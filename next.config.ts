@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   // Use webpack for compatibility with our config
   turbopack: {},
 
-  // output: "standalone", // Uncomment for Docker/production deployment
+  output: "standalone", // Enable for Docker/production deployment
 
   images: {
     remotePatterns: [
