@@ -1,0 +1,266 @@
+/**
+ * Performance-Optimized Animations
+ * 
+ * Lightweight animations for lazy loading and transitions
+ * Uses GPU-accelerated properties (transform, opacity)
+ */
+
+/* Fade In Animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out forwards;
+}
+
+/* Slide Up Animation */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.4s ease-out forwards;
+}
+
+/* Slide In From Left */
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.4s ease-out forwards;
+}
+
+/* Slide In From Right */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.4s ease-out forwards;
+}
+
+/* Scale In Animation */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.3s ease-out forwards;
+}
+
+/* Shimmer Loading Effect */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    to right,
+    #f6f7f8 0%,
+    #edeef1 20%,
+    #f6f7f8 40%,
+    #f6f7f8 100%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 2s linear infinite;
+}
+
+/* Skeleton Pulse (Alternative to shimmer) */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Stagger Animation Classes */
+.stagger-delay-100 {
+  animation-delay: 100ms;
+}
+
+.stagger-delay-200 {
+  animation-delay: 200ms;
+}
+
+.stagger-delay-300 {
+  animation-delay: 300ms;
+}
+
+.stagger-delay-400 {
+  animation-delay: 400ms;
+}
+
+.stagger-delay-500 {
+  animation-delay: 500ms;
+}
+
+/* Loading Dots Animation */
+@keyframes loadingDots {
+  0%, 20% {
+    color: rgba(0, 0, 0, 0);
+    text-shadow:
+      0.25em 0 0 rgba(0, 0, 0, 0),
+      0.5em 0 0 rgba(0, 0, 0, 0);
+  }
+  40% {
+    color: currentColor;
+    text-shadow:
+      0.25em 0 0 rgba(0, 0, 0, 0),
+      0.5em 0 0 rgba(0, 0, 0, 0);
+  }
+  60% {
+    text-shadow:
+      0.25em 0 0 currentColor,
+      0.5em 0 0 rgba(0, 0, 0, 0);
+  }
+  80%, 100% {
+    text-shadow:
+      0.25em 0 0 currentColor,
+      0.5em 0 0 currentColor;
+  }
+}
+
+.loading-dots::after {
+  content: '.';
+  animation: loadingDots 1.5s infinite;
+  display: inline-block;
+  margin-left: 0.2em;
+}
+
+/* Spinner Animation */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Bounce Animation */
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-bounce {
+  animation: bounce 1s ease-in-out infinite;
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Performance Optimization Hints */
+.gpu-accelerated {
+  transform: translateZ(0);
+  will-change: transform, opacity;
+}
+
+/* Use sparingly - removes will-change after animation */
+.animate-fade-in,
+.animate-slide-up,
+.animate-slide-in-left,
+.animate-slide-in-right,
+.animate-scale-in {
+  animation-fill-mode: forwards;
+}
+
+/* Remove will-change after animation completes */
+@supports (animation-timeline: scroll()) {
+  .animate-fade-in,
+  .animate-slide-up {
+    will-change: auto;
+  }
+}
+
+/* Intersection Observer Fade */
+.fade-in-section {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.fade-in-section.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Grid Item Stagger */
+.grid-item-stagger > * {
+  opacity: 0;
+  animation: fadeIn 0.5s ease-in-out forwards;
+}
+
+.grid-item-stagger > *:nth-child(1) { animation-delay: 0.05s; }
+.grid-item-stagger > *:nth-child(2) { animation-delay: 0.1s; }
+.grid-item-stagger > *:nth-child(3) { animation-delay: 0.15s; }
+.grid-item-stagger > *:nth-child(4) { animation-delay: 0.2s; }
+.grid-item-stagger > *:nth-child(5) { animation-delay: 0.25s; }
+.grid-item-stagger > *:nth-child(6) { animation-delay: 0.3s; }
+.grid-item-stagger > *:nth-child(7) { animation-delay: 0.35s; }
+.grid-item-stagger > *:nth-child(8) { animation-delay: 0.4s; }
+.grid-item-stagger > *:nth-child(9) { animation-delay: 0.45s; }
+.grid-item-stagger > *:nth-child(10) { animation-delay: 0.5s; }
+.grid-item-stagger > *:nth-child(n+11) { animation-delay: 0.5s; }

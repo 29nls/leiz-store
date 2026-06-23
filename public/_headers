@@ -1,0 +1,132 @@
+# Cloudflare Headers Configuration
+# https://developers.cloudflare.com/pages/configuration/headers/
+# https://developers.cloudflare.com/cache/how-to/cache-control/
+
+# ─── Global Security Headers ──────────────────────────────────
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  X-XSS-Protection: 1; mode=block
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://open.er-api.com https://api.telegram.org https://discord.com https://va.vercel-scripts.com; frame-ancestors 'none'; form-action 'self';
+  X-Robots-Tag: all
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Resource-Policy: same-origin
+  Cross-Origin-Embedder-Policy: unsafe-none
+
+# ─── Cloudflare CDN Cache Directives ─────────────────────────
+# API routes — never cached by CDN
+/api/*
+  Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate
+  Pragma: no-cache
+  CDN-Cache-Control: no-store
+  Cloudflare-CDN-Cache-Control: no-store
+
+# ─── Static Assets — Immutable Long Cache ────────────────────
+# Next.js build hash assets (immutable forever)
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+  CDN-Cache-Control: public, max-age=31536000, immutable
+  Cloudflare-CDN-Cache-Control: public, max-age=31536000, immutable
+
+# Static images
+/images/*
+  Cache-Control: public, max-age=2592000, immutable
+  CDN-Cache-Control: public, max-age=2592000
+  Cloudflare-CDN-Cache-Control: public, max-age=2592000
+
+# Fonts (long-lived, immutable)
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+  CDN-Cache-Control: public, max-age=31536000, immutable
+  Cloudflare-CDN-Cache-Control: public, max-age=31536000, immutable
+
+# Generic static assets (JS, CSS, SVG, etc.)
+/*.js
+  Cache-Control: public, max-age=31536000, immutable
+  CDN-Cache-Control: public, max-age=31536000
+  Cloudflare-CDN-Cache-Control: public, max-age=31536000
+
+/*.css
+  Cache-Control: public, max-age=31536000, immutable
+  CDN-Cache-Control: public, max-age=31536000
+  Cloudflare-CDN-Cache-Control: public, max-age=31536000
+
+/*.svg
+  Cache-Control: public, max-age=2592000
+  CDN-Cache-Control: public, max-age=2592000
+  Cloudflare-CDN-Cache-Control: public, max-age=2592000
+
+/*.png
+  Cache-Control: public, max-age=2592000, immutable
+  CDN-Cache-Control: public, max-age=2592000
+  Cloudflare-CDN-Cache-Control: public, max-age=2592000
+
+/*.jpg
+  Cache-Control: public, max-age=2592000, immutable
+  CDN-Cache-Control: public, max-age=2592000
+  Cloudflare-CDN-Cache-Control: public, max-age=2592000
+
+/*.webp
+  Cache-Control: public, max-age=2592000, immutable
+  CDN-Cache-Control: public, max-age=2592000
+  Cloudflare-CDN-Cache-Control: public, max-age=2592000
+
+/*.woff2
+  Cache-Control: public, max-age=31536000, immutable
+  CDN-Cache-Control: public, max-age=31536000
+  Cloudflare-CDN-Cache-Control: public, max-age=31536000
+
+# ─── PWA Assets ──────────────────────────────────────────────
+/manifest.json
+  Cache-Control: public, max-age=86400
+  CDN-Cache-Control: public, max-age=86400
+  Cloudflare-CDN-Cache-Control: public, max-age=86400
+
+/service-worker.js
+  Cache-Control: public, max-age=0, must-revalidate
+  CDN-Cache-Control: no-store
+  Cloudflare-CDN-Cache-Control: no-store
+
+/sw.js
+  Cache-Control: public, max-age=0, must-revalidate
+  CDN-Cache-Control: no-store
+  Cloudflare-CDN-Cache-Control: no-store
+
+# ─── Public Pages — Stale-While-Revalidate ───────────────────
+/products
+  Cache-Control: public, max-age=300, stale-while-revalidate=60
+  CDN-Cache-Control: public, max-age=300, stale-while-revalidate=60
+  Cloudflare-CDN-Cache-Control: public, max-age=300, stale-while-revalidate=60
+
+/products/*
+  Cache-Control: public, max-age=300, stale-while-revalidate=60
+  CDN-Cache-Control: public, max-age=300, stale-while-revalidate=60
+  Cloudflare-CDN-Cache-Control: public, max-age=300, stale-while-revalidate=60
+
+/track
+  Cache-Control: no-store
+
+# ─── Sensitive Pages — Never Cache ───────────────────────────
+/auth/*
+  Cache-Control: no-store, no-cache
+  CDN-Cache-Control: no-store
+  Cloudflare-CDN-Cache-Control: no-store
+
+/checkout/*
+  Cache-Control: no-store, no-cache
+  CDN-Cache-Control: no-store
+  Cloudflare-CDN-Cache-Control: no-store
+
+/wishlist
+  Cache-Control: no-store, no-cache
+  CDN-Cache-Control: no-store
+  Cloudflare-CDN-Cache-Control: no-store
+
+# ─── Admin Pages — Never Cache ───────────────────────────────
+/admin/*
+  Cache-Control: no-store, no-cache, must-revalidate
+  CDN-Cache-Control: no-store
+  Cloudflare-CDN-Cache-Control: no-store

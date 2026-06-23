@@ -1,0 +1,25 @@
+# Cloudflare Redirects Configuration
+# https://developers.cloudflare.com/pages/configuration/redirects/
+
+# Force trailing slash for SEO
+/products /products/
+/admin /admin/
+/checkout /checkout/
+/wishlist /wishlist/
+
+# Redirect old paths
+/shop /products 301
+/store /products 301
+/catalog /products 301
+/cart /checkout 301
+/contact / 301
+/about / 301
+
+# Redirect common misspellings
+/produk /products 301
+/produk/ /products/ 301
+/prodcts /products 301
+/prodcts/ /products/ 301
+
+# WWW redirect
+# www.leizstore.com/* https://leizstore.com/:splat 301

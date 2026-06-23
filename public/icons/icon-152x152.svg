@@ -1,0 +1,42 @@
+<svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="crownGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#E8B870;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#D4A05F;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="letterGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#C9897A;stop-opacity:1" />
+      <stop offset="35%" style="stop-color:#B8738F;stop-opacity:1" />
+      <stop offset="70%" style="stop-color:#9F5D99;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7B3A9D;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="256" height="256" fill="#000000"/>
+  
+  <!-- Crown simplified -->
+  <g fill="url(#crownGrad)">
+    <path d="M 98 25 L 108 48 L 128 35 L 148 48 L 158 25 L 172 48 L 84 48 Z"/>
+    <rect x="84" y="48" width="88" height="7" rx="1"/>
+    <rect x="82" y="55" width="92" height="9" rx="1"/>
+  </g>
+  
+  <!-- Letter L with gradient -->
+  <g fill="url(#letterGrad)">
+    <!-- Main vertical bar -->
+    <rect x="70" y="65" width="38" height="155" rx="1"/>
+    
+    <!-- Bottom horizontal bar -->
+    <rect x="70" y="180" width="120" height="35" rx="1"/>
+    
+    <!-- Middle bar (E) -->
+    <rect x="108" y="125" width="78" height="24" rx="1"/>
+    
+    <!-- Top right bar -->
+    <rect x="155" y="65" width="31" height="24" rx="1"/>
+    
+    <!-- Small accent -->
+    <rect x="155" y="135" width="31" height="20" rx="1"/>
+  </g>
+</svg>
