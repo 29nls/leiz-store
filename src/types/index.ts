@@ -97,7 +97,7 @@ export interface OrderItem {
   image: string;
 }
 
-export type UserRole = "ADMIN" | "MODERATOR" | "MANAGER" | "CUSTOMER";
+export type UserRole = "CUSTOMER";
 
 export interface User {
   id: string;

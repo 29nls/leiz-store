@@ -6,9 +6,6 @@
 // ─── Enums ────────────────────────────────────────────────────
 
 export const Role = {
-  ADMIN: "ADMIN",
-  MODERATOR: "MODERATOR",
-  MANAGER: "MANAGER",
   CUSTOMER: "CUSTOMER",
 } as const;
 export type Role = (typeof Role)[keyof typeof Role];

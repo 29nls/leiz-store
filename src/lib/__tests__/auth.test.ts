@@ -231,10 +231,10 @@ describe("Auth Utilities", () => {
     });
 
     it("should detect signature tampering in payload section", () => {
-      const token = signJWT({ sub: "user-1", email: "a@b.com", role: "ADMIN" });
+      const token = signJWT({ sub: "user-1", email: "a@b.com", role: "CUSTOMER" });
       const [header, , signature] = token.split(".");
       const tamperedPayload = Buffer.from(
-        JSON.stringify({ sub: "admin", email: "admin@hack.com", role: "ADMIN" })
+        JSON.stringify({ sub: "user-2", email: "user2@hack.com", role: "CUSTOMER" })
       ).toString("base64url");
       const forged = `${header}.${tamperedPayload}.${signature}`;
       expect(verifyJWT(forged)).toBeNull();

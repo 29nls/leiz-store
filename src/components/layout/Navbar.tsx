@@ -182,32 +182,6 @@ export default function Navbar() {
               Shop Now
             </Link>
 
-            {/* Admin Login — desktop */}
-            <Link
-              href="/admin/login"
-              className="hidden md:inline-flex items-center"
-              style={{
-                padding: "8px 16px", borderRadius: "4px",
-                background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.10)",
-                fontFamily: "Helvetica, Arial, system-ui, sans-serif",
-                fontSize: "13px", fontWeight: 400, color: "#999999",
-                textDecoration: "none",
-                transition: "background 0.2s ease, border-color 0.2s ease, color 0.2s ease",
-              }}
-              onMouseEnter={(e) => { 
-                e.currentTarget.style.background = "rgba(0,240,255,0.08)"; 
-                e.currentTarget.style.borderColor = "rgba(0,240,255,0.30)";
-                e.currentTarget.style.color = "#00F0FF";
-              }}
-              onMouseLeave={(e) => { 
-                e.currentTarget.style.background = "rgba(255,255,255,0.03)"; 
-                e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)";
-                e.currentTarget.style.color = "#999999";
-              }}
-            >
-              Admin
-            </Link>
-
             {/* Mobile hamburger */}
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
@@ -354,28 +328,6 @@ export default function Navbar() {
                   style={{ width: "100%", justifyContent: "center", borderRadius: "4px" }}
                 >
                   Browse Items
-                </Link>
-                <Link
-                  href="/admin/login"
-                  onClick={() => setMobileOpen(false)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: "100%",
-                    padding: "10px 20px",
-                    borderRadius: "4px",
-                    background: "rgba(255,255,255,0.03)",
-                    border: "1px solid rgba(255,255,255,0.10)",
-                    fontFamily: "Helvetica, Arial, system-ui, sans-serif",
-                    fontSize: "13px",
-                    fontWeight: 400,
-                    color: "#999999",
-                    textDecoration: "none",
-                    transition: "all 0.2s ease",
-                  }}
-                >
-                  Admin Login
                 </Link>
               </div>
             </motion.div>

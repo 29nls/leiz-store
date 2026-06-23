@@ -63,9 +63,9 @@ npm run seed
 ```
 
 This creates JSON files in the `./data/` directory with:
-- 10 users (1 admin, 1 moderator, 8 customers)
-- 6 product categories
-- 12 products with images
+- 8 customer users
+- 1 product category
+- 8 products with images
 - 30 sample orders
 - Testimonials, FAQs, and settings
 
@@ -87,8 +87,6 @@ After running `npm run seed`, you can login with:
 
 | Email | Password | Role |
 |-------|----------|------|
-| admin@leizstore.com | admin123 | Admin |
-| mod@leizstore.com | mod123 | Moderator |
 | gamerpro@email.com | customer123 | Customer |
 
 ---
@@ -164,7 +162,6 @@ leiz-store/
 │   │   ├── products/          # Product catalog & detail pages
 │   │   ├── checkout/          # 4-step checkout flow
 │   │   ├── auth/              # Login & register
-│   │   ├── admin/             # Admin dashboard (12 pages)
 │   │   ├── wishlist/          # Saved items
 │   │   ├── track/             # Order tracking
 │   │   └── api/               # REST API route handlers
@@ -213,15 +210,6 @@ leiz-store/
 - ❤️ **Wishlist** — Save favorite products
 - 📍 **Order Tracking** — Track order status in real-time
 - 📱 **Responsive** — Works on all devices
-
-### Admin Dashboard
-- 📊 **Overview** — Revenue, orders, products, low stock alerts
-- 📦 **Product Management** — CRUD operations
-- 📋 **Order Management** — Status tracking and updates
-- 👥 **Customer Management** — Order history, spending analytics
-- 📈 **Analytics** — Revenue charts, top products, payment methods
-- ⚙️ **Settings** — Store configuration
-- 📢 **Notifications** — Multi-channel alerts (Telegram, Discord, WhatsApp)
 
 ### Payment Methods
 - QRIS

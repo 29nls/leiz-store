@@ -140,38 +140,9 @@ function main() {
 
   // ─── Users ────────────────────────────────────────────────
   console.log("👥 Creating users...");
-  const adminId = cuid();
-  const modId = cuid();
-  const adminPassword = hashPassword("admin123");
-  const modPassword = hashPassword("mod123");
   const customerPassword = hashPassword("customer123");
 
-  const users: any[] = [
-    {
-      id: adminId,
-      email: "admin@leizstore.com",
-      password: adminPassword,
-      name: "Admin Leiz",
-      role: "ADMIN",
-      discord: "AdminLeiz#0001",
-      isActive: true,
-      storeId,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: modId,
-      email: "mod@leizstore.com",
-      password: modPassword,
-      name: "Moderator Pro",
-      role: "MODERATOR",
-      discord: "ModPro#0002",
-      isActive: true,
-      storeId,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-  ];
+  const users: any[] = [];
 
   const customerIds: string[] = [];
   for (const c of CUSTOMERS) {
@@ -369,7 +340,7 @@ function main() {
     // Activity log
     activityLogs.push({
       id: cuid(),
-      userId: Math.random() > 0.5 ? adminId : customerIds[Math.floor(Math.random() * customerIds.length)],
+      userId: customerIds[Math.floor(Math.random() * customerIds.length)],
       action: "ORDER_CREATED",
       entity: "order",
       entityId: orderId,
@@ -451,9 +422,7 @@ function main() {
   console.log(`│  💬 Testimonials: ${String(testimonials.length).padStart(3)}                │`);
   console.log(`│  ❓ FAQs:       ${String(faqs.length).padStart(5)}                  │`);
   console.log("└─────────────────────────────────────────┘");
-  console.log("\n🔑 Admin Login: admin@leizstore.com / admin123");
-  console.log("🔑 Moderator:   mod@leizstore.com / mod123");
-  console.log("🔑 Customer:    gamerpro@email.com / customer123\n");
+  console.log("\n🔑 Customer Login: gamerpro@email.com / customer123\n");
 }
 
 main();

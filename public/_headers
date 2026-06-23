@@ -125,8 +125,5 @@
   CDN-Cache-Control: no-store
   Cloudflare-CDN-Cache-Control: no-store
 
-# ─── Admin Pages — Never Cache ───────────────────────────────
-/admin/*
-  Cache-Control: no-store, no-cache, must-revalidate
-  CDN-Cache-Control: no-store
+# ─── No Admin Pages — Removed Admin Panel ───────────────────────────────
   Cloudflare-CDN-Cache-Control: no-store

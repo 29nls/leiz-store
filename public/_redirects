@@ -3,7 +3,6 @@
 
 # Force trailing slash for SEO
 /products /products/
-/admin /admin/
 /checkout /checkout/
 /wishlist /wishlist/
 
