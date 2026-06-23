@@ -6,7 +6,7 @@ import {
   notifyDailyReport,
   notificationService,
 } from "@/lib/notifications";
-import { NotificationChannel } from "@generated/prisma/client";
+import { NotificationChannel } from "@/lib/prisma-types";
 
 // Mock is already in jest.setup.ts for prisma and fetch
 

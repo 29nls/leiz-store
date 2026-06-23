@@ -4,7 +4,7 @@
  */
 
 import { prisma } from "@/lib/db";
-import { NotificationStatus, NotificationChannel } from "@generated/prisma/client";
+import { NotificationStatus, NotificationChannel } from "@/lib/prisma-types";
 type InputJsonValue = any;
 
 interface NotificationPayload {

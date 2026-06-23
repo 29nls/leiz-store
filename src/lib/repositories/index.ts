@@ -21,7 +21,7 @@ import type {
   StockAlert,
   Notification,
   CurrencyRate,
-} from "@generated/prisma/client";
+} from "@/lib/prisma-types";
 import {
   Role,
   OrderStatus,
@@ -30,7 +30,7 @@ import {
   NotificationStatus,
   NotificationChannel,
   StockAlertType,
-} from "@generated/prisma/client";
+} from "@/lib/prisma-types";
 
 // ─── Typed Repository Args ───────────────────────────────────
 // Each repository gets its own args type picked from Prisma's generated types

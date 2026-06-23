@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="jest tests" tests="135" failures="0" errors="0" time="16.165">
+  <testsuite name="i18n Utilities" errors="0" failures="0" skipped="0" timestamp="2026-06-23T05:58:32" time="6.555" tests="16">
+    <testcase classname="i18n Utilities t() - Translation should translate a simple key in English" name="i18n Utilities t() - Translation should translate a simple key in English" time="0.046">
+    </testcase>
+    <testcase classname="i18n Utilities t() - Translation should translate a simple key in Indonesian" name="i18n Utilities t() - Translation should translate a simple key in Indonesian" time="0.002">
+    </testcase>
+    <testcase classname="i18n Utilities t() - Translation should translate nested keys" name="i18n Utilities t() - Translation should translate nested keys" time="0.003">
+    </testcase>
+    <testcase classname="i18n Utilities t() - Translation should fallback to English for missing Indonesian key" name="i18n Utilities t() - Translation should fallback to English for missing Indonesian key" time="0.002">
+    </testcase>
+    <testcase classname="i18n Utilities t() - Translation should return key path if not found" name="i18n Utilities t() - Translation should return key path if not found" time="0.002">
+    </testcase>
+    <testcase classname="i18n Utilities t() - Translation should use current locale if not specified" name="i18n Utilities t() - Translation should use current locale if not specified" time="0.002">
+    </testcase>
+    <testcase classname="i18n Utilities setLocale / getLocale should set and get locale" name="i18n Utilities setLocale / getLocale should set and get locale" time="0.006">
+    </testcase>
+    <testcase classname="i18n Utilities getTranslations should return all translations for a namespace" name="i18n Utilities getTranslations should return all translations for a namespace" time="0.005">
+    </testcase>
+    <testcase classname="i18n Utilities getTranslations should return Indonesian translations" name="i18n Utilities getTranslations should return Indonesian translations" time="0.002">
+    </testcase>
+    <testcase classname="i18n Utilities getTranslations should return empty object for invalid namespace" name="i18n Utilities getTranslations should return empty object for invalid namespace" time="0.007">
+    </testcase>
+    <testcase classname="i18n Utilities detectLocale should detect Indonesian from Accept-Language" name="i18n Utilities detectLocale should detect Indonesian from Accept-Language" time="0.005">
+    </testcase>
+    <testcase classname="i18n Utilities detectLocale should detect English as default" name="i18n Utilities detectLocale should detect English as default" time="0.005">
+    </testcase>
+    <testcase classname="i18n Utilities detectLocale should default to English for no header" name="i18n Utilities detectLocale should default to English for no header" time="0.002">
+    </testcase>
+    <testcase classname="i18n Utilities detectLocale should default to English for empty string" name="i18n Utilities detectLocale should default to English for empty string" time="0.001">
+    </testcase>
+    <testcase classname="i18n Utilities LOCALE_NAMES should have English name" name="i18n Utilities LOCALE_NAMES should have English name" time="0.002">
+    </testcase>
+    <testcase classname="i18n Utilities LOCALE_NAMES should have Indonesian name" name="i18n Utilities LOCALE_NAMES should have Indonesian name" time="0.002">
+    </testcase>
+  </testsuite>
+  <testsuite name="Error Utilities" errors="0" failures="0" skipped="0" timestamp="2026-06-23T05:58:32" time="6.7" tests="17">
+    <testcase classname="Error Utilities AppError should create an error with status code and code" name="Error Utilities AppError should create an error with status code and code" time="0.035">
+    </testcase>
+    <testcase classname="Error Utilities AppError should be an instance of Error" name="Error Utilities AppError should be an instance of Error" time="0.002">
+    </testcase>
+    <testcase classname="Error Utilities NotFoundError should create a 404 error with resource name" name="Error Utilities NotFoundError should create a 404 error with resource name" time="0.025">
+    </testcase>
+    <testcase classname="Error Utilities NotFoundError should include resource ID in message" name="Error Utilities NotFoundError should include resource ID in message" time="0.004">
+    </testcase>
+    <testcase classname="Error Utilities ValidationError should create a 400 error with field errors" name="Error Utilities ValidationError should create a 400 error with field errors" time="0.006">
+    </testcase>
+    <testcase classname="Error Utilities ValidationError should create a 400 error with string message" name="Error Utilities ValidationError should create a 400 error with string message" time="0.002">
+    </testcase>
+    <testcase classname="Error Utilities UnauthorizedError should create a 401 error with default message" name="Error Utilities UnauthorizedError should create a 401 error with default message" time="0.002">
+    </testcase>
+    <testcase classname="Error Utilities UnauthorizedError should accept custom message" name="Error Utilities UnauthorizedError should accept custom message" time="0.001">
+    </testcase>
+    <testcase classname="Error Utilities ForbiddenError should create a 403 error" name="Error Utilities ForbiddenError should create a 403 error" time="0.004">
+    </testcase>
+    <testcase classname="Error Utilities ConflictError should create a 409 error" name="Error Utilities ConflictError should create a 409 error" time="0.001">
+    </testcase>
+    <testcase classname="Error Utilities RateLimitError should create a 429 error" name="Error Utilities RateLimitError should create a 429 error" time="0.001">
+    </testcase>
+    <testcase classname="Error Utilities successResponse should create a success response" name="Error Utilities successResponse should create a success response" time="0.003">
+    </testcase>
+    <testcase classname="Error Utilities successResponse should include meta when provided" name="Error Utilities successResponse should include meta when provided" time="0.002">
+    </testcase>
+    <testcase classname="Error Utilities errorResponse should create an error response" name="Error Utilities errorResponse should create an error response" time="0.001">
+    </testcase>
+    <testcase classname="Error Utilities errorResponse should include field errors for ValidationError" name="Error Utilities errorResponse should include field errors for ValidationError" time="0.003">
+    </testcase>
+    <testcase classname="Error Utilities buildMeta should build pagination meta" name="Error Utilities buildMeta should build pagination meta" time="0.004">
+    </testcase>
+    <testcase classname="Error Utilities buildMeta should handle zero total" name="Error Utilities buildMeta should handle zero total" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="Cart Store" errors="0" failures="0" skipped="0" timestamp="2026-06-23T05:58:32" time="6.907" tests="18">
+    <testcase classname="Cart Store addItem should add a new item to the cart" name="Cart Store addItem should add a new item to the cart" time="0.131">
+    </testcase>
+    <testcase classname="Cart Store addItem should increment quantity for existing item" name="Cart Store addItem should increment quantity for existing item" time="0.029">
+    </testcase>
+    <testcase classname="Cart Store addItem should not exceed stock limit" name="Cart Store addItem should not exceed stock limit" time="0.002">
+    </testcase>
+    <testcase classname="Cart Store addItem should add multiple different items" name="Cart Store addItem should add multiple different items" time="0.004">
+    </testcase>
+    <testcase classname="Cart Store removeItem should remove an item from the cart" name="Cart Store removeItem should remove an item from the cart" time="0.005">
+    </testcase>
+    <testcase classname="Cart Store removeItem should not affect other items when removing" name="Cart Store removeItem should not affect other items when removing" time="0.004">
+    </testcase>
+    <testcase classname="Cart Store updateQuantity should update quantity of an item" name="Cart Store updateQuantity should update quantity of an item" time="0.002">
+    </testcase>
+    <testcase classname="Cart Store updateQuantity should remove item when quantity is 0" name="Cart Store updateQuantity should remove item when quantity is 0" time="0.011">
+    </testcase>
+    <testcase classname="Cart Store updateQuantity should remove item when quantity is negative" name="Cart Store updateQuantity should remove item when quantity is negative" time="0.002">
+    </testcase>
+    <testcase classname="Cart Store updateQuantity should cap quantity at stock limit" name="Cart Store updateQuantity should cap quantity at stock limit" time="0.002">
+    </testcase>
+    <testcase classname="Cart Store clearCart should clear all items" name="Cart Store clearCart should clear all items" time="0.002">
+    </testcase>
+    <testcase classname="Cart Store Calculations should calculate subtotal correctly" name="Cart Store Calculations should calculate subtotal correctly" time="0.002">
+    </testcase>
+    <testcase classname="Cart Store Calculations should calculate tax (11%) correctly" name="Cart Store Calculations should calculate tax (11%) correctly" time="0.002">
+    </testcase>
+    <testcase classname="Cart Store Calculations should calculate total correctly" name="Cart Store Calculations should calculate total correctly" time="0.001">
+    </testcase>
+    <testcase classname="Cart Store Calculations should return 0 for empty cart" name="Cart Store Calculations should return 0 for empty cart" time="0.002">
+    </testcase>
+    <testcase classname="Cart Store getItemCount should count total items correctly" name="Cart Store getItemCount should count total items correctly" time="0.001">
+    </testcase>
+    <testcase classname="Cart Store getItemCount should count quantities correctly" name="Cart Store getItemCount should count quantities correctly" time="0.001">
+    </testcase>
+    <testcase classname="Cart Store setIsOpen should open and close the cart drawer" name="Cart Store setIsOpen should open and close the cart drawer" time="0.006">
+    </testcase>
+  </testsuite>
+  <testsuite name="QRIS Service" errors="0" failures="0" skipped="0" timestamp="2026-06-23T05:58:32" time="6.831" tests="7">
+    <testcase classname="QRIS Service isConfigured should return false when env vars are missing" name="QRIS Service isConfigured should return false when env vars are missing" time="0.034">
+    </testcase>
+    <testcase classname="QRIS Service isConfigured should return true when env vars are set" name="QRIS Service isConfigured should return true when env vars are set" time="0.002">
+    </testcase>
+    <testcase classname="QRIS Service generateQRISPayment should throw when not configured" name="QRIS Service generateQRISPayment should throw when not configured" time="0.21">
+    </testcase>
+    <testcase classname="QRIS Service generateQRISPayment should generate payment when configured" name="QRIS Service generateQRISPayment should generate payment when configured" time="0.042">
+    </testcase>
+    <testcase classname="QRIS Service verifyQRISPayment should throw when not configured" name="QRIS Service verifyQRISPayment should throw when not configured" time="0.005">
+    </testcase>
+    <testcase classname="QRIS Service handleQRISCallback should parse successful callback" name="QRIS Service handleQRISCallback should parse successful callback" time="0.003">
+    </testcase>
+    <testcase classname="QRIS Service handleQRISCallback should parse failed callback" name="QRIS Service handleQRISCallback should parse failed callback" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="Utility Functions" errors="0" failures="0" skipped="0" timestamp="2026-06-23T05:58:32" time="7.519" tests="20">
+    <testcase classname="Utility Functions formatPrice should format IDR price" name="Utility Functions formatPrice should format IDR price" time="0.396">
+    </testcase>
+    <testcase classname="Utility Functions formatPrice should handle zero" name="Utility Functions formatPrice should handle zero" time="0.002">
+    </testcase>
+    <testcase classname="Utility Functions formatDate should format a date string" name="Utility Functions formatDate should format a date string" time="0.109">
+    </testcase>
+    <testcase classname="Utility Functions formatDate should format a Date object" name="Utility Functions formatDate should format a Date object" time="0.001">
+    </testcase>
+    <testcase classname="Utility Functions formatRelativeTime should return &apos;just now&apos; for recent dates" name="Utility Functions formatRelativeTime should return &apos;just now&apos; for recent dates" time="0.001">
+    </testcase>
+    <testcase classname="Utility Functions formatRelativeTime should return minutes ago" name="Utility Functions formatRelativeTime should return minutes ago" time="0.001">
+    </testcase>
+    <testcase classname="Utility Functions formatRelativeTime should return hours ago" name="Utility Functions formatRelativeTime should return hours ago" time="0.001">
+    </testcase>
+    <testcase classname="Utility Functions formatRelativeTime should return days ago" name="Utility Functions formatRelativeTime should return days ago" time="0.001">
+    </testcase>
+    <testcase classname="Utility Functions slugify should convert text to slug" name="Utility Functions slugify should convert text to slug" time="0.001">
+    </testcase>
+    <testcase classname="Utility Functions slugify should handle special characters" name="Utility Functions slugify should handle special characters" time="0.001">
+    </testcase>
+    <testcase classname="Utility Functions slugify should handle multiple spaces" name="Utility Functions slugify should handle multiple spaces" time="0.001">
+    </testcase>
+    <testcase classname="Utility Functions generateOrderNumber should generate order number with LZ prefix" name="Utility Functions generateOrderNumber should generate order number with LZ prefix" time="0.002">
+    </testcase>
+    <testcase classname="Utility Functions generateOrderNumber should generate unique order numbers" name="Utility Functions generateOrderNumber should generate unique order numbers" time="0.065">
+    </testcase>
+    <testcase classname="Utility Functions truncate should truncate long strings" name="Utility Functions truncate should truncate long strings" time="0">
+    </testcase>
+    <testcase classname="Utility Functions truncate should not truncate short strings" name="Utility Functions truncate should not truncate short strings" time="0">
+    </testcase>
+    <testcase classname="Utility Functions truncate should handle exact length" name="Utility Functions truncate should handle exact length" time="0.002">
+    </testcase>
+    <testcase classname="Utility Functions getInitials should return initials from name" name="Utility Functions getInitials should return initials from name" time="0.001">
+    </testcase>
+    <testcase classname="Utility Functions getInitials should handle single name" name="Utility Functions getInitials should handle single name" time="0.001">
+    </testcase>
+    <testcase classname="Utility Functions getInitials should limit to 2 characters" name="Utility Functions getInitials should limit to 2 characters" time="0.002">
+    </testcase>
+    <testcase classname="Utility Functions debounce should debounce function calls" name="Utility Functions debounce should debounce function calls" time="0.007">
+    </testcase>
+  </testsuite>
+  <testsuite name="Currency Utilities" errors="0" failures="0" skipped="0" timestamp="2026-06-23T05:58:32" time="7.756" tests="18">
+    <testcase classname="Currency Utilities formatPrice should format IDR price without decimals" name="Currency Utilities formatPrice should format IDR price without decimals" time="0.148">
+    </testcase>
+    <testcase classname="Currency Utilities formatPrice should format USD price with decimals" name="Currency Utilities formatPrice should format USD price with decimals" time="0.018">
+    </testcase>
+    <testcase classname="Currency Utilities formatPrice should default to IDR" name="Currency Utilities formatPrice should default to IDR" time="0.005">
+    </testcase>
+    <testcase classname="Currency Utilities formatPrice should handle zero" name="Currency Utilities formatPrice should handle zero" time="0.006">
+    </testcase>
+    <testcase classname="Currency Utilities formatPrice should handle large numbers" name="Currency Utilities formatPrice should handle large numbers" time="0.002">
+    </testcase>
+    <testcase classname="Currency Utilities convertCurrency should return same amount for same currency" name="Currency Utilities convertCurrency should return same amount for same currency" time="0.002">
+    </testcase>
+    <testcase classname="Currency Utilities convertCurrency should convert IDR to USD" name="Currency Utilities convertCurrency should convert IDR to USD" time="0.002">
+    </testcase>
+    <testcase classname="Currency Utilities convertCurrency should convert USD to IDR" name="Currency Utilities convertCurrency should convert USD to IDR" time="0.001">
+    </testcase>
+    <testcase classname="Currency Utilities convertCurrency should handle zero" name="Currency Utilities convertCurrency should handle zero" time="0.001">
+    </testcase>
+    <testcase classname="Currency Utilities getDualPrice should return primary IDR and secondary USD" name="Currency Utilities getDualPrice should return primary IDR and secondary USD" time="0.003">
+    </testcase>
+    <testcase classname="Currency Utilities getDualPrice should return primary USD and secondary IDR" name="Currency Utilities getDualPrice should return primary USD and secondary IDR" time="0.004">
+    </testcase>
+    <testcase classname="Currency Utilities parseCurrency should parse formatted IDR string" name="Currency Utilities parseCurrency should parse formatted IDR string" time="0.002">
+    </testcase>
+    <testcase classname="Currency Utilities parseCurrency should parse USD string" name="Currency Utilities parseCurrency should parse USD string" time="0.001">
+    </testcase>
+    <testcase classname="Currency Utilities parseCurrency should parse plain number" name="Currency Utilities parseCurrency should parse plain number" time="0.005">
+    </testcase>
+    <testcase classname="Currency Utilities parseCurrency should return 0 for invalid input" name="Currency Utilities parseCurrency should return 0 for invalid input" time="0.001">
+    </testcase>
+    <testcase classname="Currency Utilities parseCurrency should handle empty string" name="Currency Utilities parseCurrency should handle empty string" time="0.001">
+    </testcase>
+    <testcase classname="Currency Utilities CURRENCIES should have IDR config" name="Currency Utilities CURRENCIES should have IDR config" time="0.002">
+    </testcase>
+    <testcase classname="Currency Utilities CURRENCIES should have USD config" name="Currency Utilities CURRENCIES should have USD config" time="0.002">
+    </testcase>
+  </testsuite>
+  <testsuite name="Storage Service" errors="0" failures="0" skipped="0" timestamp="2026-06-23T05:58:38" time="1.506" tests="7">
+    <testcase classname="Storage Service isConfigured should return false when env vars are missing" name="Storage Service isConfigured should return false when env vars are missing" time="0.003">
+    </testcase>
+    <testcase classname="Storage Service isConfigured should return true when all env vars are set" name="Storage Service isConfigured should return true when all env vars are set" time="0.001">
+    </testcase>
+    <testcase classname="Storage Service generateProductImageKey should generate a product image key" name="Storage Service generateProductImageKey should generate a product image key" time="0.002">
+    </testcase>
+    <testcase classname="Storage Service generateProductImageKey should handle special characters in filename" name="Storage Service generateProductImageKey should handle special characters in filename" time="0.001">
+    </testcase>
+    <testcase classname="Storage Service generateProductImageKey should default to jpg extension" name="Storage Service generateProductImageKey should default to jpg extension" time="0">
+    </testcase>
+    <testcase classname="Storage Service uploadFile should throw when not configured" name="Storage Service uploadFile should throw when not configured" time="0.045">
+    </testcase>
+    <testcase classname="Storage Service deleteFile should throw when not configured" name="Storage Service deleteFile should throw when not configured" time="0.003">
+    </testcase>
+  </testsuite>
+  <testsuite name="Auth Utilities" errors="0" failures="0" skipped="0" timestamp="2026-06-23T05:58:32" time="10.665" tests="32">
+    <testcase classname="Auth Utilities JWT Signing and Verification should sign and verify a valid JWT" name="Auth Utilities JWT Signing and Verification should sign and verify a valid JWT" time="0.041">
+    </testcase>
+    <testcase classname="Auth Utilities JWT Signing and Verification should include storeId when provided" name="Auth Utilities JWT Signing and Verification should include storeId when provided" time="0.018">
+    </testcase>
+    <testcase classname="Auth Utilities JWT Signing and Verification should return null for invalid token" name="Auth Utilities JWT Signing and Verification should return null for invalid token" time="0.005">
+    </testcase>
+    <testcase classname="Auth Utilities JWT Signing and Verification should return null for tampered token" name="Auth Utilities JWT Signing and Verification should return null for tampered token" time="0.019">
+    </testcase>
+    <testcase classname="Auth Utilities JWT Signing and Verification should return null for empty string" name="Auth Utilities JWT Signing and Verification should return null for empty string" time="0.001">
+    </testcase>
+    <testcase classname="Auth Utilities JWT Signing and Verification should return null for malformed token (2 parts)" name="Auth Utilities JWT Signing and Verification should return null for malformed token (2 parts)" time="0.002">
+    </testcase>
+    <testcase classname="Auth Utilities JWT Signing and Verification should return null for malformed token (4+ parts)" name="Auth Utilities JWT Signing and Verification should return null for malformed token (4+ parts)" time="0.001">
+    </testcase>
+    <testcase classname="Auth Utilities JWT Signing and Verification should return null for tokens with invalid JSON in body" name="Auth Utilities JWT Signing and Verification should return null for tokens with invalid JSON in body" time="0.001">
+    </testcase>
+    <testcase classname="Auth Utilities JWT Signing and Verification should return null for expired token" name="Auth Utilities JWT Signing and Verification should return null for expired token" time="0.008">
+    </testcase>
+    <testcase classname="Auth Utilities JWT Signing and Verification should produce different tokens for different payloads" name="Auth Utilities JWT Signing and Verification should produce different tokens for different payloads" time="0.001">
+    </testcase>
+    <testcase classname="Auth Utilities JWT Signing and Verification should produce different tokens for same payload (different iat)" name="Auth Utilities JWT Signing and Verification should produce different tokens for same payload (different iat)" time="0.003">
+    </testcase>
+    <testcase classname="Auth Utilities JWT Signing and Verification should handle special characters in payload" name="Auth Utilities JWT Signing and Verification should handle special characters in payload" time="0.001">
+    </testcase>
+    <testcase classname="Auth Utilities Password Hashing should hash a password" name="Auth Utilities Password Hashing should hash a password" time="0.53">
+    </testcase>
+    <testcase classname="Auth Utilities Password Hashing should verify a correct password" name="Auth Utilities Password Hashing should verify a correct password" time="0.67">
+    </testcase>
+    <testcase classname="Auth Utilities Password Hashing should reject an incorrect password" name="Auth Utilities Password Hashing should reject an incorrect password" time="0.543">
+    </testcase>
+    <testcase classname="Auth Utilities Password Hashing should produce different hashes for same password (different salts)" name="Auth Utilities Password Hashing should produce different hashes for same password (different salts)" time="0.997">
+    </testcase>
+    <testcase classname="Auth Utilities Password Hashing should handle empty password" name="Auth Utilities Password Hashing should handle empty password" time="0.381">
+    </testcase>
+    <testcase classname="Auth Utilities Password Hashing should handle very long passwords" name="Auth Utilities Password Hashing should handle very long passwords" time="0.314">
+    </testcase>
+    <testcase classname="Auth Utilities Password Hashing should handle unicode passwords" name="Auth Utilities Password Hashing should handle unicode passwords" time="0.312">
+    </testcase>
+    <testcase classname="Auth Utilities Refresh Token should generate a random refresh token" name="Auth Utilities Refresh Token should generate a random refresh token" time="0.002">
+    </testcase>
+    <testcase classname="Auth Utilities Refresh Token should always generate unique tokens" name="Auth Utilities Refresh Token should always generate unique tokens" time="0.002">
+    </testcase>
+    <testcase classname="Auth Utilities Refresh Token should only contain hex characters" name="Auth Utilities Refresh Token should only contain hex characters" time="0.001">
+    </testcase>
+    <testcase classname="Auth Utilities extractTokenFromHeader should extract token from Bearer header" name="Auth Utilities extractTokenFromHeader should extract token from Bearer header" time="0.001">
+    </testcase>
+    <testcase classname="Auth Utilities extractTokenFromHeader should return null for missing header" name="Auth Utilities extractTokenFromHeader should return null for missing header" time="0">
+    </testcase>
+    <testcase classname="Auth Utilities extractTokenFromHeader should return null for non-Bearer header" name="Auth Utilities extractTokenFromHeader should return null for non-Bearer header" time="0.001">
+    </testcase>
+    <testcase classname="Auth Utilities extractTokenFromHeader should return null for malformed header (no token)" name="Auth Utilities extractTokenFromHeader should return null for malformed header (no token)" time="0.001">
+    </testcase>
+    <testcase classname="Auth Utilities extractTokenFromHeader should return null for empty string" name="Auth Utilities extractTokenFromHeader should return null for empty string" time="0.001">
+    </testcase>
+    <testcase classname="Auth Utilities extractTokenFromHeader should extract token with special characters" name="Auth Utilities extractTokenFromHeader should extract token with special characters" time="0">
+    </testcase>
+    <testcase classname="Auth Utilities extractTokenFromHeader should handle multiple spaces gracefully" name="Auth Utilities extractTokenFromHeader should handle multiple spaces gracefully" time="0.001">
+    </testcase>
+    <testcase classname="Auth Utilities extractTokenFromHeader should handle lowercase bearer" name="Auth Utilities extractTokenFromHeader should handle lowercase bearer" time="0">
+    </testcase>
+    <testcase classname="Auth Utilities Security Edge Cases should not accept tokens with null algorithm" name="Auth Utilities Security Edge Cases should not accept tokens with null algorithm" time="0">
+    </testcase>
+    <testcase classname="Auth Utilities Security Edge Cases should detect signature tampering in payload section" name="Auth Utilities Security Edge Cases should detect signature tampering in payload section" time="0.001">
+    </testcase>
+  </testsuite>
+</testsuites>

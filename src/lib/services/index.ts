@@ -20,14 +20,14 @@ import {
 } from "@/lib/repositories";
 import { convertCurrency, type Currency } from "@/lib/currency";
 import { prisma } from "@/lib/db";
-import { Prisma } from "@generated/prisma/client";
+import { Prisma } from "@/lib/prisma-types";
 import {
   Role,
   OrderStatus,
   PaymentMethod,
   NotificationChannel,
   StockAlertType,
-} from "@generated/prisma/client";
+} from "@/lib/prisma-types";
 
 // Helper function to replace Prisma.Decimal
 function toDecimal(value: number): number {
