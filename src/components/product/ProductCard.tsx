@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { ShoppingCart, Check } from "@/components/ui/icons";
 import { cn, formatPrice } from "@/lib/utils";
 import { useCartStore } from "@/stores/cart-store";
@@ -87,16 +86,17 @@ export default function ProductCard({ product, priority = false, loading = 'lazy
 
         {/* Image */}
         <div style={{ position: "relative", aspectRatio: "1/1", overflow: "hidden", background: "#1A1B20" }}>
-          <Image
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src={mainImage}
             alt={product.name}
-            fill
-            className="object-cover"
-            style={{ transform: hovered && !isOutOfStock ? "scale(1.04)" : "scale(1)", transition: "transform 0.6s ease" }}
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-            priority={priority}
+            style={{
+              display: "block", width: "100%", height: "100%",
+              position: "absolute", inset: 0, objectFit: "cover",
+              transform: hovered && !isOutOfStock ? "scale(1.04)" : "scale(1)",
+              transition: "transform 0.6s ease"
+            }}
             loading={loading}
-            quality={85}
           />
 
           {/* Vignette */}
