@@ -125,9 +125,14 @@ jobs:
         run: |
           npm start &
           SERVER_PID=$!
-          npx wait-on http://localhost:3000 --timeout 60000
+          echo "Server started with PID: $SERVER_PID"
+          sleep 5
+          npx wait-on http://localhost:3000 --timeout 60000 --interval 1000 --verbose
+          echo "Server is ready, running tests..."
           npx playwright test || TEST_EXIT=$?
-          kill $SERVER_PID || true
+          echo "Tests completed, killing server..."
+          kill $SERVER_PID 2>/dev/null || true
+          wait $SERVER_PID 2>/dev/null || true
           exit ${TEST_EXIT:-0}
         env:
           NODE_ENV: production

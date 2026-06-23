@@ -5,7 +5,8 @@ const nextConfig: NextConfig = {
   // Use webpack for compatibility with our config
   turbopack: {},
 
-  output: "standalone", // Enable for Docker/production deployment
+  // output: "standalone", // Enable for Docker/production deployment
+  // For Docker: set NEXT_OUTPUT=standalone environment variable
 
   images: {
     remotePatterns: [
