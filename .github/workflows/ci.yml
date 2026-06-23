@@ -20,15 +20,11 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
-          cache-dependency-path: leiz-store/package-lock.json
       - name: Install dependencies
-        working-directory: leiz-store
         run: npm ci
       - name: Lint
-        working-directory: leiz-store
         run: npm run lint
       - name: TypeCheck
-        working-directory: leiz-store
         run: npm run typecheck
 
   unit-tests:
@@ -41,19 +37,16 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
-          cache-dependency-path: leiz-store/package-lock.json
       - name: Install dependencies
-        working-directory: leiz-store
         run: npm ci
       - name: Run tests
-        working-directory: leiz-store
         run: npm run test:ci
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: leiz-store/test-results/
+          path: test-results/
 
   build:
     name: Build Application
@@ -68,12 +61,11 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
-          cache-dependency-path: leiz-store/package-lock.json
       - name: Install dependencies
-        working-directory: leiz-store
         run: npm ci
+      - name: Seed database
+        run: npm run seed
       - name: Build
-        working-directory: leiz-store
         run: npm run build
 
   docker-build:
@@ -104,8 +96,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: leiz-store
-          file: leiz-store/Dockerfile
+          context: .
+          file: Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -121,21 +113,21 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
-          cache-dependency-path: leiz-store/package-lock.json
       - name: Install dependencies
-        working-directory: leiz-store
         run: npm ci
       - name: Install Playwright browsers
-        working-directory: leiz-store
         run: npx playwright install --with-deps chromium
       - name: Seed JSON database
-        working-directory: leiz-store
         run: npm run seed
       - name: Build application
-        working-directory: leiz-store
         run: npm run build
+      - name: Start server in background
+        run: |
+          npm start &
+          npx wait-on http://localhost:3000 --timeout 60000
+        env:
+          NODE_ENV: production
       - name: Run Playwright tests
-        working-directory: leiz-store
         run: npx playwright test
         env:
           BASE_URL: http://localhost:3000
@@ -144,4 +136,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: leiz-store/playwright-report/
+          path: playwright-report/
+          retention-days: 7
