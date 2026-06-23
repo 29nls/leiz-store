@@ -21,7 +21,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
       - name: Install dependencies
-        run: npm ci
+        run: npm ci || npm install
       - name: Lint
         run: npm run lint
       - name: TypeCheck
@@ -38,7 +38,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
       - name: Install dependencies
-        run: npm ci
+        run: npm ci || npm install
       - name: Run tests
         run: npm run test:ci
       - name: Upload test results
@@ -62,7 +62,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
       - name: Install dependencies
-        run: npm ci
+        run: npm ci || npm install
       - name: Seed database
         run: npm run seed
       - name: Build
@@ -114,7 +114,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
       - name: Install dependencies
-        run: npm ci
+        run: npm ci || npm install
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
       - name: Seed JSON database
