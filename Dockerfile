@@ -20,9 +20,7 @@ COPY . .
 # Set production environment
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-
-# Seed the JSON database
-RUN npm run seed
+ENV NEXT_OUTPUT=standalone
 
 # Build Next.js application
 RUN npm run build
@@ -42,7 +40,6 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/data ./data
 
 # Set correct permissions
 RUN chown -R nextjs:nodejs /app

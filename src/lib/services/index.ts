@@ -189,7 +189,7 @@ export const orderService = {
     const subtotal = products.reduce(
       (sum, p) => sum + Number(p.price) * p.quantity, 0
     );
-    const tax = Math.round(subtotal * 0.11); // 11% PPN
+    const tax = 0;
     const total = subtotal + tax;
 
     const subtotalUSD = convertCurrency(subtotal, "IDR", "USD");
@@ -572,13 +572,13 @@ export const notificationService = {
       );
 
       if (res.ok) {
-        await notificationRepository.markAsSent(notification.publicId);
+        await notificationRepository.markAsSent(notification.id);
       } else {
-        await notificationRepository.markAsFailed(notification.publicId);
+        await notificationRepository.markAsFailed(notification.id);
       }
       return notification;
     } catch (error) {
-      await notificationRepository.markAsFailed(notification.publicId);
+      await notificationRepository.markAsFailed(notification.id);
       return null;
     }
   },
@@ -606,13 +606,13 @@ export const notificationService = {
       });
 
       if (res.ok) {
-        await notificationRepository.markAsSent(notification.publicId);
+        await notificationRepository.markAsSent(notification.id);
       } else {
-        await notificationRepository.markAsFailed(notification.publicId);
+        await notificationRepository.markAsFailed(notification.id);
       }
       return notification;
     } catch {
-      await notificationRepository.markAsFailed(notification.publicId);
+      await notificationRepository.markAsFailed(notification.id);
       return null;
     }
   },
@@ -647,13 +647,13 @@ export const notificationService = {
       });
 
       if (res.ok) {
-        await notificationRepository.markAsSent(notification.publicId);
+        await notificationRepository.markAsSent(notification.id);
       } else {
-        await notificationRepository.markAsFailed(notification.publicId);
+        await notificationRepository.markAsFailed(notification.id);
       }
       return notification;
     } catch {
-      await notificationRepository.markAsFailed(notification.publicId);
+      await notificationRepository.markAsFailed(notification.id);
       return null;
     }
   },

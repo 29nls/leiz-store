@@ -29,22 +29,16 @@ test.describe("Smoke Tests", () => {
     }
   });
 
-  test("login page loads", async ({ page }) => {
-    await page.goto("/auth/login");
-    await expect(page.locator('input[type="email"], input[name="email"]').first()).toBeVisible({
-      timeout: 10_000,
-    });
+  test("track page has order search form", async ({ page }) => {
+    await page.goto("/track");
+    await expect(page.getByText("Track Your Order")).toBeVisible();
+    await expect(page.locator("input[type='text']").first()).toBeVisible();
   });
 
-  test("checkout page redirects to login when not authenticated", async ({ page }) => {
+  test("checkout shows empty cart state", async ({ page }) => {
     await page.goto("/checkout");
-    // Should redirect to login or show auth error
-    await page.waitForLoadState("networkidle");
-    const currentUrl = page.url();
-    // Should either redirect to login or stay on checkout
-    expect(
-      currentUrl.includes("/auth/login") || currentUrl.includes("/checkout")
-    ).toBe(true);
+    await expect(page.getByText("Your cart is empty")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Browse Products")).toBeVisible();
   });
 });
 

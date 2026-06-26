@@ -1,381 +1,580 @@
-# LEIZ STORE — Premium Game Materials Marketplace
+# 🛒 LEIZ STORE — Premium Game Materials Marketplace
 
-A modern e-commerce marketplace for game currencies, accounts, skins, and digital goods. Built with **Next.js 16**, **TypeScript**, and **TailwindCSS 4**. Features a **JSON file-based database** for zero-configuration local development.
+<div align="center">
+
+**Marketplace digital terpercaya untuk game currencies, materials, dan jasa service Dragon Nest Insane DN**
+
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat&logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat&logo=typescript)](https://www.typescriptlang.org/)
+[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?style=flat&logo=supabase)](https://supabase.com/)
+[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-4-38BDF8?style=flat&logo=tailwindcss)](https://tailwindcss.com/)
+[![Vercel](https://img.shields.io/badge/Deploy-Vercel-000?style=flat&logo=vercel)](https://vercel.com/)
+
+</div>
+
+---
+
+## 📋 Daftar Isi
+
+- [Tech Stack](#-tech-stack)
+- [Fitur](#-fitur)
+- [Katalog Produk](#-katalog-produk)
+- [Prasyarat](#-prasyarat)
+- [Panduan Memulai](#-panduan-memulai)
+- [Variabel Lingkungan](#-variabel-lingkungan)
+- [Panel Admin](#-panel-admin)
+- [Arsitektur Database](#-arsitektur-database)
+- [Struktur Proyek](#-struktur-proyek)
+- [API Reference](#-api-reference)
+- [Deployment ke Vercel](#-deployment-ke-vercel)
+- [Perintah CLI](#-perintah-cli)
+- [Troubleshooting](#-troubleshooting)
+- [Lisensi](#-lisensi)
+
+---
 
 ## 🚀 Tech Stack
 
-| Layer | Technology |
+| Layer | Teknologi |
 |-------|-----------|
-| Frontend | Next.js 16 (App Router), React 19, TailwindCSS 4, Framer Motion, Zustand |
-| Backend | Next.js API Routes, TypeScript |
-| Database | JSON file-based storage (zero external dependencies) |
-| Auth | JWT with refresh tokens |
-| Forms | React Hook Form + Zod validation |
-| Testing | Jest + Testing Library (unit), Playwright (E2E) |
-
-> **Why JSON Database?** No external database server required. Perfect for local development, demos, and small-scale deployments. Data is stored in `./data/` directory as simple JSON files.
+| **Framework** | Next.js 16 (App Router), React 19 |
+| **Bahasa** | TypeScript 5 (strict mode) |
+| **Styling** | TailwindCSS 4, Framer Motion 12 |
+| **Database** | Supabase (PostgreSQL) |
+| **State Management** | Zustand 5 |
+| **Auth** | Supabase Auth + JWT |
+| **Forms** | React Hook Form + Zod 4 |
+| **Icons** | Lucide React |
+| **Testing** | Jest + Testing Library (unit), Playwright (E2E) |
+| **Deployment** | Vercel (serverless), Docker (opsional) |
+| **PWA** | Service Worker, Offline Support, Manifest |
 
 ---
 
-## 📋 Prerequisites
+## ✨ Fitur
+
+### 🛍️ Customer Features
+
+| Fitur | Deskripsi |
+|-------|-----------|
+| **Katalog Produk** | Browse produk dengan filter kategori, search, dan sort |
+| **Detail Produk** | Halaman detail dengan informasi lengkap, stok, dan harga |
+| **Keranjang Belanja** | Drawer keranjang yang persistent dengan kalkulasi otomatis |
+| **Checkout 4 Langkah** | Info Customer → Review Order → Pembayaran → Konfirmasi |
+| **Wishlist** | Simpan produk favorit untuk dibeli nanti |
+| **Tracking Pesanan** | Lacak status pesanan dengan nomor order |
+| **Pembayaran** | QRIS, DANA, OVO, GoPay, Bank Transfer |
+| **Responsive Design** | Tampilan optimal di semua perangkat (mobile, tablet, desktop) |
+| **PWA Support** | Install sebagai app, offline page, service worker |
+| **Animasi** | Transisi halus dengan Framer Motion |
+
+### 🔧 Admin Panel
+
+| Fitur | Deskripsi |
+|-------|-----------|
+| **Dashboard** | Ringkasan toko (total produk, pesanan, pendapatan, stok menipis) |
+| **Manajemen Produk** | CRUD produk (tambah, edit, hapus, toggle aktif/nonaktif) |
+| **Manajemen Kategori** | CRUD kategori produk |
+| **Manajemen Pesanan** | Lihat daftar pesanan, update status (PENDING → PAID → PROCESSING → COMPLETED) |
+| **Manajemen Pengguna** | Lihat daftar customer |
+| **Pengaturan** | Konfigurasi toko (link Discord, WhatsApp, currency, dll) |
+| **Real-time Updates** | Dashboard otomatis refresh saat ada perubahan data |
+| **Stok Alerts** | Notifikasi stok menipis langsung di dashboard |
+
+---
+
+## 📦 Katalog Produk
+
+### ⚔️ Service Runs
+
+| Produk | Harga | Minimum |
+|--------|-------|---------|
+| **FABN** (Reroll Additional Skill on Jade) | Rp1.500/run | 10 runs |
+| **FTKN** (Reroll Additional Effect on Rune) | Rp2.000/run | 10 runs |
+| **Forest Dragon (T14)** | Rp2.000/run | 10 runs |
+| **Rune Dragon (T14)** | Rp2.000/run | 10 runs |
+
+### 📦 General
+
+| Produk | Harga | Minimum |
+|--------|-------|---------|
+| **1 Stack Jade Dust** | Rp40.000/stack | 1 |
+| **30 Stack Jade Dust** | Rp35.000/stack | 1 |
+| **Balkov** | Rp300/pcs | 100 pcs |
+
+### ⏳ On Progress (Pre-Order)
+
+| Produk | Harga | Catatan |
+|--------|-------|---------|
+| **Conve T12 +99** | Rp70.000/pcs | Pre-Order = Lebih murah / Diskon |
+| **Jade T12 +99** | Rp50.000/pcs | Pre-Order = Lebih murah / Diskon |
+| **Hon Moguro** | Rp2.000/pcs | Pre-Order Rp1.500/pcs |
+
+### 💰 Currency
+
+| Produk | Harga | Minimum |
+|--------|-------|---------|
+| **Gold** | Rp800/1M gold | 10M gold |
+| **Gold (Bulk)** | Rp70.000/100M gold | 100M gold |
+| **DNP** | Rp40.000/1M DNP | 1M DNP |
+
+---
+
+## 📋 Prasyarat
 
 - **Node.js 20+** — [Download](https://nodejs.org/)
-- **npm** — Bundled with Node.js
-
-> **No Docker, No MySQL, No Redis Required!** The JSON database runs without any external services.
+- **npm** — Sudah termasuk dengan Node.js
+- **Akun Supabase** — [Daftar gratis](https://supabase.com/) (Free tier sudah cukup)
+- **Akun Vercel** — [Daftar gratis](https://vercel.com/) (Untuk deployment)
 
 ---
 
-## 🛠️ Quick Start Guide
+## 🛠️ Panduan Memulai
 
 ### Step 1 — Clone & Install
 
-```powershell
-git clone <your-repo-url>
+```bash
+git clone https://github.com/29nls/leiz-store.git
 cd leiz-store
 npm install
 ```
 
-### Step 2 — Configure Environment
+### Step 2 — Konfigurasi Environment
 
-Copy the example environment file (or the default `.env` is already configured for local dev):
-
-```powershell
-# The .env file is pre-configured for local development
-# No changes needed to get started
+```bash
+cp .env.example .env.local
 ```
 
-Key variables in `.env`:
+Edit `.env.local` dengan kredensial Supabase Anda:
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `JWT_SECRET` | `dev-secret-change-in-production` | **Change this in production!** |
-| `JWT_EXPIRES_IN` | `15m` | Access token lifetime |
-| `JWT_REFRESH_EXPIRES_IN` | `7d` | Refresh token lifetime |
-| `NEXT_PUBLIC_SITE_URL` | `http://localhost:3000` | Public URL of the app |
-
-### Step 3 — Seed the Database
-
-Populate the JSON database with sample data (products, users, orders):
-
-```powershell
-npm run seed
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
+JWT_SECRET=your-random-secret-here
 ```
 
-This creates JSON files in the `./data/` directory with:
-- 8 customer users
-- 1 product category
-- 8 products with images
-- 30 sample orders
-- Testimonials, FAQs, and settings
+### Step 3 — Setup Database
 
-### Step 4 — Start Development Server
+1. Buat project baru di [Supabase Dashboard](https://supabase.com/dashboard)
+2. Copy kredensial dari **Settings → API**
+3. Buka **SQL Editor** dan jalankan script dari `scripts/supabase-schema.sql`
+4. Jalankan script seeder untuk mengisi data awal:
 
-```powershell
+```bash
+npx tsx scripts/create-admin.ts
+```
+
+### Step 4 — Jalankan Development Server
+
+```bash
 npm run dev
 ```
 
-Open **[http://localhost:3000](http://localhost:3000)** in your browser.
+Buka **[http://localhost:3000](http://localhost:3000)** di browser.
 
-✅ **That's it!** No database configuration, no Docker, no MySQL setup required.
+### Step 5 — Login Admin
 
----
+Buka **[http://localhost:3000/admin/login](http://localhost:3000/admin/login)**
 
-## 🔐 Default Login Credentials
-
-After running `npm run seed`, you can login with:
-
-| Email | Password | Role |
-|-------|----------|------|
-| gamerpro@email.com | customer123 | Customer |
+| Email | Password |
+|-------|----------|
+| `admin@leizstore.com` | `admin123` |
 
 ---
 
-## 📦 Common Commands
+## 🔐 Variabel Lingkungan
 
-```powershell
-# Start development server
-npm run dev
+| Variabel | Wajib | Deskripsi |
+|----------|-------|-----------|
+| `NEXT_PUBLIC_SUPABASE_URL` | ✅ | URL project Supabase (Settings → API) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | Anon/public key Supabase |
+| `SUPABASE_SERVICE_ROLE_KEY` | ✅ | Service role key (admin operations) |
+| `JWT_SECRET` | ✅ | Secret key untuk JWT (ubah di production!) |
+| `NEXT_PUBLIC_SITE_URL` | ❌ | URL publik (default: `http://localhost:3000`) |
 
-# Seed the JSON database
-npm run seed
+### Opsional — Notifikasi
 
-# Build for production
-npm run build
+| Variabel | Deskripsi |
+|----------|-----------|
+| `TELEGRAM_BOT_TOKEN` | Bot token Telegram untuk notifikasi order |
+| `TELEGRAM_CHAT_ID` | Chat ID Telegram tujuan notifikasi |
+| `DISCORD_WEBHOOK_URL` | Webhook URL Discord untuk notifikasi |
+| `WHATSAPP_API_KEY` | API key WhatsApp Gateway |
+| `WHATSAPP_API_URL` | URL API WhatsApp Gateway |
 
-# Start production server (requires build first)
-npm start
+### Opsional — Pembayaran
 
-# Type check
-npm run typecheck
+| Variabel | Deskripsi |
+|----------|-----------|
+| `QRIS_WEBHOOK_SECRET` | Secret key untuk callback QRIS payment |
 
-# Run linter
-npm run lint
+---
 
-# Fix lint issues automatically
-npm run lint:fix
+## 🔧 Panel Admin
 
-# Run unit tests
-npm test
+Akses panel admin di **`/admin`** setelah login.
 
-# Run unit tests with coverage report
-npm run test:coverage
+### Struktur Menu
 
-# Run E2E tests (requires dev server running)
-npm run e2e
+| Menu | Path | Deskripsi |
+|------|------|-----------|
+| **Dashboard** | `/admin` | Ringkasan statistik toko, pesanan terbaru, stok menipis |
+| **Produk** | `/admin/products` | CRUD produk, toggle aktif/nonaktif, filter kategori |
+| **Kategori** | `/admin/categories` | CRUD kategori, urutan tampilan |
+| **Pesanan** | `/admin/orders` | Daftar pesanan, update status, detail pesanan |
+| **Pengguna** | `/admin/users` | Daftar customer |
+| **Pengaturan** | `/admin/settings` | Konfigurasi toko, link sosial |
 
-# Run E2E tests with UI
-npm run e2e:ui
+### Status Pesanan
+
+```
+PENDING → PAID → PROCESSING → COMPLETED
+                                    ↓
+                               CANCELLED
 ```
 
 ---
 
-## 🏭 Production Build
+## 💾 Arsitektur Database
 
-```powershell
-# 1. Set environment variables (edit .env or set via your host)
-#    - Set JWT_SECRET to a strong random string
-#    - Set NEXT_PUBLIC_SITE_URL to your domain
+Proyek ini menggunakan **Supabase (PostgreSQL)** sebagai database. Data diakses melalui adapter kustom yang menyediakan API Prisma-compatible.
 
-# 2. Seed the database
-npm run seed
+### Model Data
 
-# 3. Build the application
-npm run build
+```
+store (1) ──→ product (N)
+store (1) ──→ category (N)
+store (1) ──→ order (N)
+store (1) ──→ user (N)
 
-# 4. Start the production server
-npm start
+category (1) ──→ product (N)
+category (1) ──→ parent (self-ref)
+
+product (1) ──→ order_item (N)
+product (1) ──→ product_image (N)
+product (1) ──→ inventory_log (N)
+product (1) ──→ stock_alert (N)
+product (1) ──→ wishlist (N)
+
+order (1) ──→ order_item (N)
+order (1) ──→ payment (1)
+
+user (1) ──→ order (N)
+user (1) ──→ activity_log (N)
+user (1) ──→ customer_segment (N)
 ```
 
-The app builds to `standalone` output mode, suitable for Docker or any Node.js host.
+### Database Adapter
+
+File: `src/lib/supabase-db.ts`
+
+Adapter ini menyediakan API Prisma-compatible:
+
+```typescript
+// Query examples
+const products = await prisma.product.findMany({
+  where: { isActive: true, category: { slug: "insane-dn" } },
+  include: { category: true, images: true },
+  orderBy: { createdAt: "desc" },
+  take: 20,
+});
+
+const order = await prisma.order.create({
+  data: { ... },
+  include: { items: true },
+});
+
+const stats = await prisma.order.aggregate({
+  _sum: { total: true },
+  _count: { id: true },
+  where: { status: { in: ["PAID", "COMPLETED"] } },
+});
+```
+
+**Operasi yang didukung:**
+- `findMany`, `findUnique`, `findFirst`
+- `create`, `createMany`, `upsert`
+- `update`, `updateMany`
+- `delete`, `deleteMany`
+- `count`, `aggregate`, `groupBy`
+- `$transaction` (sequential execution)
+- Relasi (include nested models)
+- Filter: `equals`, `contains`, `in`, `gt`, `gte`, `lt`, `lte`, `startsWith`, `endsWith`
 
 ---
 
-## 📁 Project Structure
+## 📁 Struktur Proyek
 
 ```
 leiz-store/
 ├── src/
-│   ├── app/                    # Next.js App Router pages
-│   │   ├── page.tsx           # Home page
-│   │   ├── layout.tsx         # Root layout
-│   │   ├── products/          # Product catalog & detail pages
-│   │   ├── checkout/          # 4-step checkout flow
-│   │   ├── auth/              # Login & register
-│   │   ├── wishlist/          # Saved items
-│   │   ├── track/             # Order tracking
-│   │   └── api/               # REST API route handlers
-│   ├── components/            # React components
-│   │   ├── layout/            # Navbar, Footer
-│   │   ├── product/           # ProductCard, ProductFilters
-│   │   └── cart/              # CartDrawer
-│   ├── stores/                # Zustand state stores
-│   │   ├── auth-store.ts
-│   │   ├── cart-store.ts
-│   │   ├── locale-store.ts
-│   │   └── theme-store.ts
-│   ├── lib/
-│   │   ├── json-db.ts         # JSON database engine (Prisma-compatible API)
-│   │   ├── prisma-types.ts    # TypeScript type definitions
-│   │   ├── repositories/      # Data access layer
-│   │   ├── services/          # Business logic layer
-│   │   ├── auth.ts            # JWT helpers
-│   │   ├── currency.ts        # Dual-currency (IDR/USD)
-│   │   ├── notifications.ts   # Multi-channel notifications
-│   │   └── qris.ts            # QRIS payment integration
-│   └── types/                 # TypeScript types
-├── data/                      # JSON database files (gitignored, created by seed)
-│   ├── user.json
-│   ├── product.json
-│   ├── order.json
-│   └── ...
-├── scripts/
-│   └── seed-json.ts           # Database seeder
-├── e2e/                       # Playwright E2E tests
+│   ├── app/                          # Next.js App Router
+│   │   ├── layout.tsx                # Root layout (fonts, metadata, PWA)
+│   │   ├── page.tsx                  # Homepage
+│   │   ├── globals.css               # Global styles & Tailwind
+│   │   ├── admin/                    # Admin panel (10 halaman)
+│   │   │   ├── page.tsx              # Dashboard
+│   │   │   ├── layout.tsx            # Admin layout + AuthGuard
+│   │   │   ├── AdminShell.tsx        # Sidebar + header shell
+│   │   │   ├── login/page.tsx        # Admin login
+│   │   │   ├── products/page.tsx     # CRUD produk
+│   │   │   ├── categories/page.tsx   # CRUD kategori
+│   │   │   ├── orders/page.tsx       # Daftar pesanan
+│   │   │   ├── orders/[id]/page.tsx  # Detail pesanan
+│   │   │   ├── users/page.tsx        # Daftar user
+│   │   │   └── settings/page.tsx     # Pengaturan toko
+│   │   ├── products/                 # Halaman publik produk
+│   │   │   ├── page.tsx              # Katalog produk
+│   │   │   └── [slug]/page.tsx       # Detail produk
+│   │   ├── checkout/page.tsx         # Checkout 4 langkah
+│   │   ├── track/page.tsx            # Tracking pesanan
+│   │   ├── wishlist/page.tsx         # Wishlist
+│   │   └── api/                      # REST API routes
+│   │       ├── admin/                # Admin API (CRUD)
+│   │       ├── products/             # Public produk API
+│   │       ├── orders/               # Order API + tracking
+│   │       ├── payments/             # QRIS callback
+│   │       └── health/               # Health check endpoint
+│   ├── components/                   # React komponen
+│   │   ├── layout/                   # Navbar, Footer, LivePurchaseTicker
+│   │   ├── product/                  # ProductCard, ProductFilters
+│   │   ├── cart/                     # CartDrawer
+│   │   ├── performance/              # LazySection, OptimizedImage, ResourceHints
+│   │   └── ui/                       # Animated, Icons
+│   ├── lib/                          # Utility libraries
+│   │   ├── supabase-db.ts            # Database adapter (Prisma API)
+│   │   ├── supabase.ts               # Server Supabase client
+│   │   ├── supabase-browser.ts       # Client Supabase + Realtime
+│   │   ├── admin-auth.ts             # Admin auth helper
+│   │   ├── auth.ts                   # JWT helpers
+│   │   ├── currency.ts               # IDR/USD converter
+│   │   ├── prisma-types.ts           # TypeScript type definitions
+│   │   ├── repositories/             # Data access layer
+│   │   ├── services/                 # Business logic layer
+│   │   ├── errors.ts                 # Custom error classes
+│   │   ├── notifications.ts          # Multi-channel notifications
+│   │   ├── qris.ts                   # QRIS payment integration
+│   │   ├── i18n.ts                   # Internationalization
+│   │   ├── middleware.ts             # Next.js middleware
+│   │   ├── fonts.tsx                 # Font configuration
+│   │   ├── motion.tsx                # Framer Motion variants
+│   │   ├── db.ts                     # Database re-export
+│   │   ├── storage.ts                # Storage helpers
+│   │   └── utils.ts                  # Utility functions
+│   ├── stores/                       # Zustand state
+│   │   ├── cart-store.ts             # Cart state & calculations
+│   │   ├── locale-store.ts           # Locale preferences
+│   │   └── theme-store.ts            # Theme management
+│   ├── styles/                       # CSS files
+│   │   └── performance-animations.css
+│   ├── types/                        # TypeScript types
+│   ├── hooks/                        # Custom React hooks
+│   └── data/                         # Static data fallback
+├── public/                           # Static assets
+│   ├── manifest.json                 # PWA manifest
+│   ├── sw-template.js                # Service Worker template
+│   ├── offline.html                  # Offline fallback page
+│   ├── _headers                      # Cloudflare headers
+│   └── _redirects                    # Cloudflare redirects
+├── scripts/                          # Utility scripts
+│   ├── create-admin.ts               # Create admin user
+│   ├── supabase-schema.sql           # Database schema SQL
+│   ├── seed-products.ts              # Seed product data
+│   └── update-products.ts            # Update product data
+├── e2e/                              # Playwright E2E tests
 │   └── smoke.spec.ts
-├── next.config.ts             # Next.js configuration
-├── tsconfig.json              # TypeScript configuration
-├── playwright.config.ts       # Playwright configuration
-└── .env                       # Environment variables
+├── next.config.ts                    # Next.js configuration
+├── vercel.json                       # Vercel configuration
+├── tsconfig.json                     # TypeScript configuration├── postcss.config.mjs                # PostCSS / TailwindCSS 4 configuration
+└── .env.example                      # Environment variables template
 ```
 
 ---
 
-## 🎨 Features
+## 🌐 API Reference
 
-### Customer Features
-- 🛒 **Shopping Cart** — Persistent cart with mini drawer
-- 💳 **4-Step Checkout** — Customer info → Review → Payment → Confirmation
-- 🔍 **Product Catalog** — Search, filter by category, sort by price/name
-- ❤️ **Wishlist** — Save favorite products
-- 📍 **Order Tracking** — Track order status in real-time
-- 📱 **Responsive** — Works on all devices
+### Public API
 
-### Payment Methods
-- QRIS
-- DANA
-- OVO
-- GoPay
-- Bank Transfer
+| Endpoint | Method | Deskripsi |
+|----------|--------|-----------|
+| `/api/products` | GET | Daftar produk (pagination, filter, search) |
+| `/api/products/[slug]` | GET | Detail produk by slug |
+| `/api/orders` | POST | Buat pesanan baru |
+| `/api/orders/track` | GET | Tracking pesanan by nomor order |
+| `/api/payments/qris/callback` | POST | Callback pembayaran QRIS |
+| `/api/health` | GET | Health check server & database |
 
----
+### Admin API (Authenticated)
 
-## 💾 JSON Database Architecture
-
-The project uses a custom JSON database engine ([src/lib/json-db.ts](src/lib/json-db.ts)) that provides a Prisma-compatible API without requiring any database server.
-
-### How It Works
-- **Data Storage**: Each model is stored as a JSON file in `./data/` directory
-- **Auto-Reload**: Files are reloaded on each query for hot-reload support
-- **Transactions**: Simplified transaction support via sequential execution
-- **Type Safety**: Full TypeScript support via [src/lib/prisma-types.ts](src/lib/prisma-types.ts)
-
-### Supported Operations
-- `findMany()`, `findUnique()`, `findFirst()`
-- `create()`, `createMany()`, `upsert()`
-- `update()`, `updateMany()`
-- `delete()`, `deleteMany()`
-- `count()`, `groupBy()`, `aggregate()`
-- Relations (include nested models)
-- Where filters (equals, contains, in, gt, lt, etc.)
-
-### Backing Up Data
-Simply copy the `./data/` directory to backup all data:
-
-```powershell
-# Backup
-xcopy data data-backup /E /I
-
-# Restore
-xcopy data-backup data /E /I
-```
+| Endpoint | Method | Deskripsi |
+|----------|--------|-----------|
+| `/api/admin/login` | POST | Login admin |
+| `/api/admin/verify` | GET | Verify session admin |
+| `/api/admin/logout` | POST | Logout admin |
+| `/api/admin/products` | GET | Daftar semua produk (admin) |
+| `/api/admin/products/[id]` | GET/PUT/DELETE | Detail, update, hapus produk |
+| `/api/admin/categories` | GET/POST | Daftar/tambah kategori |
+| `/api/admin/categories/[id]` | GET/PUT/DELETE | Detail, update, hapus kategori |
+| `/api/admin/orders` | GET | Daftar semua pesanan |
+| `/api/admin/orders/[id]` | GET | Detail pesanan |
+| `/api/admin/users` | GET | Daftar pengguna |
+| `/api/admin/stats` | GET | Statistik dashboard |
+| `/api/admin/settings` | GET/PUT | Pengaturan toko |
 
 ---
 
-## 🎨 Design System
+## 🚀 Deployment ke Vercel
 
-| Token | Value |
-|-------|-------|
-| Primary | #7C3AED |
-| Secondary | #A855F7 |
-| Accent | #EC4899 |
-| Background | #0F172A |
-| Surface | #1E293B |
+### Automatic Deployment (GitHub)
+
+1. **Push code ke GitHub** (lihat panduan di atas)
+2. **Buat akun Vercel** di [vercel.com](https://vercel.com/)
+3. **Import repository** dari GitHub:
+   - Klik **Add New → Project**
+   - Pilih repository `leiz-store`
+   - Framework sudah terdeteksi sebagai **Next.js**
+4. **Add Environment Variables**:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `JWT_SECRET`
+   - `NEXT_PUBLIC_SITE_URL` → Set ke domain Vercel Anda
+5. **Deploy!** 🚀
+
+### Manual Deployment (Vercel CLI)
+
+```bash
+# Install Vercel CLI
+npm i -g vercel
+
+# Login ke Vercel
+vercel login
+
+# Deploy
+vercel --prod
+```
+
+### Konfigurasi Vercel
+
+File `vercel.json` sudah dikonfigurasi dengan:
+- ✅ Framework: Next.js
+- ✅ Security headers (CSP, HSTS, XSS Protection)
+- ✅ Cache optimization (static assets, API)
+- ✅ Redirects (/shop → /products, /cart → /checkout)
+- ✅ Region: Singapore (sin1) — optimal untuk Asia Tenggara
+- ✅ Compression: gzip/brotli
+
+### PWA di Production
+
+Setelah deploy, pastikan:
+- ✅ Masukkan environment variables di Vercel Dashboard
+- ✅ Domain sudah dikonfigurasi (custom domain optional)
+- ✅ Service worker akan otomatis register di production
 
 ---
 
-## 🧪 Testing
+## 📦 Perintah CLI
 
-### Unit Tests
+### Development
 
-```powershell
-# Run all unit tests
-npm test
-
-# Run with coverage (requires 60% branches/functions, 70% lines)
-npm run test:coverage
-
-# Watch mode during development
-npm run test:watch
+```bash
+npm run dev          # Start development server (localhost:3000)
+npm run build        # Build untuk production
+npm start            # Start production server
+npm run lint         # Run ESLint
+npm run lint:fix     # Fix lint issues otomatis
+npm run typecheck    # TypeScript type checking
 ```
 
-Coverage is collected from `src/lib/**/*.ts` and `src/stores/**/*.ts`.
+### Testing
 
-### E2E Tests
-
-```powershell
-# Make sure the dev server is running first
-npm run dev
-
-# In another terminal, run E2E tests
-npm run e2e
-
-# Interactive UI mode
-npm run e2e:ui
-
-# Debug mode
-npm run e2e:debug
+```bash
+npm test             # Run unit tests (Jest)
+npm run test:watch   # Watch mode
+npm run test:coverage # Coverage report
+npm run e2e          # Run E2E tests (Playwright)
+npm run e2e:ui       # E2E dengan UI mode
 ```
 
-E2E smoke tests cover: homepage, products page, navigation, login page, and checkout auth guard.
+### Performance
 
----
-
-## 🔔 Optional Integrations
-
-The following integrations are **disabled by default**. Uncomment the relevant variables in `.env` to enable:
-
-### Telegram Notifications
-```env
-TELEGRAM_BOT_TOKEN=your_bot_token
-TELEGRAM_CHAT_ID=your_chat_id
+```bash
+npm run analyze       # Analyze bundle size
+npm run optimize      # Optimize bundle
+npm run perf          # Build + analyze + lighthouse
+npm run dedupe        # Deduplicate dependencies
 ```
 
-### Discord Notifications
-```env
-DISCORD_WEBHOOK_URL=your_webhook_url
-```
+### Scripts
 
-### WhatsApp Notifications
-```env
-WHATSAPP_API_KEY=your_api_key
-WHATSAPP_API_URL=your_api_url
-```
-
-### QRIS Payment Webhook
-```env
-QRIS_WEBHOOK_SECRET=your_webhook_secret
+```bash
+npx tsx scripts/create-admin.ts    # Buat admin user di Supabase
+npx tsx scripts/seed-products.ts   # Seed data produk
+npx tsx scripts/update-products.ts # Update data produk
 ```
 
 ---
 
 ## ⚠️ Troubleshooting
 
-### Port 3000 already in use
-```powershell
-# Find process using port 3000
+### Port 3000 sudah terpakai
+
+```bash
+# Cari PID yang menggunakan port 3000
 netstat -ano | findstr :3000
-
-# Kill the process (replace PID with actual process ID)
 taskkill /PID <PID> /F
+
+# Atau Next.js akan otomatis cari port berikutnya
 ```
 
-Next.js will automatically use the next available port (3001, 3002, ...) if 3000 is taken.
+### Database Error
 
-### TypeScript errors
-```powershell
-# Verify types
-npm run typecheck
+```bash
+# Cek koneksi Supabase
+curl http://localhost:3000/api/health
 
-# Ensure all dependencies are installed
-npm install
+# Pastikan environment variables benar
+cat .env.local
+
+# Cek schema sudah diapply di Supabase SQL Editor
 ```
 
-### Database errors / missing data
-```powershell
-# Re-seed the database
-npm run seed
+### Build Error
 
-# Check the ./data/ directory exists and has JSON files
-dir data
-```
-
-### Build errors
-```powershell
-# Clear Next.js cache and rebuild
-Remove-Item -Recurse -Force .next
+```bash
+# Hapus cache dan rebuild
+rm -rf .next
 npm run build
 ```
 
-### `data/` directory is empty after seeding
-The `./data/` directory is gitignored. Run `npm run seed` any time you need to repopulate data after a fresh clone.
+### TypeScript Error
+
+```bash
+npm run typecheck
+npm install  # Pastikan semua dependencies terinstall
+```
+
+### Data Tidak Muncul
+
+- Pastikan table sudah dibuat di Supabase (jalankan `scripts/supabase-schema.sql`)
+- Pastikan data sudah di-seed dengan script yang sesuai
+- Cek console browser untuk error network
 
 ---
 
-## 📜 License
+## 📜 Lisensi
 
-This project is licensed under the MIT License.
+Proyek ini dilisensikan di bawah **MIT License** — lihat file [LICENSE](LICENSE) untuk detail.
 
 ---
 
-Built with ❤️ by LEIZ STORE
+<div align="center">
+  <strong>Dibuat dengan ❤️ oleh LEIZ STORE</strong>
+  <br/>
+  <sub>Dragon Nest Insane DN — Premium Game Materials Marketplace</sub>
+  <br/>
+  <a href="https://leizstore.com">Website</a> •
+  <a href="https://discord.gg/leizstore">Discord</a> •
+  <a href="https://wa.me/6281234567890">WhatsApp</a>
+</div>

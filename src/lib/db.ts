@@ -1,9 +1,9 @@
 /**
- * Database Module - JSON File-Based Storage
- * Zero external database dependencies
+ * Database Module - Supabase Backend
+ * Replaces JSON file-based storage with Supabase PostgreSQL
  */
 
-import { prisma } from "@/lib/json-db";
+import { prisma } from "@/lib/supabase-db";
 
 export { prisma };
 export default prisma;

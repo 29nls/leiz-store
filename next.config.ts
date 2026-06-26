@@ -2,11 +2,13 @@ import type { NextConfig } from "next";
 import path from "path";
 
 const nextConfig: NextConfig = {
-  // Use webpack for compatibility with our config
-  turbopack: {},
-
-  // output: "standalone", // Enable for Docker/production deployment
-  // For Docker: set NEXT_OUTPUT=standalone environment variable
+  // Turbopack config required alongside webpack config in Next.js 16
+  turbopack: {
+    resolveAlias: {
+      "@generated": path.resolve(__dirname, "generated"),
+      "@generated/prisma/client": path.resolve(__dirname, "src/lib/prisma-types.ts"),
+    },
+  },
 
   images: {
     remotePatterns: [
@@ -59,9 +61,7 @@ const nextConfig: NextConfig = {
       "react-icons",
       "@radix-ui/react-icons",
     ],
-    // Optimize CSS
-    optimizeCss: true, // Enable CSS optimization
-    // Enable server actions
+    // Server Actions body size limit
     serverActions: {
       bodySizeLimit: "2mb",
     },

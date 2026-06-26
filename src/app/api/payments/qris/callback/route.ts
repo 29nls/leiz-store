@@ -3,7 +3,7 @@ import { handleQRISCallback } from "@/lib/qris";
 import { prisma } from "@/lib/db";
 import { successResponse, errorResponse } from "@/lib/errors";
 import { checkRateLimit } from "@/lib/middleware";
-import { OrderStatus, PaymentStatus } from "@generated/prisma/client";
+import { OrderStatus, PaymentStatus } from "@/lib/prisma-types";
 
 export async function POST(request: NextRequest) {
   try {

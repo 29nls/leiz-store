@@ -9,7 +9,6 @@
     "lint": "eslint",
     "lint:fix": "eslint --fix",
     "typecheck": "tsc --noEmit",
-    "seed": "tsx scripts/seed-json.ts",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -28,6 +27,8 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
+    "@supabase/ssr": "^0.12.0",
+    "@supabase/supabase-js": "^2.108.2",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -67,9 +68,6 @@
     "typescript": "^5",
     "wait-on": "^8.0.1"
   },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
-  },
   "jest": {
     "preset": "ts-jest",
     "testEnvironment": "jsdom",
@@ -93,7 +91,6 @@
       "src/lib/**/*.ts",
       "src/stores/**/*.ts",
       "!src/lib/db.ts",
-      "!src/lib/json-db.ts",
       "!src/lib/repositories/**",
       "!src/lib/services/**",
       "!src/lib/notifications.ts",
@@ -113,8 +110,5 @@
         "statements": 40
       }
     }
-  },
-  "allowScripts": {
-    "better-sqlite3@12.11.1": true
   }
 }

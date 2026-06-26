@@ -405,13 +405,18 @@ export const settingRepository = {
     });
   },
 
-  async getMany(group: string) {
-    return prisma.setting.findMany({ where: { group } });
+  async getMany(groupName: string) {
+    const all = await prisma.setting.findMany({});
+    return all.filter((s: any) => (s.group || s.groupName) === groupName);
   },
 
-  async getMap(group: string) {
-    const settings = await prisma.setting.findMany({ where: { group } });
-    return Object.fromEntries(settings.map((s: any) => [s.key, s.value]));
+  async getMap(groupName: string) {
+    const settings = await prisma.setting.findMany({});
+    return Object.fromEntries(
+      settings
+        .filter((s: any) => (s.group || s.groupName) === groupName)
+        .map((s: any) => [s.key, s.value])
+    );
   },
 };
 

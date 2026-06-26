@@ -52,7 +52,6 @@ export default function CheckoutPage() {
   const cartStore = useCartStore();
   const items: CartItem[] = cartStore.items;
   const getSubtotal = cartStore.getSubtotal;
-  const getTax = cartStore.getTax;
   const getTotal = cartStore.getTotal;
   const clearCart = cartStore.clearCart;
 
@@ -272,10 +271,6 @@ export default function CheckoutPage() {
                   <div className="flex justify-between text-sm text-text-muted">
                     <span>Subtotal</span>
                     <span>{formatPrice(getSubtotal())}</span>
-                  </div>
-                  <div className="flex justify-between text-sm text-text-muted">
-                    <span>Tax (11%)</span>
-                    <span>{formatPrice(getTax())}</span>
                   </div>
                   <div className="flex justify-between text-lg font-bold pt-2 border-t border-white/5">
                     <span>Total</span>
