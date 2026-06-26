@@ -8,6 +8,7 @@ import CartDrawer from "@/components/cart/CartDrawer";
 import LivePurchaseTicker from "@/components/layout/LivePurchaseTicker";
 import { PerformanceHints } from "@/components/performance/resource-hints";
 import { ThirdPartyScripts } from "@/components/performance/third-party-scripts";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 const geistSans = Geist({
@@ -151,6 +152,9 @@ export default function RootLayout({
         
         {/* Third-party scripts loaded optimally */}
         <ThirdPartyScripts />
+
+        {/* Vercel Speed Insights */}
+        <SpeedInsights />
       </body>
     </html>
   );
