@@ -87,7 +87,8 @@ export default function CheckoutPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.message || data.error || "Failed to create order");
+        const errorMessage = data.message || (data.error && data.error.message) || data.error || "Failed to create order";
+        throw new Error(typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage));
       }
 
       const orderData = data.data || data;

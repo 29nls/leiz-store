@@ -20,6 +20,7 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
     const message = Object.entries(fieldErrors)
       .map(([field, errors]) => `${field}: ${(errors || []).join(", ")}`)
       .join("; ");
+    console.error("[Order Validation Failed]", message);
     return NextResponse.json(
       errorResponse(new ValidationError(message || "Validation failed")),
       { status: 400, headers: corsHeaders() }
@@ -28,8 +29,9 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
 
   const { customerName, customerEmail, customerDiscord, customerIGN, customerNotes, items, paymentMethod, currency } = parsed.data;
 
-  // Discord ID is required for all manual payment methods (which is now the only flow)
+  // Discord ID is required for all manual payment methods
   if (!customerDiscord) {
+    console.error("[Order Validation Failed] Discord ID is missing but required");
     return NextResponse.json(
       errorResponse(new ValidationError("Discord ID is required for payment notification")),
       { status: 400, headers: corsHeaders() }
