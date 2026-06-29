@@ -87,7 +87,7 @@
   "crons": [
     {
       "path": "/api/payments/expire",
-      "schedule": "0 * * * *"
+      "schedule": "0 0 * * *"
     }
   ]
 }
