@@ -64,3 +64,4 @@ skills-lock.json
 /playwright/.cache/
 
 .dockerignore
+knowledge.md

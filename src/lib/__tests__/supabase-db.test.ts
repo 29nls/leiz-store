@@ -388,8 +388,8 @@ describe("findModelName", () => {
     expect(findModelName("nonexistent_table")).toBeNull();
   });
 
-  it("MODEL_TO_TABLE has all 23 models", () => {
-    expect(Object.keys(MODEL_TO_TABLE)).toHaveLength(23);
+  it("MODEL_TO_TABLE has all 25 models", () => {
+    expect(Object.keys(MODEL_TO_TABLE)).toHaveLength(25);
   });
 });
 

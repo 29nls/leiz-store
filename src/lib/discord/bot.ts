@@ -44,6 +44,59 @@ async function discordApiRequest(
 // ─── Send Seller Notification ───────────────────────────────
 
 /**
+ * Send a DM notification to the buyer via Discord bot API.
+ * Creates a DM channel then sends an embed with order status update.
+ */
+export async function sendBuyerNotification(
+  discordId: string,
+  orderNumber: string,
+  message: string
+): Promise<boolean> {
+  const config = getConfig();
+
+  if (!config.botToken || !discordId) {
+    console.warn("[Discord] Cannot send buyer DM: missing bot token or Discord ID");
+    return false;
+  }
+
+  try {
+    // Create DM channel with the user
+    const dmRes = await discordApiRequest(
+      `/users/@me/channels`,
+      { recipient_id: discordId },
+      config.botToken
+    );
+
+    if (!dmRes.ok) {
+      console.error("[Discord] Failed to create DM channel:", dmRes.status, await dmRes.text());
+      return false;
+    }
+
+    const dmData = await dmRes.json();
+    const channelId = dmData.id;
+
+    // Send the embed message in the DM channel
+    const embed = buildBuyerEmbed(orderNumber, message);
+    const msgRes = await discordApiRequest(
+      `/channels/${channelId}/messages`,
+      embed,
+      config.botToken
+    );
+
+    if (msgRes.ok) {
+      console.log("[Discord] Buyer notification sent via DM");
+      return true;
+    }
+
+    console.error("[Discord] Failed to send DM message:", msgRes.status, await msgRes.text());
+    return false;
+  } catch (err) {
+    console.error("[Discord] Buyer DM error:", err);
+    return false;
+  }
+}
+
+/**
  * Send a payment confirmation notification to the seller's Discord channel.
  * Includes embed with order details and interactive admin buttons.
  */
