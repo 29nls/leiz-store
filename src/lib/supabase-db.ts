@@ -69,6 +69,15 @@ const CAMEL_TO_SNAKE: Record<string, string> = {
   toCurrency: "to_currency",
   entityId: "entity_id",
   change: "change_amount",
+  buyerDiscordId: "buyer_discord_id",
+  expiryAt: "expiry_at",
+  confirmedAt: "confirmed_at",
+  cancelledAt: "cancelled_at",
+  actorType: "actor_type",
+  actorId: "actor_id",
+  previousStatus: "previous_status",
+  newStatus: "new_status",
+  buyerName: "buyer_name",
 };
 
 const SNAKE_TO_CAMEL: Record<string, string> = {};
@@ -143,6 +152,8 @@ const MODEL_TO_TABLE: Record<string, string> = {
   inventoryLog: "inventory_log",
   wishlist: "wishlist",
   currencyRate: "currency_rate",
+  paymentConfirmation: "payment_confirmation",
+  orderLog: "order_log",
 };
 
 // ─── Relation/Include definitions ────────────────────────────
@@ -230,6 +241,12 @@ const RELATIONS: Record<string, Record<string, RelationDef>> = {
   analyticsEvent: {},
   salesForecast: {},
   currencyRate: {},
+  paymentConfirmation: {
+    order: { table: "order", foreignKey: "order_id", type: "one" },
+  },
+  orderLog: {
+    order: { table: "order", foreignKey: "order_id", type: "one" },
+  },
 };
 
 // ─── Where clause builder ────────────────────────────────────
@@ -443,26 +460,33 @@ class SupabaseModel {
         const fkValue = item[camelFK] ?? item[relation.foreignKey];
 
         if (relation.type === "one") {
+          let relatedItem: Record<string, any> | null = null;
+
           if (fkValue === null || fkValue === undefined) {
-            item[key] = null;
+            const { data } = await this.getClient()
+              .from(relation.table)
+              .select("*")
+              .eq(relation.foreignKey, item.id)
+              .limit(1);
+            relatedItem = data && data.length > 0 ? toCamel(data[0]) : null;
           } else {
             const { data } = await this.getClient()
               .from(relation.table)
               .select("*")
               .eq("id", fkValue)
               .limit(1);
+            relatedItem = data && data.length > 0 ? toCamel(data[0]) : null;
+          }
 
-            item[key] = data && data.length > 0 ? toCamel(data[0]) : null;
+          item[key] = relatedItem;
 
-            // Handle nested includes on the related item
-            if (item[key] && typeof includeValue === "object" && includeValue !== true) {
-              const nestedInclude = includeValue.include;
-              if (nestedInclude) {
-                const nestedModel = findModelName(relation.table);
-                if (nestedModel) {
-                  const tempModel = new SupabaseModel(this.supabase, nestedModel);
-                  item[key] = (await tempModel.resolveIncludes([item[key]], nestedInclude))[0];
-                }
+          if (relatedItem && typeof includeValue === "object" && includeValue !== true) {
+            const nestedInclude = includeValue.include;
+            if (nestedInclude) {
+              const nestedModel = findModelName(relation.table);
+              if (nestedModel) {
+                const tempModel = new SupabaseModel(this.supabase, nestedModel);
+                item[key] = (await tempModel.resolveIncludes([relatedItem], nestedInclude))[0];
               }
             }
           }

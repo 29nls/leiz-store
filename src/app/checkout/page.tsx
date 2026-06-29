@@ -4,6 +4,7 @@ import type { CartItem } from "@/types";
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
@@ -12,12 +13,13 @@ import {
   CreditCard,
   User,
   Package,
-  Copy,
   CheckCircle2,
   FileCheck,
+  Clock,
 } from "@/components/ui/icons";
 import { useCartStore } from "@/stores/cart-store";
 import { formatPrice, cn } from "@/lib/utils";
+import { PAYMENT_ACCOUNTS } from "@/lib/payment/constants";
 
 const steps = [
   { id: 1, name: "Customer Info", icon: User },
@@ -27,16 +29,18 @@ const steps = [
 ];
 
 const paymentMethods = [
-  { id: "qris", name: "QRIS", icon: "📱", desc: "Scan & Pay" },
-  { id: "dana", name: "DANA", icon: "💰", desc: "E-Wallet" },
-  { id: "ovo", name: "OVO", icon: "💜", desc: "E-Wallet" },
-  { id: "gopay", name: "GoPay", icon: "💚", desc: "E-Wallet" },
-  { id: "bank_transfer", name: "Bank Transfer", icon: "🏦", desc: "Manual Transfer" },
+  ...PAYMENT_ACCOUNTS.map((a) => ({
+    id: a.method,
+    name: a.label,
+    icon: a.icon,
+    desc: `Transfer ke ${a.accountName}`,
+  })),
 ];
 
+
 export default function CheckoutPage() {
+  const router = useRouter();
   const [step, setStep] = useState(1);
-  const [copied, setCopied] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
@@ -46,7 +50,7 @@ export default function CheckoutPage() {
     discord: "",
     ign: "",
     notes: "",
-    paymentMethod: "",
+    paymentMethod: "bank_transfer",
   });
 
   const cartStore = useCartStore();
@@ -55,14 +59,8 @@ export default function CheckoutPage() {
   const getTotal = cartStore.getTotal;
   const clearCart = cartStore.clearCart;
 
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   const handleComplete = async () => {
-    if (!formData.name || !formData.paymentMethod) return;
+    if (!formData.name) return;
 
     setIsSubmitting(true);
     setError(null);
@@ -92,9 +90,16 @@ export default function CheckoutPage() {
         throw new Error(data.message || data.error || "Failed to create order");
       }
 
-      setOrderNumber(data.data?.orderNumber || data.orderNumber);
-      clearCart();
-      setStep(4);
+      const orderData = data.data || data;
+      setOrderNumber(orderData.orderNumber);
+
+      if (orderData.id) {
+        clearCart();
+        router.push(`/payment/${orderData.id}`);
+        return;
+      }
+      
+      throw new Error("Invalid order response");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
@@ -207,14 +212,15 @@ export default function CheckoutPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-text mb-2">Discord Username *</label>
+                    <label className="block text-sm font-medium text-text mb-2">Discord ID / Username *</label>
                     <input
                       type="text"
                       value={formData.discord}
                       onChange={(e) => setFormData({ ...formData, discord: e.target.value })}
                       className="input-premium"
-                      placeholder="username#0000"
+                      placeholder="Discord ID atau username"
                     />
+                    <p className="text-xs text-text-muted/60 mt-1">Wajib diisi untuk notifikasi pembayaran</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-text mb-2">In-Game Name (IGN)</label>
@@ -289,53 +295,33 @@ export default function CheckoutPage() {
                 transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
                 className="space-y-6"
               >
-                <h2 className="text-xl font-semibold text-text">Select Payment Method</h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {paymentMethods.map((method) => (
+                <h2 className="text-xl font-semibold text-text">Metode Pembayaran</h2>
+
+                <div className="space-y-3">
+                  {paymentMethods.map((pm) => (
                     <button
-                      key={method.id}
-                      onClick={() => setFormData({ ...formData, paymentMethod: method.id })}
+                      key={pm.id}
+                      onClick={() => setFormData({ ...formData, paymentMethod: pm.id })}
                       className={cn(
-                        "flex flex-col items-center gap-2 p-5 rounded-2xl border-2 transition-all duration-300 active:scale-[0.97]",
-                        formData.paymentMethod === method.id
-                          ? "border-primary bg-primary/10 shadow-lg shadow-primary/10"
-                          : "border-white/5 hover:border-white/10 bg-surface/30"
+                        "w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all duration-300 text-left",
+                        formData.paymentMethod === pm.id
+                          ? "border-primary/40 bg-primary/5 shadow-lg shadow-primary/5"
+                          : "border-white/5 bg-surface/40 hover:border-white/10"
                       )}
                     >
-                      <span className="text-2xl">{method.icon}</span>
-                      <span className="text-sm font-medium">{method.name}</span>
-                      <span className="text-[10px] text-text-muted/50">{method.desc}</span>
+                      <span className="text-3xl">{pm.icon}</span>
+                      <div className="flex-1">
+                        <p className="font-semibold text-text">{pm.name}</p>
+                        <p className="text-xs text-text-muted/60 mt-0.5">{pm.desc}</p>
+                      </div>
+                      {formData.paymentMethod === pm.id && (
+                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary">
+                          <Check className="h-3.5 w-3.5 text-white" />
+                        </div>
+                      )}
                     </button>
                   ))}
                 </div>
-
-                {formData.paymentMethod && (
-                  <div className="p-5 rounded-2xl bg-surface/40 border border-white/5 space-y-3">
-                    <h3 className="text-sm font-medium text-text">Payment Instructions</h3>
-                    <p className="text-sm text-text-muted">
-                      Transfer the exact amount to the account below:
-                    </p>
-                    <div className="flex items-center justify-between p-4 rounded-xl bg-surface/60 border border-white/5">
-                      <div>
-                        <p className="text-xs text-text-muted/60">Account Number</p>
-                        <p className="font-mono font-semibold text-text">1234567890</p>
-                      </div>
-                      <button
-                        onClick={() => handleCopy("1234567890")}
-                        className="flex h-9 w-9 items-center justify-center rounded-xl hover:bg-surface-light transition-all duration-200"
-                      >
-                        {copied ? (
-                          <CheckCircle2 className="h-4 w-4 text-success" />
-                        ) : (
-                          <Copy className="h-4 w-4 text-text-muted" />
-                        )}
-                      </button>
-                    </div>
-                    <p className="text-xs text-text-muted/50">
-                      After transferring, please confirm your payment on Discord.
-                    </p>
-                  </div>
-                )}
               </motion.div>
             )}
 
@@ -345,28 +331,30 @@ export default function CheckoutPage() {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
-                className="text-center py-8 space-y-6"
+                className="py-4 space-y-6"
               >
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.2, type: "spring", bounce: 0.5 }}
-                  className="flex h-20 w-20 items-center justify-center rounded-full bg-success/15 mx-auto"
-                >
-                  <CheckCircle2 className="h-10 w-10 text-success" />
-                </motion.div>
-                <h2 className="text-2xl font-bold text-text">Order Confirmed!</h2>
-                <p className="text-text-muted max-w-md mx-auto">
-                  Thank you for your order. We&apos;ve sent the details to your Discord.
-                  Please complete the payment and send proof on our Discord server.
-                </p>
-                {orderNumber && (
-                  <div className="inline-flex items-center gap-2 rounded-xl bg-surface/60 border border-white/5 px-6 py-3">
-                    <span className="text-sm text-text-muted">Order Number:</span>
-                    <span className="font-mono font-bold text-primary">{orderNumber}</span>
-                  </div>
-                )}
-                <div className="flex justify-center">
+                <div className="text-center space-y-4">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.2, type: "spring", bounce: 0.5 }}
+                    className="flex h-20 w-20 items-center justify-center rounded-full bg-success/15 mx-auto"
+                  >
+                    <CheckCircle2 className="h-10 w-10 text-success" />
+                  </motion.div>
+                  <h2 className="text-2xl font-bold text-text">Order Confirmed!</h2>
+
+                  {orderNumber && (
+                    <div className="inline-flex items-center gap-2 rounded-xl bg-surface/60 border border-white/5 px-6 py-3">
+                      <span className="text-sm text-text-muted">Order Number:</span>
+                      <span className="font-mono font-bold text-primary">{orderNumber}</span>
+                    </div>
+                  )}
+                </div>
+
+
+
+                <div className="flex justify-center pt-4">
                   <Link
                     href="/products"
                     className="rounded-full bg-primary px-8 py-3.5 text-sm font-semibold text-white shadow-lg shadow-primary/20 hover:bg-primary-light transition-all duration-300"
@@ -388,7 +376,8 @@ export default function CheckoutPage() {
           {/* Navigation */}
           {step < 4 && (
             <div className="flex justify-between mt-10 pt-6 border-t border-white/5">
-              {step > 1 ? (                  <button
+              {step > 1 ? (
+                <button
                   onClick={() => { setError(null); setStep(step - 1); }}
                   className="flex items-center gap-2 rounded-full border border-white/10 px-6 py-3 text-sm font-medium text-text-muted hover:text-text hover:bg-surface/40 transition-all duration-300"
                 >
@@ -401,8 +390,8 @@ export default function CheckoutPage() {
               <button
                 onClick={() => (step === 3 ? handleComplete() : setStep(step + 1))}
                 disabled={
-                  (step === 1 && !formData.name) ||
-                  (step === 3 && (!formData.paymentMethod || isSubmitting))
+                  (step === 1 && (!formData.name || !formData.discord)) ||
+                  (step === 3 && isSubmitting)
                 }
                 className={cn(
                   "flex items-center gap-2 rounded-full px-8 py-3.5 text-sm font-semibold transition-all duration-300 active:scale-[0.97]",
@@ -419,7 +408,7 @@ export default function CheckoutPage() {
                   </>
                 ) : (
                   <>
-                    {step === 3 ? "Complete Order" : "Continue"}
+                    {step === 3 ? "Buat Order & Bayar" : "Continue"}
                     <ArrowRight className="h-4 w-4" />
                   </>
                 )}

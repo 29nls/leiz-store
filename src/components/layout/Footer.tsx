@@ -2,7 +2,7 @@
 
 import { MessageCircle, Mail } from "@/components/ui/icons";
 
-const paymentMethods = ["QRIS", "DANA", "OVO", "GoPay", "Transfer"];
+const paymentMethods = ["Bank Transfer", "GoPay", "DANA", "SeaBank"];
 
 export default function Footer() {
   return (

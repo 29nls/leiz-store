@@ -165,7 +165,7 @@ export const faqs = [
   {
     id: "2",
     question: "What payment methods do you accept?",
-    answer: "We accept QRIS, DANA, OVO, GoPay, and Bank Transfer. All payments are processed securely.",
+    answer: "We accept Bank Transfer, GoPay, DANA, and SeaBank. All payments are processed securely via manual verification.",
   },
   {
     id: "3",

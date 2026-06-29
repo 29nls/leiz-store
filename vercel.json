@@ -83,5 +83,11 @@
       "destination": "/checkout",
       "permanent": true
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/payments/expire",
+      "schedule": "0 * * * *"
+    }
   ]
 }

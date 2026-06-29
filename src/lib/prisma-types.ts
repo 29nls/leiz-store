@@ -12,12 +12,18 @@ export type Role = (typeof Role)[keyof typeof Role];
 
 export const OrderStatus = {
   PENDING: "PENDING",
+  PENDING_PAYMENT: "PENDING_PAYMENT",
   WAITING_PAYMENT: "WAITING_PAYMENT",
+  WAITING_CONFIRMATION: "WAITING_CONFIRMATION",
   PAID: "PAID",
   PROCESSING: "PROCESSING",
   COMPLETED: "COMPLETED",
+  REJECTED: "REJECTED",
+  NEEDS_REVIEW: "NEEDS_REVIEW",
   CANCELLED: "CANCELLED",
+  FORCE_CANCELLED: "FORCE_CANCELLED",
   REFUNDED: "REFUNDED",
+  EXPIRED: "EXPIRED",
 } as const;
 export type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus];
 
@@ -31,11 +37,10 @@ export const PaymentStatus = {
 export type PaymentStatus = (typeof PaymentStatus)[keyof typeof PaymentStatus];
 
 export const PaymentMethod = {
-  QRIS: "qris",
-  DANA: "dana",
-  OVO: "ovo",
-  GOPAY: "gopay",
   BANK_TRANSFER: "bank_transfer",
+  GOPAY: "gopay",
+  DANA: "dana",
+  SEABANK: "seabank",
 } as const;
 export type PaymentMethod = (typeof PaymentMethod)[keyof typeof PaymentMethod];
 
@@ -158,6 +163,7 @@ export interface Order {
   customerDiscord?: string | null;
   customerIGN?: string | null;
   customerNotes?: string | null;
+  buyerDiscordId?: string | null;
   subtotal: number;
   subtotalUSD?: number | null;
   tax: number;
@@ -170,8 +176,11 @@ export interface Order {
   paymentMethod?: string | null;
   paymentProof?: string | null;
   paymentRef?: string | null;
+  expiryAt?: Date | null;
+  confirmedAt?: Date | null;
   paidAt?: Date | null;
   completedAt?: Date | null;
+  cancelledAt?: Date | null;
   userId?: string | null;
   storeId?: string | null;
   notes?: string | null;
@@ -207,6 +216,27 @@ export interface Payment {
   paidAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface PaymentConfirmation {
+  id: string;
+  orderId: string;
+  buyerName: string;
+  buyerDiscordId?: string | null;
+  note?: string | null;
+  createdAt: Date;
+}
+
+export interface OrderLog {
+  id: string;
+  orderId: string;
+  actorType: string;
+  actorId?: string | null;
+  action: string;
+  previousStatus?: string | null;
+  newStatus?: string | null;
+  metadata?: any;
+  createdAt: Date;
 }
 
 export interface AnalyticsEvent {
@@ -557,6 +587,7 @@ export namespace Prisma {
     customerDiscord?: string;
     customerIGN?: string;
     customerNotes?: string;
+    buyerDiscordId?: string;
     subtotal: number;
     subtotalUSD?: number;
     tax?: number;
@@ -567,6 +598,7 @@ export namespace Prisma {
     totalUSD?: number;
     currency?: string;
     paymentMethod?: string;
+    expiryAt?: Date;
     userId?: string;
     storeId?: string;
     items?: { create: any };
@@ -575,8 +607,12 @@ export namespace Prisma {
 
   export type OrderUpdateInput = {
     status?: OrderStatus;
+    buyerDiscordId?: string;
+    expiryAt?: Date;
+    confirmedAt?: Date;
     paidAt?: Date;
     completedAt?: Date;
+    cancelledAt?: Date;
     [key: string]: any;
   };
 

@@ -21,9 +21,12 @@ import {
 import { convertCurrency, type Currency } from "@/lib/currency";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@/lib/prisma-types";
+import { PAYMENT_EXPIRY_MS } from "@/lib/payment/constants";
+import { logOrderStatusChange } from "@/lib/payment/order-logger";
 import {
   Role,
   OrderStatus,
+  PaymentStatus,
   PaymentMethod,
   NotificationChannel,
   StockAlertType,
@@ -272,6 +275,28 @@ export const orderService = {
       return newOrder;
     });
 
+    // Proceed with manual payment flow for all orders
+    const expiryAt = new Date(Date.now() + PAYMENT_EXPIRY_MS);
+
+    await orderRepository.update((order as any).id, {
+      status: OrderStatus.PENDING_PAYMENT,
+      buyerDiscordId: data.customerDiscord || undefined,
+      expiryAt,
+    });
+    (order as any).status = OrderStatus.PENDING_PAYMENT;
+    (order as any).buyerDiscordId = data.customerDiscord;
+    (order as any).expiryAt = expiryAt.toISOString();
+
+    // Log status change
+    await logOrderStatusChange({
+      orderId: (order as any).id,
+      actorType: "SYSTEM",
+      action: "ORDER_CREATED_MANUAL_PAYMENT",
+      previousStatus: OrderStatus.PENDING,
+      newStatus: OrderStatus.PENDING_PAYMENT,
+      metadata: { paymentMethod: data.paymentMethod, expiryAt: expiryAt.toISOString() },
+    });
+
     // Track analytics
     await analyticsRepository.trackEvent({
       event: "order_created",
@@ -286,7 +311,10 @@ export const orderService = {
       },
     });
 
-    return order;
+    return {
+      ...order as any,
+      manualPayment: true,
+    };
   },
 
   async updateStatus(id: string, status: string) {

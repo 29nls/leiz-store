@@ -67,12 +67,24 @@ export interface CartStore {
 
 export type OrderStatus =
   | "pending"
+  | "pending_payment"
   | "waiting_payment"
+  | "waiting_confirmation"
   | "paid"
   | "processing"
   | "completed"
+  | "rejected"
+  | "needs_review"
   | "cancelled"
-  | "refunded";
+  | "force_cancelled"
+  | "refunded"
+  | "expired";
+
+export type ManualPaymentMethod =
+  | "bank_transfer"
+  | "gopay"
+  | "dana"
+  | "seabank";
 
 export interface Order {
   id: string;
