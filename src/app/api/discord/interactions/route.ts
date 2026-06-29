@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { verifyKey, InteractionType, InteractionResponseType } from "discord-interactions";
 import {
   adminAcceptPayment,
@@ -7,7 +7,6 @@ import {
   adminForceCancelOrder,
   getOrderForPayment,
 } from "@/lib/payment/payment-service";
-import { sendBuyerNotification } from "@/lib/discord/bot";
 
 
 export async function POST(req: NextRequest) {
@@ -67,91 +66,66 @@ export async function POST(req: NextRequest) {
 
     const [, action, orderId] = match;
 
-    let result: { success: boolean; error?: string };
-
-    try {
-      switch (action) {
-        case "accept":
-          result = await adminAcceptPayment(orderId, adminId);
-          break;
-        case "reject":
-          result = await adminRejectPayment(orderId, adminId);
-          break;
-        case "cancel":
-          result = await adminCancelOrder(orderId, adminId);
-          break;
-        case "force_cancel":
-          result = await adminForceCancelOrder(orderId, adminId);
-          break;
-        default:
-          result = { success: false, error: "Unknown action" };
-      }
-
-      if (!result.success) {
-        return NextResponse.json({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: `❌ Gagal memproses order: ${result.error}`,
-            flags: 64, // Ephemeral
-          }
-        });
-      }
-
-      // Notify Buyer in the background
+    // Use after() to process the DB action and patch Discord asynchronously
+    after(async () => {
+      let result: { success: boolean; error?: string };
       try {
-        const orderData = await getOrderForPayment(orderId);
-        if (orderData) {
-          const msgs: Record<string, string> = {
-            accept: "✅ Pembayaran Anda telah diverifikasi! Pesanan sedang diproses.",
-            reject: "⚠️ Pembayaran belum terdeteksi. Silakan cek kembali atau hubungi admin.",
-            cancel: "❌ Pesanan Anda telah dibatalkan.",
-            force_cancel: "❌ Pesanan Anda telah dibatalkan oleh admin.",
-          };
-          await sendBuyerNotification(
-            orderData.buyer_discord_id || orderData.customer_discord,
-            orderData.order_number,
-            msgs[action] || "Status pesanan diperbarui."
-          );
+        switch (action) {
+          case "accept":
+            result = await adminAcceptPayment(orderId, adminId);
+            break;
+          case "reject":
+            result = await adminRejectPayment(orderId, adminId);
+            break;
+          case "cancel":
+            result = await adminCancelOrder(orderId, adminId);
+            break;
+          case "force_cancel":
+            result = await adminForceCancelOrder(orderId, adminId);
+            break;
+          default:
+            result = { success: false, error: "Unknown action" };
         }
-      } catch (err) {
-        console.error("[DiscordInteraction] Buyer notification failed:", err);
-      }
 
-      const actionLabels: Record<string, string> = {
-        accept: "✅ Pembayaran dikonfirmasi masuk",
-        reject: "⚠️ Pembayaran ditandai belum masuk",
-        cancel: "🚫 Order dibatalkan",
-        force_cancel: "⛔ Order dibatalkan paksa",
-      };
-
-      const embed = message.embeds[0];
-      if (embed) {
-        embed.color = action === "accept" ? 0x22c55e : 0xef4444;
-        embed.footer = {
-          text: `${actionLabels[action]} oleh ${adminTag}`,
+        const actionLabels: Record<string, string> = {
+          accept: "✅ Pembayaran dikonfirmasi masuk",
+          reject: "⚠️ Pembayaran ditandai belum masuk",
+          cancel: "🚫 Order dibatalkan",
+          force_cancel: "⛔ Order dibatalkan paksa",
         };
-      }
 
-      // Return UPDATE_MESSAGE
-      return NextResponse.json({
-        type: InteractionResponseType.UPDATE_MESSAGE,
-        data: {
-          content: `${actionLabels[action]} — Order ID: \`${orderId}\`\nOleh: <@${adminId}>`,
-          embeds: embed ? [embed] : [],
-          components: [],
-        },
-      });
-
-    } catch (err) {
-      console.error("[DiscordInteraction] Processing error:", err);
-      return NextResponse.json({
-        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-        data: {
-          content: `❌ Terjadi kesalahan internal saat memproses aksi.`,
-          flags: 64, // Ephemeral
+        const embed = message.embeds[0];
+        if (embed) {
+          embed.color = action === "accept" ? 0x22c55e : 0xef4444;
+          embed.footer = {
+            text: `${actionLabels[action]} oleh ${adminTag}`,
+          };
         }
-      });
-    }
+
+        // Patch the original message
+        await fetch(
+          `https://discord.com/api/v10/webhooks/${interaction.application_id}/${interaction.token}/messages/@original`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              content: result.success 
+                ? `${actionLabels[action]} — Order ID: \`${orderId}\`\nOleh: <@${adminId}>`
+                : `❌ Gagal memproses order: ${result.error}`,
+              embeds: embed ? [embed] : [],
+              components: [],
+            }),
+          }
+        );
+      } catch (err) {
+        console.error("[DiscordInteraction] Processing error:", err);
+      }
+    });
+
+    // Immediately acknowledge the button click to prevent "Interaction failed"
+    return NextResponse.json({
+      type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE,
+    });
   }
 
   return NextResponse.json({ error: "Unknown interaction type" }, { status: 400 });

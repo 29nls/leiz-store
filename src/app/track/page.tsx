@@ -62,12 +62,19 @@ const statusConfig: Record<
     bg: "bg-accent/15",
     description: "Please complete your payment to proceed.",
   },
+  waiting_confirmation: {
+    label: "Verifikasi Admin",
+    icon: Clock,
+    color: "text-blue-400",
+    bg: "bg-blue-500/15",
+    description: "Menunggu verifikasi admin.",
+  },
   paid: {
-    label: "Paid",
+    label: "Sukses",
     icon: CheckCircle2,
     color: "text-success",
     bg: "bg-success/15",
-    description: "Payment confirmed! Your order is being processed.",
+    description: "Pembayaran terverifikasi! Pesanan Anda sedang diproses.",
   },
   processing: {
     label: "Processing",
@@ -90,6 +97,20 @@ const statusConfig: Record<
     bg: "bg-error/15",
     description: "This order has been cancelled.",
   },
+  rejected: {
+    label: "Ditolak",
+    icon: XCircle,
+    color: "text-error",
+    bg: "bg-error/15",
+    description: "Pembayaran ditolak oleh admin.",
+  },
+  force_cancelled: {
+    label: "Dibatalkan",
+    icon: XCircle,
+    color: "text-error",
+    bg: "bg-error/15",
+    description: "Pesanan dibatalkan secara paksa.",
+  },
   refunded: {
     label: "Refunded",
     icon: ArrowLeft,
@@ -99,11 +120,12 @@ const statusConfig: Record<
   },
 };
 
-const allStatuses = ["pending", "waiting_payment", "paid", "processing", "completed"];
+const allStatuses = ["pending", "waiting_payment", "waiting_confirmation", "paid", "processing", "completed"];
 
 function StatusTimeline({ currentStatus }: { currentStatus: string }) {
-  const currentIdx = allStatuses.indexOf(currentStatus);
-  const isTerminal = currentStatus === "cancelled" || currentStatus === "refunded";
+  const normalizedStatus = currentStatus.toLowerCase();
+  const currentIdx = allStatuses.indexOf(normalizedStatus);
+  const isTerminal = ["cancelled", "refunded", "rejected", "force_cancelled"].includes(normalizedStatus);
 
   return (
     <div className="space-y-0">
@@ -111,7 +133,7 @@ function StatusTimeline({ currentStatus }: { currentStatus: string }) {
         const config = statusConfig[status];
         const Icon = config.icon;
         const isCompleted = !isTerminal && i <= currentIdx;
-        const isCurrent = !isTerminal && status === currentStatus;
+        const isCurrent = !isTerminal && status === normalizedStatus;
 
         return (
           <div key={status} className="flex gap-4">
@@ -298,15 +320,16 @@ export default function TrackOrderPage() {
                       <span
                         className={cn(
                           "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold",
-                          statusConfig[order.status]?.bg,
-                          statusConfig[order.status]?.color
+                          statusConfig[order.status.toLowerCase()]?.bg || "bg-surface",
+                          statusConfig[order.status.toLowerCase()]?.color || "text-text"
                         )}
                       >
                         {(() => {
-                          const SIcon = statusConfig[order.status]?.icon || Clock;
+                          const normalized = order.status.toLowerCase();
+                          const SIcon = statusConfig[normalized]?.icon || Clock;
                           return <SIcon className="h-3.5 w-3.5" />;
                         })()}
-                        {statusConfig[order.status]?.label || order.status}
+                        {statusConfig[order.status.toLowerCase()]?.label || order.status}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">

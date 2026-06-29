@@ -39,7 +39,7 @@ export const POST = withErrorHandling(async (
     );
   }
 
-  const { buyerName, buyerDiscordId, note } = parsed.data;
+  const { buyerName, buyerDiscordId, note, paymentProofBase64 } = parsed.data;
 
   const result = await confirmTransfer(orderId, buyerName, buyerDiscordId, note);
 
@@ -54,6 +54,9 @@ export const POST = withErrorHandling(async (
   try {
     const orderData = await getOrderForPayment(orderId);
     if (orderData) {
+      if (paymentProofBase64) {
+        (orderData as any).paymentProofBase64 = paymentProofBase64;
+      }
       await sendSellerNotification(orderData);
     }
   } catch (err) {

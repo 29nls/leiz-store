@@ -22,16 +22,22 @@ function getConfig() {
 
 async function discordApiRequest(
   endpoint: string,
-  body: any,
+  body: any | FormData,
   token: string
 ): Promise<Response> {
+  const isFormData = body instanceof FormData;
+  const headers: Record<string, string> = {
+    Authorization: `Bot ${token}`,
+  };
+  
+  if (!isFormData) {
+    headers["Content-Type"] = "application/json";
+  }
+
   return fetch(`https://discord.com/api/v10${endpoint}`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bot ${token}`,
-    },
-    body: JSON.stringify(body),
+    headers,
+    body: isFormData ? body : JSON.stringify(body),
   });
 }
 
@@ -48,12 +54,33 @@ export async function sendSellerNotification(orderData: any): Promise<boolean> {
   const embed = buildSellerEmbed(orderData);
   const components = buildAdminButtons(orderData.id);
 
+  // Attach image if present
+  let payload: any = { ...embed, components };
+  let isMultipart = false;
+  let formData = new FormData();
+
+  if (orderData.paymentProofBase64) {
+    const match = orderData.paymentProofBase64.match(/^data:(image\/.+);base64,(.+)$/);
+    if (match) {
+      const mime = match[1];
+      const ext = mime.split("/")[1] || "png";
+      const buffer = Buffer.from(match[2], "base64");
+      const blob = new Blob([buffer], { type: mime });
+      
+      payload.embeds[0].image = { url: `attachment://proof.${ext}` };
+      
+      formData.append("payload_json", JSON.stringify(payload));
+      formData.append("files[0]", blob, `proof.${ext}`);
+      isMultipart = true;
+    }
+  }
+
   // Try bot token + channel first
   if (config.botToken && config.sellerChannelId) {
     try {
       const res = await discordApiRequest(
         `/channels/${config.sellerChannelId}/messages`,
-        { ...embed, components },
+        isMultipart ? formData : payload,
         config.botToken
       );
 
@@ -94,62 +121,4 @@ export async function sendSellerNotification(orderData: any): Promise<boolean> {
   return false;
 }
 
-// ─── Send Buyer Notification (DM) ───────────────────────────
 
-/**
- * Send a DM to the buyer based on their Discord ID.
- * Requires the bot token to be configured.
- */
-export async function sendBuyerNotification(
-  buyerDiscordId: string | null | undefined,
-  orderNumber: string,
-  message: string
-): Promise<boolean> {
-  if (!buyerDiscordId) {
-    console.warn("[Discord] No buyer Discord ID — skipping buyer notification");
-    return false;
-  }
-
-  const config = getConfig();
-  if (!config.botToken) {
-    console.warn("[Discord] No bot token — skipping buyer DM");
-    return false;
-  }
-
-  try {
-    // Step 1: Create DM channel
-    const dmRes = await discordApiRequest(
-      "/users/@me/channels",
-      { recipient_id: buyerDiscordId },
-      config.botToken
-    );
-
-    if (!dmRes.ok) {
-      const errBody = await dmRes.text();
-      console.error("[Discord] Failed to create DM channel:", dmRes.status, errBody);
-      return false;
-    }
-
-    const dmChannel = await dmRes.json();
-
-    // Step 2: Send message to DM channel
-    const embed = buildBuyerEmbed(orderNumber, message);
-    const msgRes = await discordApiRequest(
-      `/channels/${dmChannel.id}/messages`,
-      embed,
-      config.botToken
-    );
-
-    if (msgRes.ok) {
-      console.log(`[Discord] Buyer DM sent to ${buyerDiscordId}`);
-      return true;
-    }
-
-    const errBody = await msgRes.text();
-    console.error("[Discord] Failed to send DM:", msgRes.status, errBody);
-    return false;
-  } catch (err) {
-    console.error("[Discord] Buyer DM error:", err);
-    return false;
-  }
-}

@@ -9,6 +9,8 @@ interface OrderData {
   customer_name: string;
   buyer_discord_id?: string | null;
   customer_discord?: string | null;
+  customer_ign?: string | null;
+  customer_notes?: string | null;
   total: number;
   payment_method?: string | null;
   status: string;
@@ -37,8 +39,10 @@ export function buildSellerEmbed(order: OrderData) {
           { name: "📋 Order", value: `\`${order.order_number}\``, inline: true },
           { name: "👤 Pembeli", value: order.customer_name, inline: true },
           { name: "🎮 Discord ID", value: discordId, inline: true },
+          { name: "🎮 IGN", value: order.customer_ign || "—", inline: true },
           { name: "💰 Total", value: `Rp${Number(order.total).toLocaleString("id-ID")}`, inline: true },
           { name: "💳 Metode", value: paymentMethod, inline: true },
+          { name: "📝 Catatan", value: order.customer_notes || "—", inline: true },
           { name: "📊 Status", value: order.status, inline: true },
           { name: "📦 Produk", value: items, inline: false },
           {

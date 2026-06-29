@@ -94,6 +94,7 @@ export {
   FileText,
   Download,
   Upload,
+  UploadCloud,
   Filter,
   RefreshCw,
 } from 'lucide-react';
@@ -115,6 +116,7 @@ export {
   FolderOpen,
   Save,
   FileCheck,
+  ImagePlus,
 } from 'lucide-react';
 
 // Other Common Icons

@@ -13,6 +13,8 @@ import {
   AlertCircle,
   XCircle,
   CreditCard,
+  UploadCloud,
+  ImagePlus,
 } from "@/components/ui/icons";
 import { formatPrice, cn } from "@/lib/utils";
 import { PAYMENT_ACCOUNTS, type PaymentAccount } from "@/lib/payment/constants";
@@ -151,6 +153,26 @@ export default function PaymentPage() {
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
+  const [paymentProofBase64, setPaymentProofBase64] = useState<string | null>(null);
+  const [paymentProofName, setPaymentProofName] = useState<string | null>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Ukuran gambar maksimal 5MB");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setPaymentProofBase64(event.target?.result as string);
+      setPaymentProofName(file.name);
+      setError(null);
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Fetch order data via a lightweight API
   useEffect(() => {
@@ -194,6 +216,7 @@ export default function PaymentPage() {
           buyerName: order.customer_name,
           buyerDiscordId: order.buyer_discord_id || order.customer_discord,
           note: "",
+          paymentProofBase64: paymentProofBase64 || undefined,
         }),
       });
 
@@ -383,6 +406,29 @@ export default function PaymentPage() {
             {/* Confirm Button */}
             {isPayable && !confirmed && (
               <>
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-text flex items-center gap-2">
+                    <UploadCloud className="h-4 w-4" />
+                    Upload Bukti Pembayaran
+                  </h3>
+                  <label className="block w-full rounded-2xl border-2 border-dashed border-white/10 bg-surface/40 p-6 text-center cursor-pointer hover:border-primary/50 transition-colors">
+                    <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+                    {paymentProofBase64 ? (
+                      <div className="space-y-2">
+                        <CheckCircle2 className="h-8 w-8 text-emerald-500 mx-auto" />
+                        <p className="text-sm font-medium text-emerald-400">{paymentProofName}</p>
+                        <p className="text-xs text-text-muted">Klik untuk mengganti gambar</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <ImagePlus className="h-8 w-8 text-text-muted mx-auto" />
+                        <p className="text-sm font-medium text-text">Pilih atau letakkan gambar disini</p>
+                        <p className="text-xs text-text-muted">Maksimal 5MB (JPG, PNG)</p>
+                      </div>
+                    )}
+                  </label>
+                </div>
+
                 {error && (
                   <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-sm text-red-400">
                     {error}
