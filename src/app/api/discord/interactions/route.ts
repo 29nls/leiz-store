@@ -9,9 +9,9 @@ import {
 } from "@/lib/payment/payment-service";
 import { sendBuyerNotification } from "@/lib/discord/bot";
 
-const DISCORD_PUBLIC_KEY = process.env.DISCORD_PUBLIC_KEY;
 
 export async function POST(req: NextRequest) {
+  const DISCORD_PUBLIC_KEY = process.env.DISCORD_PUBLIC_KEY;
   if (!DISCORD_PUBLIC_KEY) {
     console.error("[Discord] DISCORD_PUBLIC_KEY is missing");
     return NextResponse.json({ error: "Server error" }, { status: 500 });
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
   // Read raw body for signature verification
   const rawBody = await req.text();
 
-  const isValidRequest = verifyKey(
+  const isValidRequest = await verifyKey(
     rawBody,
     signature,
     timestamp,
