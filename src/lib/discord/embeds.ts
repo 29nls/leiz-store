@@ -17,6 +17,7 @@ interface OrderData {
   confirmed_at?: string | null;
   created_at: string;
   order_item?: Array<{ name: string; quantity: number; price: number }>;
+  orderItem?: Array<{ name: string; quantity: number; price: number }>;
 }
 
 /**
