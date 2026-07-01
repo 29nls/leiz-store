@@ -24,7 +24,7 @@ interface OrderData {
  * Build the seller notification embed object for Discord
  */
 export function buildSellerEmbed(order: OrderData) {
-  const items = (order.order_item || [])
+  const items = (order.orderItem || order.order_item || [])
     .map((item) => `• ${item.name} x${item.quantity} — Rp${Number(item.price).toLocaleString("id-ID")}`)
     .join("\n") || "—";
 

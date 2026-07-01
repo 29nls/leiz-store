@@ -613,7 +613,7 @@ class SupabaseModel {
   }
 
   async create(options: Record<string, any>): Promise<Record<string, any>> {
-    let data = { ...options.data };
+    const data = { ...options.data };
 
     // Handle nested creates (e.g., items: { create: [...] })
     const nestedIncludes: Record<string, any> = {};
@@ -649,7 +649,7 @@ class SupabaseModel {
 
     if (error) throw error;
 
-    let created = toCamel(result);
+    const created = toCamel(result);
 
     // Create nested items
     for (const [key, nested] of Object.entries(nestedIncludes)) {
@@ -715,7 +715,7 @@ class SupabaseModel {
     const { data: result, error } = await query.single();
     if (error) throw error;
 
-    let updated = toCamel(result);
+    const updated = toCamel(result);
 
     if (include) {
       return (await this.findUnique({ where: { id: updated.id }, include })) || updated;

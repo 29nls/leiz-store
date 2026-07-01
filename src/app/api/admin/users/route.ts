@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
 
     // Also fetch auth-level last_sign_in_at from Supabase Auth for each user
     // This requires listing auth users, which is expensive — skip if > 50 users
-    let authUsers: Record<string, { last_sign_in_at: string | null; banned_until: string | null }> = {};
+    const authUsers: Record<string, { last_sign_in_at: string | null; banned_until: string | null }> = {};
     if ((count || 0) <= 50) {
       const { data: authData } = await supabaseAdmin.auth.admin.listUsers({ perPage: 100 });
       if (authData?.users) {

@@ -108,9 +108,9 @@ export async function sendSellerNotification(orderData: any): Promise<boolean> {
   const components = buildAdminButtons(orderData.id);
 
   // Attach image if present
-  let payload: any = { ...embed, components };
+  const payload: any = { ...embed, components };
   let isMultipart = false;
-  let formData = new FormData();
+  const formData = new FormData();
 
   if (orderData.paymentProofBase64) {
     const match = orderData.paymentProofBase64.match(/^data:(image\/.+);base64,(.+)$/);

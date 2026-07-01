@@ -6,6 +6,7 @@ import {
   TrendingUp, RefreshCw, DollarSign,
 } from "lucide-react";
 import { getSupabaseBrowser, subscribeToTable } from "@/lib/supabase-browser";
+import Link from "next/link";
 
 interface Stats {
   totalProducts: number;
@@ -242,11 +243,11 @@ export default function AdminDashboard() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         {statCards.map((card) => (
-          <a
-            key={card.label}
-            href={card.href}
-            className={`${card.bg} border ${card.border} rounded-xl p-5 hover:scale-[1.02] transition-all duration-200 group`}
-          >
+           <Link
+               key={card.label}
+               href={card.href}
+               className={`${card.bg} border ${card.border} rounded-xl p-5 hover:scale-[1.02] transition-all duration-200 group`}
+             >
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm text-gray-400">{card.label}</p>
               <card.icon className={`h-5 w-5 ${card.color} opacity-60 group-hover:opacity-100 transition-opacity`} />
@@ -255,7 +256,7 @@ export default function AdminDashboard() {
               {typeof card.value === "number" ? card.value.toLocaleString("id-ID") : card.value}
             </p>
             {card.sub && <p className="text-xs text-gray-500 mt-1">{card.sub}</p>}
-          </a>
+           </Link>
         ))}
       </div>
 
@@ -264,9 +265,9 @@ export default function AdminDashboard() {
         <div className="bg-gray-900/80 border border-gray-800 rounded-xl p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-white">Pesanan Terbaru</h2>
-            <a href="/admin/orders" className="text-sm text-blue-400 hover:text-blue-300 transition-colors">
+            <Link href="/admin/orders" className="text-sm text-blue-400 hover:text-blue-300 transition-colors">
               Lihat semua →
-            </a>
+             </Link>
           </div>
 
           {recentOrders.length === 0 ? (
@@ -277,10 +278,10 @@ export default function AdminDashboard() {
           ) : (
             <div className="space-y-2">
               {recentOrders.map((order) => (
-                <a
-                  key={order.id}
-                  href="/admin/orders"
-                  className="flex items-center justify-between p-3 rounded-lg bg-gray-800/30 hover:bg-gray-800/60 transition-colors group"
+<Link
+                   key={order.id}
+                   href="/admin/orders"
+                   className="flex items-center justify-between p-3 rounded-lg bg-gray-800/30 hover:bg-gray-800/60 transition-colors group"
                 >
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-white truncate">#{order.order_number}</p>
@@ -292,7 +293,7 @@ export default function AdminDashboard() {
                       {order.status.replace("_", " ")}
                     </span>
                   </div>
-                </a>
+            </Link>
               ))}
             </div>
           )}
@@ -302,9 +303,9 @@ export default function AdminDashboard() {
         <div className="bg-gray-900/80 border border-gray-800 rounded-xl p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-white">Stok Menipis</h2>
-            <a href="/admin/products" className="text-sm text-blue-400 hover:text-blue-300 transition-colors">
-              Ke produk →
-            </a>
+            <Link href="/admin/products" className="text-sm text-blue-400 hover:text-blue-300 transition-colors">
+               Ke produk →
+             </Link>
           </div>
 
           {lowStock.length === 0 ? (
