@@ -4,21 +4,32 @@
  */
 
 interface OrderItem {
-  name: string;
-  quantity: number;
-  price: number;
+  name?: string;
+  quantity?: number;
+  price?: number;
+  total?: number;
+  productName?: string;
+  product?: { name?: string };
+  product_name?: string;
+  productId?: string;
+  product_id?: string;
 }
 
 interface OrderData {
   id: string;
-  order_number: string;
-  customer_name: string;
+  order_number?: string;
+  orderNumber?: string;
+  customer_name?: string;
+  customerName?: string;
   buyer_discord_id?: string | null;
   customer_discord?: string | null;
+  customerDiscord?: string | null;
   customer_ign?: string | null;
+  customerIGN?: string | null;
   customer_notes?: string | null;
   total: number;
   payment_method?: string | null;
+  paymentMethod?: string | null;
   status: string;
   confirmed_at?: string | null;
   created_at: string;
@@ -34,11 +45,29 @@ export function buildSellerEmbed(order: OrderData) {
   // Collect order items from any property name the data might arrive under
   const rawItems = order.items || order.orderItem || order.order_item || [];
   const items = rawItems
-    .map((item) => `• ${item.name} x${item.quantity} — Rp${Number(item.price).toLocaleString("id-ID")}`)
+    .map((item) => {
+      const itemName =
+        item.name ||
+        (item as any).productName ||
+        (item as any).product?.name ||
+        (item as any).product_name ||
+        (item as any).productId ||
+        (item as any).product_id ||
+        "Unknown Product";
+      const quantity = item.quantity ?? 1;
+      const price = Number(item.price ?? item.total ?? 0);
+      const formattedPrice = Number.isFinite(price)
+        ? `Rp${price.toLocaleString("id-ID")}`
+        : "Rp0";
+      return `• ${itemName} x${quantity} — ${formattedPrice}`;
+    })
     .join("\n") || "—";
 
-  const discordId = order.buyer_discord_id || order.customer_discord || "—";
-  const paymentMethod = order.payment_method?.toUpperCase().replace("_", " ") || "—";
+  const discordId = order.buyer_discord_id || order.customer_discord || order.customerDiscord || "—";
+  const paymentMethod = (order.payment_method || order.paymentMethod)?.toUpperCase().replace("_", " ") || "—";
+  const customerName = order.customer_name || order.customerName || "—";
+  const customerIgn = order.customer_ign || order.customerIGN || "—";
+  const orderNumber = order.order_number || (order as any).orderNumber || "—";
 
   return {
     embeds: [
@@ -46,10 +75,10 @@ export function buildSellerEmbed(order: OrderData) {
         title: "🛒 Konfirmasi Transfer Baru",
         color: 0xf59e0b, // amber
         fields: [
-          { name: "📋 Order", value: `\`${order.order_number}\``, inline: true },
-          { name: "👤 Pembeli", value: order.customer_name, inline: true },
+          { name: "📋 Order", value: `\`${orderNumber}\``, inline: true },
+          { name: "👤 Pembeli", value: customerName, inline: true },
           { name: "🎮 Discord ID", value: discordId, inline: true },
-          { name: "🎮 IGN", value: order.customer_ign || "—", inline: true },
+          { name: "🎮 IGN", value: customerIgn || "—", inline: true },
           { name: "💰 Total", value: `Rp${Number(order.total).toLocaleString("id-ID")}`, inline: true },
           { name: "💳 Metode", value: paymentMethod, inline: true },
           { name: "📝 Catatan", value: order.customer_notes || "—", inline: true },

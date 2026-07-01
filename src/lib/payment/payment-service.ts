@@ -264,11 +264,13 @@ export async function getOrderForPayment(orderId: string) {
   // Always fetch items separately (embedded join unreliable)
   const { data: items, error: itemsError } = await supabaseAdmin
     .from("order_item")
-    .select("*")
+    .select("*, product:product(id, name, slug)")
     .eq("order_id", orderId);
 
   if (!itemsError && items) {
     data.order_item = items;
+    data.items = items;
+    data.orderItem = items;
   }
 
   return data;

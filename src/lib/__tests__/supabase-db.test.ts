@@ -25,8 +25,8 @@ import {
 type ResolveValue = { data: any; error: any; count?: number };
 
 let mockQueryBuilder: any;
-const mockSupabaseClient: any;
-const mockResolveValue: ResolveValue = { data: [], error: null };
+let mockSupabaseClient: any;
+let mockResolveValue: ResolveValue = { data: [], error: null };
 
 jest.mock("@/lib/supabase", () => ({
   get supabaseAdmin() { return mockSupabaseClient; },
