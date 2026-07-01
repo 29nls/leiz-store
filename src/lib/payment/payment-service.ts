@@ -254,11 +254,11 @@ export async function expireOverdueOrders(): Promise<{
 export async function getOrderForPayment(orderId: string) {
   const { data, error } = await supabaseAdmin
     .from("order")
-    .select(`
-      *,
-      order_item (*),
-      payment_confirmation (*)
-    `)
+.select(`
+       *,
+       order_item(*),
+       payment_confirmation(*)
+     `)
     .eq("id", orderId)
     .single();
 
