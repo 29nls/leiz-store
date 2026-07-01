@@ -9,6 +9,7 @@ import { successResponse, errorResponse, ValidationError } from "@/lib/errors";
 import { corsHeaders, handleCors } from "@/lib/middleware";
 import { confirmTransferSchema } from "@/lib/validators/order";
 import { confirmTransfer, getOrderForPayment } from "@/lib/payment/payment-service";
+import { orderRepository } from "@/lib/repositories";
 import { sendSellerNotification } from "@/lib/discord/bot";
 
 export const POST = withErrorHandling(async (
@@ -54,6 +55,24 @@ export const POST = withErrorHandling(async (
   try {
     const orderData = await getOrderForPayment(orderId);
     if (orderData) {
+      // `getOrderForPayment` doesn't reliably include order items — that's
+      // what caused the "📦 Produk" field in the Discord embed to fall back
+      // to "—". Backfill items from the repository (which does include them,
+      // with product data joined) whenever they're missing, so the
+      // notification always has real product data. This is a no-op if
+      // orderData already has items.
+      const hasItems =
+        (orderData as any).items?.length ||
+        (orderData as any).orderItem?.length ||
+        (orderData as any).order_item?.length;
+
+      if (!hasItems) {
+        const fullOrder = (await orderRepository.findById(orderId)) as any;
+        if (fullOrder?.items?.length) {
+          (orderData as any).items = fullOrder.items;
+        }
+      }
+
       if (paymentProofBase64) {
         (orderData as any).paymentProofBase64 = paymentProofBase64;
       }

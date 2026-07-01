@@ -261,13 +261,44 @@ export async function getOrderForPayment(orderId: string) {
 
   if (error || !data) return null;
 
-  // Always fetch items separately (embedded join unreliable)
-  const { data: items, error: itemsError } = await supabaseAdmin
+  // Always fetch items separately (embedded join unreliable). Try the
+  // richer query with the `product` embed first; if that join fails to
+  // resolve, fall back to plain order_item columns so we still get
+  // name/price/quantity — these are already snapshotted on order_item at
+  // checkout, so the join isn't actually required to have real product
+  // data. Previously a failure here (itemsError) was silently swallowed,
+  // which is why the Discord "Produk" field was showing "—" with no
+  // error in the logs.
+  let items: any[] | null = null;
+
+  const withProduct = await supabaseAdmin
     .from("order_item")
     .select("*, product:product(id, name, slug)")
     .eq("order_id", orderId);
 
-  if (!itemsError && items) {
+  if (!withProduct.error && withProduct.data) {
+    items = withProduct.data;
+  } else {
+    if (withProduct.error) {
+      console.error(
+        "[PaymentService] order_item+product join failed, falling back to plain columns:",
+        withProduct.error.message
+      );
+    }
+
+    const plain = await supabaseAdmin
+      .from("order_item")
+      .select("*")
+      .eq("order_id", orderId);
+
+    if (plain.error) {
+      console.error("[PaymentService] Failed to fetch order items:", plain.error.message);
+    } else {
+      items = plain.data;
+    }
+  }
+
+  if (items) {
     data.order_item = items;
     data.items = items;
     data.orderItem = items;
