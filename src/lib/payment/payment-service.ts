@@ -252,12 +252,24 @@ export async function expireOverdueOrders(): Promise<{
 // ─── Fetch order for payment page ───────────────────────────
 
 export async function getOrderForPayment(orderId: string) {
+  // Fetch order first
   const { data, error } = await supabaseAdmin
     .from("order")
-    .select("*, order_item(*), payment_confirmation(*)")
+    .select("*")
     .eq("id", orderId)
     .single();
 
   if (error || !data) return null;
+
+  // Always fetch items separately (embedded join unreliable)
+  const { data: items, error: itemsError } = await supabaseAdmin
+    .from("order_item")
+    .select("*")
+    .eq("order_id", orderId);
+
+  if (!itemsError && items) {
+    data.order_item = items;
+  }
+
   return data;
 }

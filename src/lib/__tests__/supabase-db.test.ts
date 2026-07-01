@@ -24,7 +24,7 @@ import {
 
 type ResolveValue = { data: any; error: any; count?: number };
 
-const mockQueryBuilder: any;
+let mockQueryBuilder: any;
 const mockSupabaseClient: any;
 const mockResolveValue: ResolveValue = { data: [], error: null };
 

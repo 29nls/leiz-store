@@ -3,6 +3,12 @@
  * Rich embed messages for seller notifications and buyer DMs
  */
 
+interface OrderItem {
+  name: string;
+  quantity: number;
+  price: number;
+}
+
 interface OrderData {
   id: string;
   order_number: string;
@@ -16,15 +22,18 @@ interface OrderData {
   status: string;
   confirmed_at?: string | null;
   created_at: string;
-  order_item?: Array<{ name: string; quantity: number; price: number }>;
-  orderItem?: Array<{ name: string; quantity: number; price: number }>;
+  items?: OrderItem[];
+  order_item?: OrderItem[];
+  orderItem?: OrderItem[];
 }
 
 /**
  * Build the seller notification embed object for Discord
  */
 export function buildSellerEmbed(order: OrderData) {
-  const items = (order.orderItem || order.order_item || [])
+  // Collect order items from any property name the data might arrive under
+  const rawItems = order.items || order.orderItem || order.order_item || [];
+  const items = rawItems
     .map((item) => `• ${item.name} x${item.quantity} — Rp${Number(item.price).toLocaleString("id-ID")}`)
     .join("\n") || "—";
 
