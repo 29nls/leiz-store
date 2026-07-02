@@ -63,8 +63,6 @@ jobs:
           cache: "npm"
       - name: Install dependencies
         run: npm ci || npm install
-      - name: Seed database
-        run: npm run seed
       - name: Build
         run: npm run build
 
@@ -117,8 +115,6 @@ jobs:
         run: npm ci || npm install
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
-      - name: Seed JSON database
-        run: npm run seed
       - name: Build application
         run: npm run build
       - name: Start server and run tests
