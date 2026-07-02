@@ -9,6 +9,9 @@ import {
 } from "@/lib/payment/payment-service";
 
 
+// Force dynamic rendering for Discord interactions
+export const dynamic = "force-dynamic";
+
 export async function POST(req: NextRequest) {
   const DISCORD_PUBLIC_KEY = process.env.DISCORD_PUBLIC_KEY;
   if (!DISCORD_PUBLIC_KEY) {
@@ -66,7 +69,12 @@ export async function POST(req: NextRequest) {
 
     const [, action, orderId] = match;
 
-    // Use after() to process the DB action and patch Discord asynchronously
+    // Immediately acknowledge the button click to prevent "Interaction failed"
+    // Use after() to process the action asynchronously after response is sent
+    const deferredResponse = NextResponse.json({
+      type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE,
+    });
+
     after(async () => {
       let result: { success: boolean; error?: string };
       try {
@@ -122,10 +130,7 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    // Immediately acknowledge the button click to prevent "Interaction failed"
-    return NextResponse.json({
-      type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE,
-    });
+    return deferredResponse;
   }
 
   return NextResponse.json({ error: "Unknown interaction type" }, { status: 400 });
