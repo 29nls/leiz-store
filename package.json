@@ -23,7 +23,10 @@
     "lighthouse:ci": "lighthouse http://localhost:3000 --output=json --output-path=./lighthouse-report.json --chrome-flags=\"--headless\" --preset=perf --quiet",
     "perf": "npm run build && npm run analyze && npm run lighthouse",
     "perf:full": "npm run build && npm run analyze && npm run analyze:deps && npm run lighthouse",
-    "dedupe": "npm dedupe && npm prune"
+    "dedupe": "npm dedupe && npm prune",
+    "seed": "npx tsx scripts/seed-products.ts",
+    "seed:admin": "npx tsx scripts/create-admin.ts",
+    "seed:update": "npx tsx scripts/update-products.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
