@@ -11,6 +11,8 @@ import {
   Role,
   OrderStatus,
   StockAlertType,
+  NotificationChannel,
+  NotificationStatus,
 } from "@/lib/prisma-types";
 
 // ─── Typed Repository Args ───────────────────────────────────
