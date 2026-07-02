@@ -68,8 +68,13 @@ export const POST = withErrorHandling(async (
 
       if (!hasItems) {
         const fullOrder = (await orderRepository.findById(orderId)) as any;
-        if (fullOrder?.items?.length) {
-          (orderData as any).items = fullOrder.items;
+        const fallbackItems =
+          fullOrder?.items || fullOrder?.orderItem || fullOrder?.order_item || [];
+
+        if (fallbackItems?.length) {
+          (orderData as any).items = fallbackItems;
+          (orderData as any).orderItem = fallbackItems;
+          (orderData as any).order_item = fallbackItems;
         }
       }
 

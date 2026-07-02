@@ -652,16 +652,38 @@ class SupabaseModel {
     const created = toCamel(result);
 
     // Create nested items
-    for (const [key, nested] of Object.entries(nestedIncludes)) {
-      const relation = findRelation(this.modelName, key);
-      if (relation && nested.create) {
-        const items = Array.isArray(nested.create) ? nested.create : [nested.create];
-        for (const item of items) {
-          item[relation.foreignKey] = created.id;
-          const snakeNested = toSnake(item);
-          await this.getClient().from(relation.table).insert(snakeNested).select();
+    try {
+      for (const [key, nested] of Object.entries(nestedIncludes)) {
+        const relation = findRelation(this.modelName, key);
+        if (relation && nested.create) {
+          const items = Array.isArray(nested.create) ? nested.create : [nested.create];
+          for (const item of items) {
+            item[relation.foreignKey] = created.id;
+            const snakeNested = toSnake(item);
+            const { error } = await this.getClient()
+              .from(relation.table)
+              .insert(snakeNested)
+              .select()
+              .single();
+            if (error) {
+              console.error(`[SupabaseModel] Nested create failed for ${key}:`, error.message, snakeNested);
+              throw error;
+            }
+          }
         }
       }
+    } catch (createError) {
+      // Since transactions are sequential over REST, we can't roll back automatically.
+      // Attempt best-effort cleanup of the created parent record to avoid orphaned rows.
+      try {
+        await this.getClient()
+          .from(this.tableName)
+          .delete()
+          .eq("id", created.id);
+      } catch (cleanupError) {
+        console.error(`[SupabaseModel] Failed cleanup after nested create error for ${this.tableName}:`, cleanupError);
+      }
+      throw createError;
     }
 
     // Reload with includes
