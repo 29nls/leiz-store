@@ -659,6 +659,10 @@ class SupabaseModel {
           const items = Array.isArray(nested.create) ? nested.create : [nested.create];
           for (const item of items) {
             item[relation.foreignKey] = created.id;
+            // Auto-generate ID for nested items if not provided
+            if (!item.id) {
+              item.id = crypto.randomUUID().replace(/-/g, "").slice(0, 25);
+            }
             const snakeNested = toSnake(item);
             const { error } = await this.getClient()
               .from(relation.table)
