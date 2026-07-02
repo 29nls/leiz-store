@@ -51,7 +51,7 @@ export function WebVitalsReporter() {
  */
 async function sendToAnalytics(metric: any) {
   try {
-    const body = JSON.stringify({
+    const _body = JSON.stringify({
       name: metric.name,
       value: metric.value,
       rating: metric.rating,

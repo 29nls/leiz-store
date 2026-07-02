@@ -106,7 +106,7 @@ export default function AdminCategoriesPage() {
       fetchCats();
     } catch (e: any) { setServerErr(e.message || "Gagal menyimpan"); }
     finally { setSaving(false); }
-  }, [form, editingId, supabase, fetchCats, showOk]); // validate is a local fn, always fresh in closure
+  }, [form, editingId, supabase, fetchCats, showOk]); // eslint-disable-line react-hooks/exhaustive-deps -- validate is a local fn, always fresh in closure
 
   const handleDelete = useCallback(async () => {
     if (!delTarget) return;

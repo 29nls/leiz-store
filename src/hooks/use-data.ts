@@ -73,7 +73,7 @@ function useFetch<T>(url: string, options?: RequestInit): FetchState<T> & { refe
       });
 
     return () => { cancelled = true; };
-  }, [url, fetchKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [url, fetchKey]);
 
   return { ...state, refetch };
 }

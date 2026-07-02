@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element -- admin panel: preview images, not user-facing */
 "use client";
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
@@ -77,6 +78,7 @@ function fmtIDR(n: number): string {
   return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- kept for future formatting
 function fmtDate(s: string): string {
   return new Date(s).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }

@@ -79,7 +79,7 @@ export default function AdminSettingsPage() {
       fetchSettings();
     } catch (e: any) { setError(e.message || "Gagal menyimpan"); }
     finally { setSaving(false); }
-  }, [activeGroup, edited, filtered, supabase, fetchSettings, showOk]);
+  }, [edited, filtered, supabase, fetchSettings, showOk]);
 
   const getName = (k: string) => DISPLAY_NAMES[k] || k.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
   const getType = (s: SettingItem) => s.type === "number" ? "number" : s.type === "url" ? "url" : s.type === "email" ? "email" : "text";

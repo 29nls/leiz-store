@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { Search, X, SlidersHorizontal } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 import type { SortOption } from "@/types";

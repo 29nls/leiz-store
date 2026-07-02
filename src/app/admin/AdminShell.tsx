@@ -13,7 +13,6 @@ import {
   LogOut,
   Menu,
   X,
-  Bell,
   AlertTriangle,
   RefreshCw,
 } from "lucide-react";

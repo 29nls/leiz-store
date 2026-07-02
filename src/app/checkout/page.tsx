@@ -15,7 +15,6 @@ import {
   Package,
   CheckCircle2,
   FileCheck,
-  Clock,
 } from "@/components/ui/icons";
 import { useCartStore } from "@/stores/cart-store";
 import { formatPrice, cn } from "@/lib/utils";

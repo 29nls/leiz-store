@@ -59,7 +59,7 @@ describe("Auth Utilities", () => {
     });
 
     it("should return null for tokens with invalid JSON in body", () => {
-      const { signJWT: sign } = jest.requireActual("@/lib/auth");
+      const { signJWT: _sign } = jest.requireActual("@/lib/auth");
       // Create a token with invalid base64 body
       const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.invalid-body.signature";
       expect(verifyJWT(token)).toBeNull();

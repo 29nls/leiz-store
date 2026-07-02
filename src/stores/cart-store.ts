@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { CartItem, CartStore } from "@/types";
+import type { CartStore } from "@/types";
 
 export const useCartStore = create<CartStore>()(
   persist(

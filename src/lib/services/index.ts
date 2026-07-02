@@ -5,12 +5,9 @@
 
 import {
   productRepository,
-  categoryRepository,
   orderRepository,
   userRepository,
   activityLogRepository,
-  inventoryLogRepository,
-  settingRepository,
   analyticsRepository,
   stockAlertRepository,
   notificationRepository,
@@ -26,16 +23,10 @@ import { logOrderStatusChange } from "@/lib/payment/order-logger";
 import {
   Role,
   OrderStatus,
-  PaymentStatus,
   PaymentMethod,
   NotificationChannel,
   StockAlertType,
 } from "@/lib/prisma-types";
-
-// Helper function to replace Prisma.Decimal
-function toDecimal(value: number): number {
-  return value;
-}
 import {
   NotFoundError,
   ValidationError,
@@ -616,7 +607,7 @@ export const notificationService = {
         await notificationRepository.markAsFailed(notification.id);
       }
       return notification;
-    } catch (error) {
+    } catch {
       await notificationRepository.markAsFailed(notification.id);
       return null;
     }

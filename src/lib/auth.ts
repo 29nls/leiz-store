@@ -10,7 +10,7 @@ if (!JWT_SECRET) {
 }
 const SECRET = JWT_SECRET || "leiz-store-dev-secret-key-change-in-production";
 const JWT_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
-const REFRESH_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const _REFRESH_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 function base64UrlEncode(data: string): string {
   return Buffer.from(data)

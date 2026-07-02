@@ -14,6 +14,7 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Additional ignores:
     "scripts/**",
+    "coverage/**",
     "public/**/*.js",
     "jest.setup.ts",
     "e2e/**",

@@ -1,5 +1,8 @@
+// eslint-disable-next-line no-var -- var required for jest.mock hoisting
 var mockQueryBuilder: any;
+// eslint-disable-next-line no-var -- var required for jest.mock hoisting
 var mockSupabaseAdmin: any;
+// eslint-disable-next-line no-var -- var required for jest.mock hoisting
 var mockResolveValue: any = { data: null, error: null };
 
 mockQueryBuilder = {

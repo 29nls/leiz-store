@@ -21,7 +21,7 @@ interface ProductCardProps {
   loading?: 'eager' | 'lazy';
 }
 
-export default function ProductCard({ product, priority = false, loading = 'lazy' }: ProductCardProps) {
+export default function ProductCard({ product, priority: _priority = false, loading = 'lazy' }: ProductCardProps) {
   const [hovered,  setHovered]  = useState(false);
   const [justAdded, setJustAdded] = useState(false);
   const addItem = useCartStore((s) => s.addItem);

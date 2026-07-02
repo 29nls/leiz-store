@@ -6,29 +6,10 @@
 import { prisma } from "@/lib/db";
 import type {
   Prisma,
-  Product,
-  Category,
-  Order,
-  User,
-  Payment,
-  ActivityLog,
-  InventoryLog,
-  Setting,
-  AnalyticsEvent,
-  SalesForecast,
-  CustomerSegment,
-  ProductRecommendation,
-  StockAlert,
-  Notification,
-  CurrencyRate,
 } from "@/lib/prisma-types";
 import {
   Role,
   OrderStatus,
-  PaymentStatus,
-  PaymentMethod,
-  NotificationStatus,
-  NotificationChannel,
   StockAlertType,
 } from "@/lib/prisma-types";
 

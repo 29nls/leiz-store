@@ -8,7 +8,6 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { type ComponentProps } from 'react';
 
 // Lazy load framer-motion components
 export const Motion = {
@@ -110,9 +109,9 @@ export function useAdaptiveMotion() {
 const SimpleDivMotion = ({
   children,
   className = '',
-  initial,
-  animate,
-  exit,
+  initial: _initial,
+  animate: _animate,
+  exit: _exit,
   ...props
 }: any) => {
   return (

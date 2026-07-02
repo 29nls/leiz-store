@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
-  Users, Plus, Search, Shield, ShieldOff, Edit3, Trash2,
+  Users, Search, Shield, ShieldOff, Edit3, Trash2,
   X, Check, AlertTriangle, ChevronLeft, ChevronRight, UserPlus,
   Eye, EyeOff, Mail, Key,
 } from "lucide-react";

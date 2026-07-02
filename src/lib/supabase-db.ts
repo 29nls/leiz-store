@@ -391,7 +391,7 @@ class SupabaseModel {
   }
 
   async findMany(options: Record<string, any> = {}): Promise<Record<string, any>[]> {
-    const { where, orderBy, skip, take, include, select, distinct } = options;
+    const { where, orderBy, skip, take, include, select, distinct: _distinct } = options;
 
     const { selectString, hasCountSelect, countSelectRelations } = buildSelectString(
       this.modelName, include, select
@@ -618,7 +618,7 @@ class SupabaseModel {
     // Handle nested creates (e.g., items: { create: [...] })
     const nestedIncludes: Record<string, any> = {};
     if (options.include) {
-      for (const [key, value] of Object.entries(options.include)) {
+      for (const [key, _value] of Object.entries(options.include)) {
         if (options.data[key]?.create) {
           nestedIncludes[key] = { create: options.data[key].create };
           delete data[key];

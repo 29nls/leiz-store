@@ -58,7 +58,7 @@ export function LazySection({
   style,
 }: LazySectionProps) {
   const [isVisible, setIsVisible] = useState(false);
-  const [hasLoaded, setHasLoaded] = useState(false);
+  const [_hasLoaded, setHasLoaded] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
   const hasLoadedRef = useRef(false);
 

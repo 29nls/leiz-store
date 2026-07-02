@@ -14,7 +14,6 @@ import {
   findModelName,
   CAMEL_TO_SNAKE,
   SNAKE_TO_CAMEL,
-  RELATIONS,
   MODEL_TO_TABLE,
 } from "@/lib/supabase-db";
 
@@ -24,8 +23,11 @@ import {
 
 type ResolveValue = { data: any; error: any; count?: number };
 
+// eslint-disable-next-line no-var -- var required for jest.mock hoisting
 var mockQueryBuilder: any;
+// eslint-disable-next-line no-var -- var required for jest.mock hoisting
 var mockSupabaseClient: any;
+// eslint-disable-next-line no-var -- var required for jest.mock hoisting
 var mockResolveValue: ResolveValue = { data: [], error: null };
 
 jest.mock("@/lib/supabase", () => ({

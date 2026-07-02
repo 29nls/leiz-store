@@ -153,7 +153,7 @@ interface StaggerProps extends HTMLAttributes<HTMLDivElement> {
 export function Stagger({ 
   children, 
   className, 
-  staggerDelay = 0.05,
+  staggerDelay: _staggerDelay = 0.05,
   ...props 
 }: StaggerProps) {
   return (
@@ -202,8 +202,8 @@ export function ConditionalAnimate({
 export function AnimateOnView({ 
   children, 
   className,
-  animation = 'slide-up',
-  threshold = 0.1,
+  animation: _animation = 'slide-up',
+  threshold: _threshold = 0.1,
 }: {
   children: ReactNode;
   className?: string;
