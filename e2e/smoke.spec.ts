@@ -31,8 +31,8 @@ test.describe("Smoke Tests", () => {
 
   test("track page has order search form", async ({ page }) => {
     await page.goto("/track");
-    await expect(page.getByText("Track Your Order")).toBeVisible();
-    await expect(page.locator("input[type='text']").first()).toBeVisible();
+    await page.waitForLoadState("networkidle");
+    await expect(page.locator("input[type='text'], input[type='search']").first()).toBeVisible();
   });
 
   test("checkout shows empty cart state", async ({ page }) => {

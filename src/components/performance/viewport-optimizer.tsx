@@ -14,11 +14,17 @@ import { useEffect, useState } from 'react';
  */
 export function useViewport() {
   const [viewport, setViewport] = useState({
-    width: typeof window !== 'undefined' ? window.innerWidth : 0,
-    height: typeof window !== 'undefined' ? window.innerHeight : 0,
+    width: 0,
+    height: 0,
   });
 
   useEffect(() => {
+    // Set initial value on mount (client-side only)
+    setViewport({
+      width: window.innerWidth,
+      height: window.innerHeight,
+    });
+
     let timeoutId: NodeJS.Timeout;
 
     const handleResize = () => {
@@ -94,13 +100,14 @@ export function useMediaQuery(query: string): boolean {
  * Orientation hook
  */
 export function useOrientation() {
-  const [orientation, setOrientation] = useState<'portrait' | 'landscape'>(
-    typeof window !== 'undefined' && window.innerWidth > window.innerHeight
-      ? 'landscape'
-      : 'portrait'
-  );
+  const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('portrait');
 
   useEffect(() => {
+    // Set initial value on mount (client-side only)
+    setOrientation(
+      window.innerWidth > window.innerHeight ? 'landscape' : 'portrait'
+    );
+
     const handleOrientationChange = () => {
       setOrientation(
         window.innerWidth > window.innerHeight ? 'landscape' : 'portrait'

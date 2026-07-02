@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useReportWebVitals } from 'next/web-vitals';
 
 /**
@@ -90,23 +90,29 @@ export function usePerformanceObserver(
   entryTypes: string[],
   callback: (entries: PerformanceEntry[]) => void
 ) {
+  const callbackRef = useRef(callback);
+  callbackRef.current = callback;
+
+  // Stabilize entryTypes with JSON.stringify to avoid re-creating observer on every render
+  const typesKey = JSON.stringify(entryTypes);
+
   useEffect(() => {
     if (typeof window === 'undefined' || !('PerformanceObserver' in window)) {
       return;
     }
 
     const observer = new PerformanceObserver((list) => {
-      callback(list.getEntries());
+      callbackRef.current(list.getEntries());
     });
 
     try {
-      observer.observe({ entryTypes });
+      observer.observe({ entryTypes: JSON.parse(typesKey) });
     } catch (error) {
       console.error('Performance observer error:', error);
     }
 
     return () => observer.disconnect();
-  }, [entryTypes, callback]);
+  }, [typesKey]);
 }
 
 /**

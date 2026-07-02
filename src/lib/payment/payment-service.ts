@@ -105,7 +105,7 @@ export async function confirmTransfer(
     return { success: false, error: "Order has expired" };
   }
 
-  // Check for duplicate confirmation
+  // Check for duplicate confirmation (fast-path check before insert)
   const { data: existing } = await supabaseAdmin
     .from("payment_confirmation")
     .select("id")
@@ -116,7 +116,9 @@ export async function confirmTransfer(
     return { success: false, error: "Transfer already confirmed for this order" };
   }
 
-  // Create confirmation record
+  // Create confirmation record — catch duplicate key error to handle
+  // TOCTOU race condition where two concurrent requests both pass the
+  // SELECT check above but only one INSERT should succeed.
   const { error: confirmError } = await supabaseAdmin
     .from("payment_confirmation")
     .insert({
@@ -127,6 +129,14 @@ export async function confirmTransfer(
     });
 
   if (confirmError) {
+    // Handle unique constraint violation (duplicate confirmation)
+    if (
+      confirmError.code === "23505" ||
+      confirmError.message.toLowerCase().includes("duplicate") ||
+      confirmError.message.toLowerCase().includes("unique")
+    ) {
+      return { success: false, error: "Transfer already confirmed for this order" };
+    }
     console.error("[PaymentService] Confirmation insert failed:", confirmError.message);
     return { success: false, error: "Failed to create confirmation" };
   }
@@ -168,7 +178,7 @@ export async function adminRejectPayment(
 ): Promise<{ success: boolean; error?: string; order?: any }> {
   return updateOrderStatus(
     orderId,
-    OrderStatus.NEEDS_REVIEW,
+    OrderStatus.REJECTED,
     "ADMIN",
     adminId,
     "PAYMENT_REJECTED"

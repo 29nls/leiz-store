@@ -63,7 +63,7 @@ export function getPaymentAccount(method: string): PaymentAccount | undefined {
  * Key = current status, value = array of allowed next statuses.
  */
 export const STATUS_TRANSITIONS: Record<string, string[]> = {
-  PENDING: ["PENDING_PAYMENT", "WAITING_PAYMENT", "CANCELLED"],
+  PENDING: ["PENDING_PAYMENT", "CANCELLED"],
   PENDING_PAYMENT: ["WAITING_CONFIRMATION", "EXPIRED", "CANCELLED", "FORCE_CANCELLED"],
   WAITING_PAYMENT: ["PAID", "CANCELLED", "EXPIRED"],
   WAITING_CONFIRMATION: ["PAID", "REJECTED", "NEEDS_REVIEW", "CANCELLED", "FORCE_CANCELLED", "EXPIRED"],

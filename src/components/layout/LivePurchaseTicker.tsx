@@ -72,7 +72,7 @@ export default function LivePurchaseTicker() {
             {/* Duplicate items for infinite loop */}
             {[...liveFeed, ...liveFeed, ...liveFeed].map((feed, i) => (
               <div
-                key={i}
+                key={`${feed.name}-${feed.item}-${i}`}
                 className="ticker-item"
                 style={{
                   display: "flex",
@@ -144,29 +144,6 @@ export default function LivePurchaseTicker() {
         </div>
       </div>
 
-      {/* Mobile media query styles */}
-      <style jsx>{`
-        @media (max-width: 640px) {
-          .live-ticker-wrapper {
-            bottom: 8px !important;
-            width: calc(100vw - 16px) !important;
-          }
-          .live-ticker-container {
-            border-radius: 8px !important;
-          }
-          .ticker-track {
-            padding: 8px 0 !important;
-          }
-          .ticker-item {
-            padding-left: 16px !important;
-            padding-right: 16px !important;
-            gap: 6px !important;
-          }
-          .ticker-item span {
-            font-size: 11px !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }

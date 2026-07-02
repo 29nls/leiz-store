@@ -32,7 +32,7 @@ export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 
 export const confirmTransferSchema = z.object({
   buyerName: z.string().min(1, "Name is required").max(100),
-  buyerDiscordId: z.string().max(100).optional(),
+  buyerDiscordId: z.string().min(1, "Discord ID is required").max(100),
   note: z.string().max(500).optional(),
   paymentProofBase64: z.string().optional(),
 });

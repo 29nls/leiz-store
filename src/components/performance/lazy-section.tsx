@@ -60,16 +60,18 @@ export function LazySection({
   const [isVisible, setIsVisible] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
+  const hasLoadedRef = useRef(false);
 
   useEffect(() => {
     const currentRef = sectionRef.current;
-    if (!currentRef) return;
+    if (!currentRef || hasLoadedRef.current) return;
 
     // Create Intersection Observer
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting && !hasLoaded) {
+          if (entry.isIntersecting && !hasLoadedRef.current) {
+            hasLoadedRef.current = true;
             setIsVisible(true);
             setHasLoaded(true);
             // Disconnect after first load
@@ -88,7 +90,7 @@ export function LazySection({
     return () => {
       observer.disconnect();
     };
-  }, [rootMargin, threshold, hasLoaded]);
+  }, [rootMargin, threshold]);
 
   return (
     <div
@@ -178,8 +180,11 @@ export function LazyGrid({
   return (
     <div className={`grid ${gridCols} gap-${gap} ${className}`}>
       {items.map((item, index) => (
+        // NOTE: Using index as key is acceptable here because items are
+        // typically static and not reordered. For dynamic lists, consider
+        // passing a keyExtractor function or wrapping items with keys.
         <LazySection
-          key={index}
+          key={`lazy-grid-${index}`}
           rootMargin="200px"
           className="transition-all duration-300"
         >
