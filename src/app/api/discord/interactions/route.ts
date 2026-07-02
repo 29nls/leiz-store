@@ -24,24 +24,40 @@ export async function POST(req: NextRequest) {
   const timestamp = req.headers.get("x-signature-timestamp");
 
   if (!signature || !timestamp) {
-    return NextResponse.json({ error: "Missing signature" }, { status: 401 });
+    console.error("[Discord] Missing signature headers");
+    return NextResponse.json({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: "Missing signature", flags: 64 } }, { status: 401 });
   }
 
   // Read raw body for signature verification
-  const rawBody = await req.text();
-
-  const isValidRequest = await verifyKey(
-    rawBody,
-    signature,
-    timestamp,
-    DISCORD_PUBLIC_KEY
-  );
-
-  if (!isValidRequest) {
-    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+  let rawBody: string;
+  try {
+    rawBody = await req.text();
+  } catch (e) {
+    console.error("[Discord] Failed to read request body:", e);
+    return NextResponse.json({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: "Invalid request body", flags: 64 } }, { status: 400 });
   }
 
-  const interaction = JSON.parse(rawBody);
+  let isValidRequest: boolean;
+  try {
+    isValidRequest = await verifyKey(rawBody, signature, timestamp, DISCORD_PUBLIC_KEY);
+  } catch (e) {
+    console.error("[Discord] Signature verification error:", e);
+    return NextResponse.json({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: "Invalid signature", flags: 64 } }, { status: 401 });
+  }
+
+  if (!isValidRequest) {
+    console.error("[Discord] Invalid signature");
+    return NextResponse.json({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: "Invalid signature", flags: 64 } }, { status: 401 });
+  }
+
+  let interaction: any;
+  try {
+    interaction = JSON.parse(rawBody);
+  } catch (e) {
+    console.error("[Discord] Failed to parse JSON:", e);
+    return NextResponse.json({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: "Invalid JSON", flags: 64 } }, { status: 400 });
+  }
+
   const { type, custom_id, member, user, message } = interaction;
   
   // Provide a fallback admin ID from interaction
@@ -49,25 +65,31 @@ export async function POST(req: NextRequest) {
   const adminId = interactionUser?.id || "discord_admin";
   const adminTag = interactionUser?.username || "Admin";
 
+  console.log("[Discord] Received interaction:", { type, custom_id, adminId });
+
   // 1. Handle PING (Mandatory for Discord setup)
   if (type === InteractionType.PING) {
+    console.log("[Discord] Responding to PING");
     return NextResponse.json({ type: InteractionResponseType.PONG });
   }
 
   // 2. Handle Button Clicks
   if (type === InteractionType.MESSAGE_COMPONENT) {
     if (!custom_id) {
-      return NextResponse.json({ error: "No custom_id" }, { status: 400 });
+      console.error("[Discord] No custom_id in interaction");
+      return NextResponse.json({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: "Invalid interaction", flags: 64 } });
     }
 
     // Format: payment_{action}_{orderId}
     const match = custom_id.match(/^payment_(accept|reject|cancel|force_cancel)_(.+)$/);
     
     if (!match) {
+      console.error("[Discord] Invalid custom_id format:", custom_id);
       return NextResponse.json({ type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE });
     }
 
     const [, action, orderId] = match;
+    console.log("[Discord] Processing action:", { action, orderId, adminId });
 
     // Immediately acknowledge the button click to prevent "Interaction failed"
     // Use after() to process the action asynchronously after response is sent
@@ -95,6 +117,8 @@ export async function POST(req: NextRequest) {
             result = { success: false, error: "Unknown action" };
         }
 
+        console.log("[Discord] Action result:", result);
+
         const actionLabels: Record<string, string> = {
           accept: "✅ Pembayaran dikonfirmasi masuk",
           reject: "⚠️ Pembayaran ditandai belum masuk",
@@ -102,7 +126,7 @@ export async function POST(req: NextRequest) {
           force_cancel: "⛔ Order dibatalkan paksa",
         };
 
-        const embed = message.embeds[0];
+        const embed = message?.embeds?.[0];
         if (embed) {
           embed.color = action === "accept" ? 0x22c55e : 0xef4444;
           embed.footer = {
@@ -111,20 +135,28 @@ export async function POST(req: NextRequest) {
         }
 
         // Patch the original message
-        await fetch(
-          `https://discord.com/api/v10/webhooks/${interaction.application_id}/${interaction.token}/messages/@original`,
-          {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              content: result.success 
-                ? `${actionLabels[action]} — Order ID: \`${orderId}\`\nOleh: <@${adminId}>`
-                : `❌ Gagal memproses order: ${result.error}`,
-              embeds: embed ? [embed] : [],
-              components: [],
-            }),
-          }
-        );
+        const patchUrl = `https://discord.com/api/v10/webhooks/${interaction.application_id}/${interaction.token}/messages/@original`;
+        const patchBody = {
+          content: result.success 
+            ? `${actionLabels[action]} — Order ID: \`${orderId}\`\nOleh: <@${adminId}>`
+            : `❌ Gagal memproses order: ${result.error}`,
+          embeds: embed ? [embed] : [],
+          components: [],
+        };
+
+        console.log("[Discord] Patching message:", patchUrl);
+        const patchRes = await fetch(patchUrl, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(patchBody),
+        });
+
+        if (!patchRes.ok) {
+          const errText = await patchRes.text();
+          console.error("[Discord] Failed to patch message:", patchRes.status, errText);
+        } else {
+          console.log("[Discord] Message patched successfully");
+        }
       } catch (err) {
         console.error("[DiscordInteraction] Processing error:", err);
       }
@@ -133,5 +165,6 @@ export async function POST(req: NextRequest) {
     return deferredResponse;
   }
 
-  return NextResponse.json({ error: "Unknown interaction type" }, { status: 400 });
+  console.error("[Discord] Unknown interaction type:", type);
+  return NextResponse.json({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: "Unknown interaction type", flags: 64 } }, { status: 400 });
 }
