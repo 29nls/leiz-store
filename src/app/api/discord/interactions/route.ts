@@ -1,6 +1,26 @@
+/**
+ * Discord Interactions Endpoint
+ * POST /api/discord/interactions
+ *
+ * Handles Discord HTTP interactions (PING + button clicks).
+ *
+ * IMPORTANT: All work is done synchronously in this handler.
+ * No background processing (after(), waitUntil(), etc.) is used because
+ * Vercel serverless freezes the function immediately after the HTTP response
+ * is sent, making background work unreliable.
+ *
+ * Discord requires a valid response within 3 seconds. Our DB update (~150ms)
+ * + Discord PATCH (~150ms) = ~300ms total — well within the 3-second limit.
+ * The interaction token is valid immediately (for 15 minutes), so we can
+ * PATCH the webhook before returning the ACK response.
+ */
+
 import { NextRequest, NextResponse } from "next/server";
-import { waitUntil } from "@vercel/functions";
-import { verifyKey, InteractionType, InteractionResponseType } from "discord-interactions";
+import {
+  verifyKey,
+  InteractionType,
+  InteractionResponseType,
+} from "discord-interactions";
 import {
   adminAcceptPayment,
   adminRejectPayment,
@@ -8,53 +28,30 @@ import {
   adminForceCancelOrder,
 } from "@/lib/payment/payment-service";
 
-// Force dynamic rendering for Discord interactions
 export const dynamic = "force-dynamic";
 
-// ─── Discord interaction response helpers ──────────────────────────────────────
-// Discord requires a valid HTTP response within 3 seconds.
-// For button clicks we return DEFERRED_UPDATE_MESSAGE (type 6) to ACK immediately,
-// then use waitUntil() to extend the Vercel function lifetime so we can PATCH
-// the original message afterward.
+// ─── Action labels ────────────────────────────────────────────────────────────
 
-function deferredUpdate() {
-  return NextResponse.json({
-    type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE,
-  });
-}
+const ACTION_LABELS: Record<string, string> = {
+  accept: "✅ Pembayaran dikonfirmasi masuk",
+  reject: "⚠️ Pembayaran ditandai belum masuk",
+  cancel: "🚫 Order dibatalkan",
+  force_cancel: "⛔ Order dibatalkan paksa",
+};
 
-function ephemeralMessage(content: string, status = 200) {
-  return NextResponse.json(
-    {
-      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-      data: { content, flags: 64 },
-    },
-    { status }
-  );
-}
+// ─── Process action + PATCH Discord message (synchronous) ─────────────────────
 
-function pong() {
-  return NextResponse.json({ type: InteractionResponseType.PONG });
-}
-
-// ─── Background work: process action + PATCH original Discord message ──────────
-
-async function processPaymentAction(
+async function processAndPatch(
   action: string,
   orderId: string,
   adminId: string,
   adminTag: string,
-  patchUrl: string,
+  applicationId: string,
+  token: string,
   originalEmbed: any
 ): Promise<void> {
+  // 1. Execute the DB action
   let result: { success: boolean; error?: string } = { success: false, error: "Unknown action" };
-
-  const actionLabels: Record<string, string> = {
-    accept: "✅ Pembayaran dikonfirmasi masuk",
-    reject: "⚠️ Pembayaran ditandai belum masuk",
-    cancel: "🚫 Order dibatalkan",
-    force_cancel: "⛔ Order dibatalkan paksa",
-  };
 
   try {
     switch (action) {
@@ -71,145 +68,157 @@ async function processPaymentAction(
         result = await adminForceCancelOrder(orderId, adminId);
         break;
     }
-
-    console.log("[Discord] Action result:", result);
+    console.log("[Discord] DB action result:", { action, orderId, success: result.success });
   } catch (err) {
-    console.error("[Discord] Action processing error:", err);
-    result = { success: false, error: err instanceof Error ? err.message : "Unknown error" };
-  }
-
-  // Build updated embed
-  const embed = originalEmbed ? { ...originalEmbed } : null;
-  if (embed) {
-    embed.color = result.success && action === "accept" ? 0x22c55e : 0xef4444;
-    embed.footer = {
-      text: `${actionLabels[action] || action} oleh ${adminTag}`,
+    console.error("[Discord] DB action error:", err);
+    result = {
+      success: false,
+      error: err instanceof Error ? err.message : "Unknown error",
     };
   }
 
+  // 2. Build updated embed
+  const embed = originalEmbed ? JSON.parse(JSON.stringify(originalEmbed)) : null;
+  if (embed) {
+    embed.color = result.success && action === "accept" ? 0x22c55e : 0xef4444;
+    embed.footer = { text: `${ACTION_LABELS[action] ?? action} oleh ${adminTag}` };
+  }
+
   const content = result.success
-    ? `${actionLabels[action]} — Order ID: \`${orderId}\`\nOleh: <@${adminId}>`
+    ? `${ACTION_LABELS[action]} — Order ID: \`${orderId}\`\nOleh: <@${adminId}>`
     : `❌ Gagal memproses order: ${result.error}`;
 
-  // PATCH the original message via Discord webhook
+  // 3. PATCH the original message via Discord webhook
+  const patchUrl = `https://discord.com/api/v10/webhooks/${applicationId}/${token}/messages/@original`;
+
   try {
-    console.log("[Discord] Patching message via", patchUrl);
-    const patchRes = await fetch(patchUrl, {
+    const res = await fetch(patchUrl, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         content,
         embeds: embed ? [embed] : [],
-        components: [], // Remove buttons after action is taken
+        components: [], // remove buttons
       }),
     });
 
-    if (!patchRes.ok) {
-      const errText = await patchRes.text();
-      console.error("[Discord] PATCH failed:", patchRes.status, errText);
+    if (!res.ok) {
+      const body = await res.text();
+      console.error("[Discord] PATCH failed:", res.status, body);
     } else {
-      console.log("[Discord] Message patched successfully");
+      console.log("[Discord] PATCH succeeded — message updated");
     }
-  } catch (fetchErr) {
-    console.error("[Discord] PATCH network error:", fetchErr);
+  } catch (err) {
+    console.error("[Discord] PATCH network error:", err);
   }
 }
 
-// ─── POST /api/discord/interactions ──────────────────────────────────────────
+// ─── POST handler ─────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  const DISCORD_PUBLIC_KEY = process.env.DISCORD_PUBLIC_KEY;
-  if (!DISCORD_PUBLIC_KEY) {
-    console.error("[Discord] DISCORD_PUBLIC_KEY is missing");
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
-  }
-
-  // Read raw body for signature verification
+  // ── Read body ───────────────────────────────────────────────────────────────
   let rawBody: string;
   try {
     rawBody = await req.text();
-  } catch (e) {
-    console.error("[Discord] Failed to read request body:", e);
-    return ephemeralMessage("Invalid request body", 400);
+  } catch {
+    return new NextResponse("Bad request", { status: 400 });
   }
 
-  // Verify ed25519 signature
+  // ── Verify ed25519 signature ────────────────────────────────────────────────
   const signature = req.headers.get("x-signature-ed25519");
   const timestamp = req.headers.get("x-signature-timestamp");
 
   if (!signature || !timestamp) {
-    console.error("[Discord] Missing signature headers");
-    return ephemeralMessage("Missing signature", 401);
+    return new NextResponse("Missing signature", { status: 401 });
   }
 
-  let isValidRequest: boolean;
+  const publicKey = process.env.DISCORD_PUBLIC_KEY;
+  if (!publicKey) {
+    console.error("[Discord] DISCORD_PUBLIC_KEY not set");
+    return new NextResponse("Server misconfiguration", { status: 500 });
+  }
+
+  let isValid: boolean;
   try {
-    isValidRequest = await verifyKey(rawBody, signature, timestamp, DISCORD_PUBLIC_KEY);
-  } catch (e) {
-    console.error("[Discord] Signature verification error:", e);
-    return ephemeralMessage("Invalid signature", 401);
+    isValid = await verifyKey(rawBody, signature, timestamp, publicKey);
+  } catch {
+    isValid = false;
   }
 
-  if (!isValidRequest) {
-    console.error("[Discord] Invalid signature");
-    return ephemeralMessage("Invalid signature", 401);
+  if (!isValid) {
+    return new NextResponse("Invalid signature", { status: 401 });
   }
 
+  // ── Parse interaction ───────────────────────────────────────────────────────
   let interaction: any;
   try {
     interaction = JSON.parse(rawBody);
-  } catch (e) {
-    console.error("[Discord] Failed to parse JSON:", e);
-    return ephemeralMessage("Invalid JSON", 400);
+  } catch {
+    return new NextResponse("Invalid JSON", { status: 400 });
   }
 
-  const type = interaction.type;
-  const customId = interaction.custom_id;
+  const type: number = interaction.type;
 
-  console.log("[Discord] Received interaction:", { type, customId });
-
-  // ── 1. PING — mandatory for Discord URL verification ─────────────────────────
+  // ── PING ────────────────────────────────────────────────────────────────────
   if (type === InteractionType.PING) {
-    console.log("[Discord] Responding to PING");
-    return pong();
+    return NextResponse.json({ type: InteractionResponseType.PONG });
   }
 
-  // ── 2. MESSAGE_COMPONENT — button clicks ─────────────────────────────────────
+  // ── MESSAGE_COMPONENT (button clicks) ───────────────────────────────────────
   if (type === InteractionType.MESSAGE_COMPONENT) {
+    const customId: string | undefined = interaction.custom_id;
+
+    // If no custom_id or unrecognized format, just ACK with deferred update
     if (!customId) {
-      return deferredUpdate();
+      return NextResponse.json({
+        type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE,
+      });
     }
 
-    // Match: payment_{action}_{orderId}
-    const match = customId.match(/^payment_(accept|reject|cancel|force_cancel)_(.+)$/);
+    const match = customId.match(
+      /^payment_(accept|reject|cancel|force_cancel)_(.+)$/
+    );
+
     if (!match) {
-      return deferredUpdate();
+      return NextResponse.json({
+        type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE,
+      });
     }
 
     const action = match[1];
     const orderId = match[2];
-
-    const interactionUser = interaction.member?.user || interaction.user;
-    const adminId = interactionUser?.id || "discord_admin";
-    const adminTag = interactionUser?.username || "Admin";
+    const interactionUser = interaction.member?.user ?? interaction.user;
+    const adminId: string = interactionUser?.id ?? "discord_admin";
+    const adminTag: string = interactionUser?.username ?? "Admin";
     const originalEmbed = interaction.message?.embeds?.[0] ?? null;
 
-    console.log("[Discord] Processing action:", { action, orderId, adminId });
-
-    // Build the webhook PATCH URL using the interaction token
-    const patchUrl = `https://discord.com/api/v10/webhooks/${interaction.application_id}/${interaction.token}/messages/@original`;
-
-    // ACK immediately to Discord (within 3-second window)
-    // Then extend the Vercel function lifetime with waitUntil() so the
-    // background PATCH actually executes before freezing.
-    waitUntil(
-      processPaymentAction(action, orderId, adminId, adminTag, patchUrl, originalEmbed)
+    console.log(
+      `[Discord] Button click: action=${action} orderId=${orderId} admin=${adminId}`
     );
 
-    return deferredUpdate();
+    // ── Do ALL work synchronously before returning ────────────────────────────
+    // The interaction token is valid immediately for 15 minutes.
+    // We can PATCH the webhook before returning the ACK response.
+    // DB (~150ms) + PATCH (~150ms) = ~300ms, well under Discord's 3s limit.
+    await processAndPatch(
+      action,
+      orderId,
+      adminId,
+      adminTag,
+      interaction.application_id,
+      interaction.token,
+      originalEmbed
+    );
+
+    // ── ACK Discord ───────────────────────────────────────────────────────────
+    return NextResponse.json({
+      type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE,
+    });
   }
 
-  // ── 3. Unknown interaction type ──────────────────────────────────────────────
-  console.warn("[Discord] Unknown interaction type:", type);
-  return deferredUpdate();
+  // ── Fallback ────────────────────────────────────────────────────────────────
+  console.warn("[Discord] Unhandled interaction type:", type);
+  return NextResponse.json({
+    type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE,
+  });
 }
