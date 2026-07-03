@@ -12,79 +12,70 @@ Proyek ini dibangun di atas fondasi teknologi modern:
 - **State Management**: Zustand (dengan persitensi local storage)
 - **Styling**: Tailwind CSS v4 + Framer Motion (untuk animasi transisi checkout)
 - **Testing**: Jest (Unit testing) + Playwright (End-to-End integration testing)
-- **Orkestrasi Agen**: Arsitektur Multi-Agent berbasis model spesialis dari NVIDIA, Poolside, dan Cohere.
+---
+
+## 🔐 Alur Pembayaran & Integrasi Discord
+
+Pembayaran dilakukan secara **manual** melalui transfer bank / e-wallet (BCA, GoPay, DANA, SeaBank). Admin memverifikasi pembayaran langsung dari Discord menggunakan tombol interaktif.
+
+```
+Buyer checkout → Upload bukti transfer → Discord embed dengan buttons
+  ↓ Admin klik "✅ Pembayaran sudah masuk"
+  → PATCH webhook Discord → Update status order → Notifikasi DM ke buyer
+```
+
+**Tombol Discord:**
+
+| custom_id | Aksi | Status Order |
+|---|---|---|
+| `payment_accept_{orderId}` | Pembayaran sudah masuk | `PAID` |
+| `payment_reject_{orderId}` | Pembayaran belum masuk | `REJECTED` |
+| `payment_cancel_{orderId}` | Cancel order | `CANCELLED` |
+| `payment_force_cancel_{orderId}` | Cancel order paksa | `FORCE_CANCELLED` |
 
 ---
 
-## 🤖 Panduan Konfigurasi Custom Agent (Model Overrides & Hyperparameters)
+## 🏗️ CI/CD Pipeline
 
-Untuk mencapai performa terbaik, konfigurasi agent mode Anda dengan spesifikasi berikut di dashboard admin/development Anda:
+Proyek ini menggunakan GitHub Actions untuk automated testing dan deployment ke Vercel.
 
-### 1. Central Dispatch & Orchestration
-- **Orchestrator** (Model: `NVIDIA Nemotron 3 Ultra` | Temp: `0.0` | Top P: `0` | Max Steps: `35`)  
-  *Menerima query user, merancang sub-task, mendelegasikan ke agen spesialis secara paralel, dan mensintesis hasil akhir.*
+| Workflow | Trigger | Tugas |
+|----------|---------|-------|
+| **CI Pipeline** | push/PR to main | Lint, TypeCheck, Unit Tests, Build, E2E Tests |
+| **CodeQL Advanced** | push/PR + weekly | Security scanning (actions, JS/TS, Python) |
+| **MSDO** | push/PR + weekly | Microsoft Defender static analysis |
+| **njsscan** | push/PR + weekly | Node.js security scanning |
 
-### 2. Core Development & Implementation
-- **code** (Model: `Inception / Mercury` | Temp: `Default` | Top P: `Default` | Max Steps: `15`)  
-  *Penulisan fitur dan implementasi logika bisnis Next.js & TypeScript.*
-- **frontend-specialist** (Model: `Poolside Laguna XS.2` | Temp: `0.1` | Top P: `0.1` | Max Steps: `20`)  
-  *Implementasi komponen UI/UX, transisi Framer Motion, layout Tailwind CSS v4.*
-- **architect** (Model: `NVIDIA Nemotron 3 Ultra` | Temp: `0.1` | Top P: `0.1` | Max Steps: `15`)  
-  *Mendesain arsitektur modul, skema DB, dan menghasilkan spesifikasi teknis.*
+**Environment Variables yang dibutuhkan:**
 
-### 3. Quality Assurance & Review
-- **code-reviewer** (Model: `NVIDIA Nemotron Super` | Temp: `0.0` | Top P: `0.0` | Max Steps: `15`)  
-  *Melakukan peninjauan kode, pengecekan best practices, dan audit keamanan OWASP.*
-- **code-simplifier** (Model: `Cohere North Mini Code` | Temp: `0.1` | Top P: `0.1` | Max Steps: `15`)  
-  *Melakukan refactoring, pembersihan kode mati, dan menyederhanakan fungsi kompleks.*
-- **code-skeptic** (Model: `NVIDIA Nemotron Super` | Temp: `0.3` | Top P: `0.3` | Max Steps: `15`)  
-  *Berperan sebagai penguji adversarial, mencari celah keamanan, logika cacat, dan edge cases.*
-
-### 4. Testing & Diagnostics
-- **test-engineer** (Model: `Cohere North Mini Code` | Temp: `0.0` | Top P: `0.0` | Max Steps: `20`)  
-  *Menulis test suite unit (Jest) dan skenario end-to-end (Playwright).*
-- **debug** (Model: `Poolside Laguna XS.2` | Temp: `0.0` | Top P: `0.0` | Max Steps: `20`)  
-  *Mendiagnosis crash, menganalisis stack trace, dan merekomendasikan perbaikan root-cause.*
-
-### 5. Utilities & Data
-- **explore** (Model: `Cohere North Mini Code` | Temp: `Default` | Top P: `Default` | Max Steps: `10`)  
-  *Navigasi cepat dan pembacaan codebase menggunakan pattern-matching grep/glob.*
-- **data** (Model: `NVIDIA Nemotron 3 Ultra` | Temp: `0.0` | Top P: `0.0` | Max Steps: `20`)  
-  *Menangani eksekusi query PostgreSQL, manipulasi skema, dan analisis database.*
-- **docs-specialist** (Model: `NVIDIA Nemotron Super` | Temp: `0.3` | Top P: `0.5` | Max Steps: `10`)  
-  *Menulis dokumentasi markdown, panduan API, dan berkas README.*
+- `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase anon key
+- `SUPABASE_SERVICE_ROLE_KEY` — Supabase service role key
+- `JWT_SECRET` — JWT signing secret (required di production)
+- `DISCORD_PUBLIC_KEY` — Discord interaction verification
+- `DISCORD_BOT_TOKEN` — Discord bot token
 
 ---
 
-## 🧠 Integrasi Claude-Mem (Persistent Context System)
+## 📜 NPM Scripts
 
-Project ini didukung oleh **Claude-Mem** untuk menjaga memori jangka panjang agen lintas sesi sehingga tidak kehilangan konteks pekerjaan penting.
-
-### Cara Instalasi & Setup
-
-1. **Prasyarat**: Pastikan Node.js 18+ sudah terpasang.
-2. **Setup Otomatis**:
-   Jalankan script setup yang telah disediakan:
-   ```bash
-   bash scripts/setup-mem.sh
-   ```
-3. **Instalasi Manual**:
-   ```bash
-   # Install global plugin
-   npx claude-mem install
-   
-   # Setup folder lokal di project
-   mkdir -p .claude-mem/db
-   
-   # Jalankan background worker dengan database lokal project
-   npx claude-mem start --db-path ./.claude-mem/db
-   ```
-4. **Verifikasi**:
-   Restart terminal/client MCP Anda. Claude-Mem akan otomatis berjalan sebagai plugin di background dan melacak konteks development Anda.
+| Command | Deskripsi |
+|---------|-----------|
+| `npm run dev` | Start development server |
+| `npm run build` | Production build (Next.js) |
+| `npm run lint` | Run ESLint |
+| `npm run typecheck` | TypeScript type checking |
+| `npm run test` | Run Jest unit tests |
+| `npm run e2e` | Run Playwright E2E tests |
+| `npm run seed` | Seed database (products) |
+| `npm run seed:admin` | Create admin user |
+| `npm run seed:update` | Update existing products |
+| `npm run analyze` | Bundle size analysis |
+| `npm run perf` | Build + analyze + Lighthouse |
 
 ---
 
-## 🚀 Memulai Development lokal
+## 🚀 Memulai Development Lokal
 
 1. Clone repository ini.
 2. Install dependensi:
@@ -92,12 +83,72 @@ Project ini didukung oleh **Claude-Mem** untuk menjaga memori jangka panjang age
    npm install
    ```
 3. Konfigurasi environment variables dengan menyalin `.env.example` ke `.env.local`.
-4. Jalankan server development:
+4. Seed database (opsional):
+   ```bash
+   npm run seed
+   ```
+5. Jalankan server development:
    ```bash
    npm run dev
    ```
-5. Akses platform lokal di `http://localhost:3000`.
+6. Akses platform lokal di `http://localhost:3000`.
 
 ---
+
+## 📂 Struktur Folder Penting
+
+```
+leiz-store/
+├── src/
+│   ├── app/                     # Next.js App Router pages & API
+│   │   ├── admin/               # Admin panel
+│   │   ├── checkout/            # Checkout flow (4 steps)
+│   │   ├── payment/             # Payment confirmation page
+│   │   ├── products/            # Product catalog & detail
+│   │   └── api/                 # REST API endpoints
+│   ├── components/              # React components
+│   │   ├── cart/                # Cart components
+│   │   ├── checkout/            # Checkout components
+│   │   ├── layout/              # Navbar, Footer, LivePurchaseTicker
+│   │   ├── performance/         # Performance optimization
+│   │   └── product/             # Product display components
+│   ├── hooks/                   # Custom React hooks
+│   ├── lib/                     # Utility libraries
+│   │   ├── api/                 # API client utilities
+│   │   ├── discord/             # Discord integration
+│   │   ├── payment/             # Payment service & constants
+│   │   ├── validators/          # Zod validators
+│   │   ├── auth.ts              # JWT utilities (lazy init)
+│   │   └── supabase.ts          # Supabase clients (lazy Proxy)
+│   └── types/                   # TypeScript type definitions
+├── scripts/                     # Setup & maintenance scripts
+├── .github/workflows/           # CI/CD GitHub Actions
+└── e2e/                         # Playwright E2E tests
+```
+
+---
+
+## 📝 Changelog
+
+### Juli 2026
+
+- ✅ Fix Discord "This interaction failed" error (synchronous execution)
+- ✅ Fix 15 audit bugs (CSS animation, React keys, SSR, payment flow)
+- ✅ Migrate `styled-jsx` → global CSS (app router compatible)
+- ✅ Zero lint errors and TypeScript warnings
+- ✅ Lazy initialization pattern untuk runtime secrets di build time
+- ✅ CI/CD pipeline fully operational (lint → test → build → E2E)
+- ✅ Dependabot configured (npm + github-actions)
+- ✅ MSDO, CodeQL, njsscan workflows configured
+
+### Sebelumnya
+
+- Implementasi multi-agent orchestration
+- Discord webhook integration dengan interactive buttons
+- Supabase RLS dengan payment flow verification
+- Framer Motion checkout transitions
+
+---
+
 Dibuat oleh MACENG.
- Dragon Nest Insane DN — Premium Game Materials Marketplace
+Dragon Nest Insane DN — Premium Game Materials Marketplace
