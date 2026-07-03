@@ -3,9 +3,9 @@
 import React, { useEffect, useState, useCallback } from "react";
 import {
   Package, FolderTree, ShoppingCart, Clock, AlertTriangle,
-  TrendingUp, RefreshCw, DollarSign,
+  TrendingUp, RefreshCw, DollarSign, Info,
 } from "lucide-react";
-import { getSupabaseBrowser, subscribeToTable } from "@/lib/supabase-browser";
+import { subscribeToTable } from "@/lib/supabase-browser";
 import Link from "next/link";
 
 interface Stats {
@@ -35,6 +35,13 @@ interface LowStockProduct {
   min_stock: number;
 }
 
+interface DashboardData {
+  stats: Stats;
+  recentOrders: RecentOrder[];
+  lowStock: LowStockProduct[];
+  warnings?: string[];
+}
+
 function fmtIDR(n: number): string {
   return new Intl.NumberFormat("id-ID", {
     style: "currency", currency: "IDR", minimumFractionDigits: 0,
@@ -42,9 +49,7 @@ function fmtIDR(n: number): string {
 }
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
-  const [lowStock, setLowStock] = useState<LowStockProduct[]>([]);
+  const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
@@ -55,68 +60,23 @@ export default function AdminDashboard() {
     setError("");
 
     try {
-      const supabase = getSupabaseBrowser();
+      const res = await fetch("/api/admin/stats");
 
-      // Parallel queries for all stats
-      const [
-        productsRes,
-        activeProductsRes,
-        categoriesRes,
-        ordersRes,
-        pendingRes,
-        completedRes,
-        revenueRes,
-        recentRes,
-        lowStockRes,
-      ] = await Promise.all([
-        supabase.from("product").select("id", { count: "exact", head: true }),
-        supabase.from("product").select("id", { count: "exact", head: true }).eq("is_active", true),
-        supabase.from("category").select("id", { count: "exact", head: true }),
-        supabase.from("order").select("id", { count: "exact", head: true }),
-        supabase.from("order").select("id", { count: "exact", head: true }).eq("status", "PENDING"),
-        supabase.from("order").select("id", { count: "exact", head: true }).eq("status", "COMPLETED"),
-        supabase.from("order").select("total").eq("status", "COMPLETED"),
-        supabase.from("order")
-          .select("id,order_number,customer_name,total,status,created_at")
-          .order("created_at", { ascending: false })
-          .limit(5),
-        supabase.from("product")
-          .select("id,name,slug,stock,min_stock")
-          .lte("stock", 10)
-          .order("stock", { ascending: true })
-          .limit(10),
-      ]);
-
-      // Check for any errors
-      const errors = [
-        productsRes.error, activeProductsRes.error, categoriesRes.error,
-        ordersRes.error, pendingRes.error, completedRes.error,
-      ].filter(Boolean);
-      if (errors.length > 0) {
-        throw new Error(errors[0]!.message);
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.error || `Gagal memuat dashboard (${res.status})`);
       }
 
-      // Calculate total revenue from completed orders
-      const totalRevenue = (revenueRes.data || []).reduce(
-        (sum, o) => sum + (o.total || 0), 0
-      );
+      const result: DashboardData = await res.json();
 
-      // Filter low stock products client-side (stock <= min_stock)
-      const lowStockProducts = (lowStockRes.data || []).filter(
-        (p) => p.stock <= p.min_stock
-      );
-
-      setStats({
-        totalProducts: productsRes.count || 0,
-        activeProducts: activeProductsRes.count || 0,
-        totalCategories: categoriesRes.count || 0,
-        totalOrders: ordersRes.count || 0,
-        pendingOrders: pendingRes.count || 0,
-        completedOrders: completedRes.count || 0,
-        totalRevenue,
-      });
-      setRecentOrders((recentRes.data || []) as RecentOrder[]);
-      setLowStock(lowStockProducts as LowStockProduct[]);
+      // Show first warning as error if stats are completely empty
+      const allZero = Object.values(result.stats).every((v) => v === 0);
+      if (allZero && result.warnings && result.warnings.length > 0) {
+        setError(`⚠️ ${result.warnings[0]}`);
+        setData(result);
+      } else {
+        setData(result);
+      }
     } catch (err: any) {
       setError(err.message || "Gagal memuat data dashboard");
     } finally {
@@ -147,7 +107,12 @@ export default function AdminDashboard() {
     );
   }
 
-  if (error) {
+  const stats = data?.stats;
+  const recentOrders = data?.recentOrders ?? [];
+  const lowStock = data?.lowStock ?? [];
+  const warnings = data?.warnings;
+
+  if (error && !data) {
     return (
       <div className="space-y-4">
         <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg flex items-center gap-2">
@@ -240,6 +205,25 @@ export default function AdminDashboard() {
         </button>
       </div>
 
+      {/* Warnings banner */}
+      {warnings && warnings.length > 0 && (
+        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4">
+          <div className="flex items-start gap-3">
+            <Info className="h-5 w-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-yellow-300">
+                Beberapa data tidak dapat dimuat
+              </p>
+              <ul className="text-xs text-yellow-400/80 space-y-0.5">
+                {warnings.map((w, i) => (
+                  <li key={i}>• {w}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         {statCards.map((card) => (
@@ -280,7 +264,7 @@ export default function AdminDashboard() {
               {recentOrders.map((order) => (
 <Link
                    key={order.id}
-                   href="/admin/orders"
+                   href={`/admin/orders/${order.id}`}
                    className="flex items-center justify-between p-3 rounded-lg bg-gray-800/30 hover:bg-gray-800/60 transition-colors group"
                 >
                   <div className="min-w-0">

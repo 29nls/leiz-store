@@ -10,7 +10,8 @@
  * is sent, making background work unreliable.
  *
  * Discord requires a valid response within 3 seconds. Our DB update (~150ms)
- * + Discord PATCH (~150ms) = ~300ms total — well within the 3-second limit.
+ * + Discord PATCH (~150ms) + ephemeral followup (~150ms) = ~450ms total —
+ * well within the 3-second limit.
  * The interaction token is valid immediately (for 15 minutes), so we can
  * PATCH the webhook before returning the ACK response.
  */
@@ -41,6 +42,45 @@ const ACTION_LABELS: Record<string, string> = {
 
 function isSafeDiscordPathSegment(value: string, pattern: RegExp): boolean {
   return typeof value === "string" && pattern.test(value);
+}
+
+// ─── Send ephemeral followup (visible only to the clicking user) ──────────────
+
+async function sendEphemeralFollowup(
+  applicationId: string,
+  token: string,
+  content: string
+): Promise<void> {
+  if (
+    !isSafeDiscordPathSegment(applicationId, /^\d+$/) ||
+    !isSafeDiscordPathSegment(token, /^[A-Za-z0-9._-]+$/)
+  ) {
+    console.error("[Discord] Invalid webhook identifiers for followup");
+    return;
+  }
+
+  try {
+    const url = new URL(
+      `/api/v10/webhooks/${encodeURIComponent(applicationId)}/${encodeURIComponent(token)}`,
+      "https://discord.com"
+    ).toString();
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        content,
+        flags: 64, // EPHEMERAL — only the clicking user sees this
+      }),
+    });
+
+    if (!res.ok) {
+      const body = await res.text();
+      console.error("[Discord] Ephemeral followup failed:", res.status, body);
+    }
+  } catch (err) {
+    console.error("[Discord] Ephemeral followup network error:", err);
+  }
 }
 
 // ─── Process action + PATCH Discord message (synchronous) ─────────────────────
@@ -81,18 +121,35 @@ async function processAndPatch(
     };
   }
 
-  // 2. Build updated embed
+  const actionLabel = ACTION_LABELS[action] ?? action;
+
+  // 2. Send ephemeral followup to the admin who clicked
+  if (result.success) {
+    await sendEphemeralFollowup(
+      applicationId,
+      token,
+      `${actionLabel}\nOrder ID: \`${orderId}\`\nStatus: ✅ Berhasil`
+    );
+  } else {
+    await sendEphemeralFollowup(
+      applicationId,
+      token,
+      `❌ **Gagal:** ${result.error ?? "Terjadi kesalahan"}\nAction: ${actionLabel}\nOrder ID: \`${orderId}\``
+    );
+  }
+
+  // 3. Build updated embed
   const embed = originalEmbed ? JSON.parse(JSON.stringify(originalEmbed)) : null;
   if (embed) {
     embed.color = result.success && action === "accept" ? 0x22c55e : 0xef4444;
-    embed.footer = { text: `${ACTION_LABELS[action] ?? action} oleh ${adminTag}` };
+    embed.footer = { text: `${actionLabel} oleh ${adminTag}` };
   }
 
   const content = result.success
-    ? `${ACTION_LABELS[action]} — Order ID: \`${orderId}\`\nOleh: <@${adminId}>`
+    ? `${actionLabel} — Order ID: \`${orderId}\`\nOleh: <@${adminId}>`
     : `❌ Gagal memproses order: ${result.error}`;
 
-  // 3. PATCH the original message via Discord webhook
+  // 4. PATCH the original message via Discord webhook
   if (
     !isSafeDiscordPathSegment(applicationId, /^\d+$/) ||
     !isSafeDiscordPathSegment(token, /^[A-Za-z0-9._-]+$/)
@@ -181,10 +238,17 @@ export async function POST(req: NextRequest) {
 
   // ── MESSAGE_COMPONENT (button clicks) ───────────────────────────────────────
   if (type === InteractionType.MESSAGE_COMPONENT) {
-    const customId: string | undefined = interaction.custom_id;
+    const customId: string | undefined = interaction.data?.custom_id;
+    const applicationId: string = interaction.application_id;
+    const token: string = interaction.token;
 
-    // If no custom_id or unrecognized format, just ACK with deferred update
+    // If no custom_id — send ephemeral feedback and ACK
     if (!customId) {
+      await sendEphemeralFollowup(
+        applicationId,
+        token,
+        "❌ Tombol tidak dikenali (custom_id kosong). Silakan hubungi developer."
+      );
       return NextResponse.json({
         type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE,
       });
@@ -194,7 +258,13 @@ export async function POST(req: NextRequest) {
       /^payment_(accept|reject|cancel|force_cancel)_(.+)$/
     );
 
+    // If unrecognized format — send ephemeral feedback and ACK
     if (!match) {
+      await sendEphemeralFollowup(
+        applicationId,
+        token,
+        `❌ Tombol tidak dikenali: \`${customId}\`\nSilakan hubungi developer.`
+      );
       return NextResponse.json({
         type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE,
       });
@@ -213,15 +283,15 @@ export async function POST(req: NextRequest) {
 
     // ── Do ALL work synchronously before returning ────────────────────────────
     // The interaction token is valid immediately for 15 minutes.
-    // We can PATCH the webhook before returning the ACK response.
-    // DB (~150ms) + PATCH (~150ms) = ~300ms, well under Discord's 3s limit.
+    // We can PATCH the webhook & send ephemeral feedback before returning the ACK.
+    // DB (~150ms) + PATCH (~150ms) + ephemeral (~150ms) = ~450ms, under Discord's 3s limit.
     await processAndPatch(
       action,
       orderId,
       adminId,
       adminTag,
-      interaction.application_id,
-      interaction.token,
+      applicationId,
+      token,
       originalEmbed
     );
 

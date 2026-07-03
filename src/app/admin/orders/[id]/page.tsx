@@ -87,19 +87,29 @@ export default function OrderDetailPage() {
 
   const updateStatus = useCallback(async (newStatus: string) => {
     if (!order) return;
-    setUpdating(true);
+    setUpdating(true); setError("");
     try {
-      const payload: any = { status: newStatus, updated_at: new Date().toISOString() };
-      if (newStatus === "PAID") payload.paid_at = new Date().toISOString();
-      if (newStatus === "COMPLETED") payload.completed_at = new Date().toISOString();
-      const { error: upErr } = await supabase.from("order").update(payload).eq("id", order.id);
-      if (upErr) throw upErr;
+      const res = await fetch(`/api/admin/orders/${order.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || `Gagal update (${res.status})`);
+      }
+
       setOkMsg(`Status → ${newStatus.replace("_", " ")}`);
       setTimeout(() => setOkMsg(""), 3000);
       fetchOrder();
-    } catch (e: any) { setError(e.message || "Gagal update"); }
-    finally { setUpdating(false); }
-  }, [order, supabase, fetchOrder]);
+    } catch (e: any) {
+      setError(e.message || "Gagal update");
+    } finally {
+      setUpdating(false);
+    }
+  }, [order, fetchOrder]);
 
   if (loading) {
     return <div className="flex items-center justify-center h-64"><div className="flex items-center gap-2 text-gray-400"><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500" /> Memuat...</div></div>;

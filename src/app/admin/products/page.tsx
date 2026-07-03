@@ -6,7 +6,7 @@ import {
   Plus, Search, Edit3, Trash2, Package, X, Check, AlertTriangle, ImageIcon,
   ChevronLeft, ChevronRight, Eye, EyeOff,
 } from "lucide-react";
-import { getSupabaseBrowser, subscribeToTable } from "@/lib/supabase-browser";
+import { subscribeToTable } from "@/lib/supabase-browser";
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -110,7 +110,6 @@ function validateForm(data: ProductFormData): Record<string, string> {
 // ─── Component ────────────────────────────────────────────────
 
 export default function AdminProductsPage() {
-  const supabase = getSupabaseBrowser();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -145,29 +144,35 @@ export default function AdminProductsPage() {
   const fetchProducts = useCallback(async () => {
     setLoading(true); setError("");
     try {
-      let q = supabase
-        .from("product")
-        .select("*, category:category(id,name,slug), images:product_image(*)", { count: "exact" });
-      if (searchDb) q = q.or(`name.ilike.%${searchDb}%,description.ilike.%${searchDb}%`);
-      if (catFilter) q = q.eq("category_id", catFilter);
-      const from = (page - 1) * limit;
-      const { data, error: err, count } = await q
-        .order("created_at", { ascending: false })
-        .range(from, from + limit - 1);
-      if (err) throw err;
-      setProducts((data || []) as any);
-      setTotalPages(Math.ceil((count || 0) / limit) || 1);
-      setTotal(count || 0);
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+      });
+      if (searchDb) params.set("search", searchDb);
+      if (catFilter) params.set("category", catFilter);
+
+      const res = await fetch(`/api/admin/products?${params}`);
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Gagal memuat produk");
+      }
+      const data = await res.json();
+      setProducts(data.products || []);
+      setTotalPages(data.totalPages || 1);
+      setTotal(data.total || 0);
     } catch (e: any) { setError(e.message || "Gagal memuat produk"); }
     finally { setLoading(false); }
-  }, [searchDb, catFilter, page, supabase]);
+  }, [searchDb, catFilter, page]);
 
   const fetchCats = useCallback(async () => {
     try {
-      const { data } = await supabase.from("category").select("id,name,slug").order("sort_order");
-      setCategories((data || []) as any);
+      const res = await fetch("/api/admin/categories");
+      if (res.ok) {
+        const data = await res.json();
+        setCategories((data.categories || []) as any);
+      }
     } catch { /* ignore */ }
-  }, [supabase]);
+  }, []);
 
   useEffect(() => { fetchCats(); }, [fetchCats]);
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
@@ -219,41 +224,48 @@ export default function AdminProductsPage() {
       if (form.compare_price) payload.compare_price = Number(form.compare_price);
       if (form.badge) payload.badge = form.badge;
 
+      // Map snake_case form to camelCase API fields
+      const apiPayload: any = {
+        name: form.name.trim(),
+        slug: form.slug.trim(),
+        description: form.description.trim(),
+        price: Number(form.price),
+        unit: form.unit,
+        stock: Number(form.stock),
+        minStock: Number(form.min_stock),
+        isActive: form.is_active,
+        isFeatured: form.is_featured,
+        categoryId: form.category_id,
+      };
+      if (form.compare_price) apiPayload.comparePrice = Number(form.compare_price);
+      if (form.badge) apiPayload.badge = form.badge;
+      if (form.image_url.trim()) {
+        apiPayload.images = [{ url: form.image_url.trim(), alt: form.name.trim() }];
+      }
+
       if (editingId) {
-        payload.updated_at = new Date().toISOString();
-        const { error: upErr } = await supabase.from("product").update(payload).eq("id", editingId);
-        if (upErr) { setServerErr(upErr.message); return; }
-        // Handle images
-        if (form.image_url.trim()) {
-          const { data: existing } = await supabase.from("product_image").select("id").eq("product_id", editingId).limit(1);
-          if (existing && existing.length > 0) {
-            await supabase.from("product_image").update({ url: form.image_url.trim(), alt: form.name.trim() }).eq("product_id", editingId);
-          } else {
-            await supabase.from("product_image").insert({
-              product_id: editingId, url: form.image_url.trim(), alt: form.name.trim(), sort_order: 0,
-            });
-          }
-        }
+        const res = await fetch(`/api/admin/products/${editingId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(apiPayload),
+        });
+        const data = await res.json();
+        if (!res.ok) { setServerErr(data.error || "Gagal memperbarui"); return; }
       } else {
-        // Generate a simple cuid-like ID
-        const id = crypto.randomUUID().replace(/-/g, "").slice(0, 25);
-        payload.id = id;
-        payload.created_at = new Date().toISOString();
-        payload.updated_at = payload.created_at;
-        const { error: insErr } = await supabase.from("product").insert(payload);
-        if (insErr) { setServerErr(insErr.message); return; }
-        if (form.image_url.trim()) {
-          await supabase.from("product_image").insert({
-            product_id: id, url: form.image_url.trim(), alt: form.name.trim(), sort_order: 0,
-          });
-        }
+        const res = await fetch("/api/admin/products", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(apiPayload),
+        });
+        const data = await res.json();
+        if (!res.ok) { setServerErr(data.error || "Gagal membuat"); return; }
       }
       setShowModal(false);
       showOk(editingId ? "Produk berhasil diperbarui" : "Produk berhasil dibuat");
       fetchProducts();
     } catch (e: any) { setServerErr(e.message || "Terjadi kesalahan"); }
     finally { setSaving(false); }
-  }, [form, editingId, supabase, fetchProducts, showOk]);
+  }, [form, editingId, fetchProducts, showOk]);
 
   // ── Delete ─────────────────────────────────────────────────
 
@@ -261,25 +273,34 @@ export default function AdminProductsPage() {
     if (!delTarget) return;
     setDeleting(true);
     try {
-      await supabase.from("product_image").delete().eq("product_id", delTarget.id);
-      const { error: dErr } = await supabase.from("product").delete().eq("id", delTarget.id);
-      if (dErr) throw dErr;
+      const res = await fetch(`/api/admin/products/${delTarget.id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Gagal menghapus"); return; }
       setDelTarget(null);
       showOk("Produk berhasil dihapus");
       fetchProducts();
     } catch (e: any) { setError(e.message || "Gagal menghapus"); }
     finally { setDeleting(false); }
-  }, [delTarget, supabase, fetchProducts, showOk]);
+  }, [delTarget, fetchProducts, showOk]);
 
   // ── Toggle active ──────────────────────────────────────────
 
   const toggleActive = useCallback(async (p: Product) => {
     try {
-      await supabase.from("product").update({ is_active: !p.is_active, updated_at: new Date().toISOString() }).eq("id", p.id);
+      const res = await fetch(`/api/admin/products/${p.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: !p.is_active }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || "Gagal mengubah status");
+        return;
+      }
       showOk(p.is_active ? "Produk dinonaktifkan" : "Produk diaktifkan");
       fetchProducts();
     } catch (e: any) { setError(e.message); }
-  }, [supabase, fetchProducts, showOk]);
+  }, [fetchProducts, showOk]);
 
   // ── Render ─────────────────────────────────────────────────
 

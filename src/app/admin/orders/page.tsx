@@ -108,19 +108,26 @@ export default function AdminOrdersPage() {
   useEffect(() => { setPage(1); }, [searchDb, statusFilter]);
 
   const updateStatus = useCallback(async (orderId: string, newStatus: string) => {
-    setUpdating(true);
+    setUpdating(true); setError("");
     try {
-      const payload: any = { status: newStatus, updated_at: new Date().toISOString() };
-      if (newStatus === "PAID" || newStatus === "paid") payload.paid_at = new Date().toISOString();
-      if (newStatus === "COMPLETED" || newStatus === "completed") payload.completed_at = new Date().toISOString();
-      const { error: upErr } = await supabase.from("order").update(payload).eq("id", orderId);
-      if (upErr) throw upErr;
+      const res = await fetch(`/api/admin/orders/${orderId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || `Gagal update (${res.status})`);
+      }
+
       showOk(`Status → ${newStatus.replace("_", " ")}`);
       setSelected(p => p ? { ...p, status: newStatus } : null);
       fetchOrders();
     } catch (e: any) { setError(e.message || "Gagal update"); }
     finally { setUpdating(false); }
-  }, [supabase, fetchOrders, showOk]);
+  }, [fetchOrders, showOk]);
 
   return (
     <div className="space-y-6">
