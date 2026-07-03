@@ -1,16 +1,41 @@
 import crypto from "crypto";
 
 // JWT utilities (pure implementation - no external dependency needed)
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) {
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("JWT_SECRET environment variable is required in production");
-  }
-  console.warn("⚠️  JWT_SECRET not set. Using default for development only.");
-}
-const SECRET = JWT_SECRET || "leiz-store-dev-secret-key-change-in-production";
+//
+// Lazy secret resolution: we resolve JWT_SECRET on first access rather than at
+// module-load time. This is critical because during `next build` Next.js sets
+// NODE_ENV=production and evaluates route modules to collect page data. The
+// build environment does NOT have runtime env vars like JWT_SECRET, so throwing
+// eagerly at the top level would crash the build with
+//   "JWT_SECRET environment variable is required in production"
+// Auth functions (sign/verify) are never invoked during build, so deferring the
+// check to call time is both safe and necessary.
+
 const JWT_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
 const _REFRESH_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+let cachedSecret: string | null = null;
+
+function getSecret(): string {
+  if (cachedSecret !== null) return cachedSecret;
+
+  const envSecret = process.env.JWT_SECRET;
+  if (envSecret) {
+    cachedSecret = envSecret;
+    return cachedSecret;
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "JWT_SECRET environment variable is required in production. " +
+      "Set it in your hosting environment (e.g. Vercel dashboard)."
+    );
+  }
+
+  console.warn("⚠️  JWT_SECRET not set. Using default for development only.");
+  cachedSecret = "leiz-store-dev-secret-key-change-in-production";
+  return cachedSecret;
+}
 
 function base64UrlEncode(data: string): string {
   return Buffer.from(data)
@@ -51,7 +76,7 @@ export function signJWT(payload: Omit<JWTPayload, "iat" | "exp">): string {
       exp: now + JWT_EXPIRY_MS / 1000,
     })
   );
-  const signature = hmacSign(`${header}.${body}`, SECRET);
+  const signature = hmacSign(`${header}.${body}`, getSecret());
   return `${header}.${body}.${signature}`;
 }
 
@@ -61,7 +86,7 @@ export function verifyJWT(token: string): JWTPayload | null {
     if (parts.length !== 3) return null;
 
     const [header, body, signature] = parts;
-    const expectedSig = hmacSign(`${header}.${body}`, SECRET);
+    const expectedSig = hmacSign(`${header}.${body}`, getSecret());
 
     if (signature !== expectedSig) return null;
 
