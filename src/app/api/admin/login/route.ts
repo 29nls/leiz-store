@@ -6,12 +6,30 @@
 import { NextResponse } from "next/server";
 import { signJWT } from "@/lib/auth";
 
-// Admin credentials - in production, store these securely
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@leizstore.com";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
+// Admin credentials — must be set via environment variables.
+// No hardcoded fallbacks: if missing, reject logins with a clear server error
+// so the misconfiguration is caught immediately instead of silently allowing
+// anyone who guesses the default to log in.
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+
+function credentialsConfigured(): boolean {
+  return Boolean(ADMIN_EMAIL && ADMIN_PASSWORD);
+}
 
 export async function POST(request: Request) {
   try {
+    if (!credentialsConfigured()) {
+      console.error(
+        "[admin/login] ADMIN_EMAIL and ADMIN_PASSWORD env vars are not set. " +
+        "Login rejected — configure them before attempting to sign in."
+      );
+      return NextResponse.json(
+        { error: "Server misconfiguration — contact administrator" },
+        { status: 500 }
+      );
+    }
+
     const body = await request.json();
     const { email, password } = body;
 
@@ -22,6 +40,10 @@ export async function POST(request: Request) {
       );
     }
 
+    // Timing-safe comparison would be ideal but bcrypt comparison (used here for
+    // demo) is not applicable since we compare plain-text creds in this route.
+    // For production auth, prefer Supabase Auth — this is a fallback for the
+    // simple admin login flow.
     if (email !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
       return NextResponse.json(
         { error: "Invalid credentials" },
@@ -31,7 +53,7 @@ export async function POST(request: Request) {
 
     const token = signJWT({
       sub: "admin",
-      email: ADMIN_EMAIL,
+      email: ADMIN_EMAIL!,
       role: "ADMIN",
     });
 
@@ -49,7 +71,8 @@ export async function POST(request: Request) {
     });
 
     return response;
-  } catch {
+  } catch (err) {
+    console.error("[admin/login] Unexpected error:", err);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

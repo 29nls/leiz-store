@@ -16,6 +16,7 @@
 import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 import * as readline from "readline";
+import { hashPassword } from "../src/lib/auth";
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -86,10 +87,9 @@ async function main() {
 
     // Step 2: Create/update record in public.user table
     console.log("2️⃣  Creating record in public.user table...");
-    const hashedPassword = crypto
-      .createHash("sha256")
-      .update(password)
-      .digest("hex");
+    // hashPassword uses PBKDF2 with 100k iterations + SHA-512 + random 16-byte salt —
+    // a NIST-recommended key-derivation function recognized as secure by CodeQL (CWE-916).
+    const hashedPassword = await hashPassword(password);
 
     // Check if user already exists in public.user
     const { data: existing } = await supabase
