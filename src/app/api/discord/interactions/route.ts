@@ -9,11 +9,12 @@
  * Vercel serverless freezes the function immediately after the HTTP response
  * is sent, making background work unreliable.
  *
- * Discord requires a valid response within 3 seconds. Our DB update (~150ms)
- * + Discord PATCH (~150ms) + ephemeral followup (~150ms) = ~450ms total —
- * well within the 3-second limit.
+ * Uses UPDATE_MESSAGE (type 7) for button clicks — the response itself
+ * directly updates the Discord message. No separate PATCH call needed.
+ * DB update (~150ms) + ephemeral followup (~150ms) = ~300ms total,
+ * well within Discord's 3-second limit.
  * The interaction token is valid immediately (for 15 minutes), so we can
- * PATCH the webhook before returning the ACK response.
+ * send the ephemeral followup before returning the response.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -22,6 +23,7 @@ import {
   InteractionType,
   InteractionResponseType,
 } from "discord-interactions";
+import { sendBuyerNotification } from "@/lib/discord/bot";
 import {
   adminAcceptPayment,
   adminRejectPayment,
@@ -83,9 +85,27 @@ async function sendEphemeralFollowup(
   }
 }
 
-// ─── Process action + PATCH Discord message (synchronous) ─────────────────────
+// ─── Process action + build response data (synchronous) ───────────────────────
+// Uses UPDATE_MESSAGE (type 7) so the response itself directly updates the
+// Discord message — no separate PATCH call needed. The interaction token is
+// valid immediately, so ephemeral followups can be sent before the response.
 
-async function processAndPatch(
+interface MessageUpdateData {
+  content: string;
+  embeds: any[];
+  components: any[];
+}
+
+// ─── Buyer DM messages per action ────────────────────────────────────────
+
+const BUYER_MESSAGES: Record<string, string> = {
+  accept: "Pembayaran Anda sudah dikonfirmasi masuk! 🎉\n\nPesanan sedang diproses dan akan segera dikirim.\nTerima kasih telah berbelanja di LEIZ STORE 🙏",
+  reject: "Pembayaran Anda tidak dapat diverifikasi. ⚠️\n\nSilakan hubungi admin untuk informasi lebih lanjut atau lakukan upload ulang bukti transfer.",
+  cancel: "Pesanan Anda telah dibatalkan. 🚫\n\nJika Anda memiliki pertanyaan, silakan hubungi admin LEIZ STORE.",
+  force_cancel: "Pesanan Anda telah dibatalkan paksa. ⛔\n\nJika Anda memiliki pertanyaan, silakan hubungi admin LEIZ STORE.",
+};
+
+async function processAction(
   action: string,
   orderId: string,
   adminId: string,
@@ -93,9 +113,9 @@ async function processAndPatch(
   applicationId: string,
   token: string,
   originalEmbed: any
-): Promise<void> {
+): Promise<MessageUpdateData> {
   // 1. Execute the DB action
-  let result: { success: boolean; error?: string } = { success: false, error: "Unknown action" };
+  let result: { success: boolean; error?: string; order?: any } = { success: false, error: "Unknown action" };
 
   try {
     switch (action) {
@@ -123,7 +143,7 @@ async function processAndPatch(
 
   const actionLabel = ACTION_LABELS[action] ?? action;
 
-  // 2. Send ephemeral followup to the admin who clicked
+  // 2. Send ephemeral followup to the admin who clicked (fast, ~150ms)
   if (result.success) {
     await sendEphemeralFollowup(
       applicationId,
@@ -138,7 +158,29 @@ async function processAndPatch(
     );
   }
 
-  // 3. Build updated embed
+  // 3. Send DM notification to the buyer (synchronous — must complete before response)
+  // Vercel serverless freezes after the response is sent, so we must await this.
+  // Total time: DB (~150ms) + ephemeral (~150ms) + buyer DM (~300ms) = ~600ms,
+  // well within Discord's 3-second limit.
+  if (result.success && result.order) {
+    const order = result.order;
+    const buyerDiscordId = order.buyer_discord_id || order.customer_discord || order.buyerDiscordId || null;
+    const orderNumber = order.order_number || order.orderNumber || orderId;
+    const buyerMessage = BUYER_MESSAGES[action];
+
+    if (buyerDiscordId && buyerMessage) {
+      try {
+        const sent = await sendBuyerNotification(buyerDiscordId, orderNumber, buyerMessage);
+        if (sent) {
+          console.log(`[Discord] Buyer DM sent for order ${orderNumber}`);
+        }
+      } catch (err) {
+        console.error("[Discord] Buyer DM error:", err);
+      }
+    }
+  }
+
+  // 4. Build updated embed for the response
   const embed = originalEmbed ? JSON.parse(JSON.stringify(originalEmbed)) : null;
   if (embed) {
     embed.color = result.success && action === "accept" ? 0x22c55e : 0xef4444;
@@ -149,40 +191,12 @@ async function processAndPatch(
     ? `${actionLabel} — Order ID: \`${orderId}\`\nOleh: <@${adminId}>`
     : `❌ Gagal memproses order: ${result.error}`;
 
-  // 4. PATCH the original message via Discord webhook
-  if (
-    !isSafeDiscordPathSegment(applicationId, /^\d+$/) ||
-    !isSafeDiscordPathSegment(token, /^[A-Za-z0-9._-]+$/)
-  ) {
-    console.error("[Discord] Invalid webhook identifiers");
-    return;
-  }
-
-  const patchUrl = new URL(
-    `/api/v10/webhooks/${encodeURIComponent(applicationId)}/${encodeURIComponent(token)}/messages/@original`,
-    "https://discord.com"
-  ).toString();
-
-  try {
-    const res = await fetch(patchUrl, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        content,
-        embeds: embed ? [embed] : [],
-        components: [], // remove buttons
-      }),
-    });
-
-    if (!res.ok) {
-      const body = await res.text();
-      console.error("[Discord] PATCH failed:", res.status, body);
-    } else {
-      console.log("[Discord] PATCH succeeded — message updated");
-    }
-  } catch (err) {
-    console.error("[Discord] PATCH network error:", err);
-  }
+  // Return the message update data — will be used in the UPDATE_MESSAGE (type 7) response
+  return {
+    content,
+    embeds: embed ? [embed] : [],
+    components: [], // remove buttons
+  };
 }
 
 // ─── POST handler ─────────────────────────────────────────────────────────────
@@ -242,15 +256,14 @@ export async function POST(req: NextRequest) {
     const applicationId: string = interaction.application_id;
     const token: string = interaction.token;
 
-    // If no custom_id — send ephemeral feedback and ACK
+    // If no custom_id — respond with ephemeral error message
     if (!customId) {
-      await sendEphemeralFollowup(
-        applicationId,
-        token,
-        "❌ Tombol tidak dikenali (custom_id kosong). Silakan hubungi developer."
-      );
       return NextResponse.json({
-        type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE,
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          content: "❌ Tombol tidak dikenali (custom_id kosong). Silakan hubungi developer.",
+          flags: 64, // EPHEMERAL — only the clicking user sees this
+        },
       });
     }
 
@@ -258,15 +271,14 @@ export async function POST(req: NextRequest) {
       /^payment_(accept|reject|cancel|force_cancel)_(.+)$/
     );
 
-    // If unrecognized format — send ephemeral feedback and ACK
+    // If unrecognized format — respond with ephemeral error message
     if (!match) {
-      await sendEphemeralFollowup(
-        applicationId,
-        token,
-        `❌ Tombol tidak dikenali: \`${customId}\`\nSilakan hubungi developer.`
-      );
       return NextResponse.json({
-        type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE,
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          content: `❌ Tombol tidak dikenali: \`${customId}\`\nSilakan hubungi developer.`,
+          flags: 64, // EPHEMERAL — only the clicking user sees this
+        },
       });
     }
 
@@ -282,10 +294,10 @@ export async function POST(req: NextRequest) {
     );
 
     // ── Do ALL work synchronously before returning ────────────────────────────
-    // The interaction token is valid immediately for 15 minutes.
-    // We can PATCH the webhook & send ephemeral feedback before returning the ACK.
-    // DB (~150ms) + PATCH (~150ms) + ephemeral (~150ms) = ~450ms, under Discord's 3s limit.
-    await processAndPatch(
+    // Uses UPDATE_MESSAGE (type 7) so the response itself directly updates the
+    // Discord message, eliminating the need for a separate PATCH call.
+    // DB (~150ms) + ephemeral (~150ms) = ~300ms total, well under Discord's 3s limit.
+    const messageData = await processAction(
       action,
       orderId,
       adminId,
@@ -295,15 +307,20 @@ export async function POST(req: NextRequest) {
       originalEmbed
     );
 
-    // ── ACK Discord ───────────────────────────────────────────────────────────
+    // ── ACK + update message in one response ─────────────────────────────────
     return NextResponse.json({
-      type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE,
+      type: InteractionResponseType.UPDATE_MESSAGE,
+      data: messageData,
     });
   }
 
   // ── Fallback ────────────────────────────────────────────────────────────────
   console.warn("[Discord] Unhandled interaction type:", type);
   return NextResponse.json({
-    type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE,
+    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+    data: {
+      content: `❌ Interaksi tidak dikenal (type: ${type}). Silakan hubungi developer.`,
+      flags: 64, // EPHEMERAL
+    },
   });
 }
