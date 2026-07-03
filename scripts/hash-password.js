@@ -34,7 +34,6 @@ bcrypt.hash(password, saltRounds, (err, hash) => {
   console.log('\n=================================');
   console.log('Password Hash Generated');
   console.log('=================================');
-  console.log('Password length:', password.length, 'characters');
   console.log('Hash:', hash);
   console.log('=================================\n');
   console.log('Copy the hash above and use it in your auth configuration.');

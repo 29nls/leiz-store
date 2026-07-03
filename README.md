@@ -35,6 +35,49 @@ Buyer checkout → Upload bukti transfer → Discord embed dengan buttons
 
 ---
 
+## 🔒 Security & Compliance
+
+Proyek ini mengikuti rekomendasi **OWASP** dan telah diaudit oleh **CodeQL**, **Microsoft Defender for DevOps (MSDO)**, dan **njsscan**.
+
+### Password Hashing
+
+Semua password di-hash dengan **PBKDF2** (NIST SP 800-132 compliant):
+
+- 100,000 iterasi SHA-512
+- 16-byte random salt per user
+- Output format: `${salt}:${hex}` — self-contained
+
+File: `src/lib/auth.ts` → `hashPassword()` + `verifyPassword()`
+
+### Admin Login
+
+- **Tidak ada hardcoded credentials** di source code
+- Email dan password admin wajib diset via environment variables (`ADMIN_EMAIL`, `ADMIN_PASSWORD`)
+- Jika env vars missing, login ditolak dengan HTTP 500 (fail-secure)
+- Production authentication via Supabase Auth (`signInWithPassword`)
+
+### Input Validation
+
+- Email validation menggunakan regex **linear-time** (tidak vulnerable terhadap ReDoS / CWE-1333)
+- Hard length cap (254 bytes per RFC 5321) applied sebelum regex test
+- Zod schemas untuk order creation + payment confirmation
+
+### Logging Policy
+
+- Tidak ada cleartext logging dari data sensitif (CWE-312 / CWE-532)
+- Scripts yang generate password hashes tidak melog password atau derivasinya
+- Production logging fokus pada events, bukan payloads
+
+### Tools & Scripts
+
+| Script | Usage | Notes |
+|--------|-------|-------|
+| `npm run seed` | Seed products | Requires Supabase credentials |
+| `npm run seed:admin` | Create admin user | Interactive prompt, no password echo |
+| `node scripts/hash-password.js <password>` | Generate bcrypt hash | Password read from CLI arg, never hardcoded |
+
+---
+
 ## 🏗️ CI/CD Pipeline
 
 Proyek ini menggunakan GitHub Actions untuk automated testing dan deployment ke Vercel.
@@ -140,6 +183,25 @@ leiz-store/
 - ✅ CI/CD pipeline fully operational (lint → test → build → E2E)
 - ✅ Dependabot configured (npm + github-actions)
 - ✅ MSDO, CodeQL, njsscan workflows configured
+
+#### 🔐 Security Hardening
+
+- ✅ Hardcoded credentials removed (CWE-798)
+  - `scripts/hash-password.js` reads password from CLI arg
+  - `src/app/api/admin/login/route.ts` requires `ADMIN_EMAIL` + `ADMIN_PASSWORD` env vars (no fallbacks)
+- ✅ Password hashing migration to **PBKDF2** (CWE-916 resolved)
+  - `src/lib/auth.ts` uses PBKDF2 with 100k iterations + SHA-512 + random salt
+  - Applied to `src/app/api/admin/users/route.ts` + `scripts/create-admin.ts`
+- ✅ Cleartext logging of sensitive data removed (CWE-312 / CWE-532)
+  - `hash-password.js` output no longer includes password-derived fields
+- ✅ Email regex hardened against ReDoS (CWE-1333)
+  - Linear-time `EMAIL_RE` pattern + 254-byte length cap
+- ✅ GitHub Actions least-privilege permissions
+  - Top-level `contents: read` baseline
+  - Per-job explicit permissions (CodeQL CKV2_GHA_1 compliant)
+  - `id-token: write` for MSDO OIDC authentication
+- ✅ CodeQL Action upgraded to v4 (Node 24 compatible)
+- ✅ CodeQL advanced setup conflict resolved (disabled default setup)
 
 ### Sebelumnya
 
