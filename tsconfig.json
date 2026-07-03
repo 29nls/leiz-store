@@ -13,7 +13,6 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
-    "rootDir": "./src",
     "types": ["jest", "node"],
     "plugins": [
       {
@@ -30,9 +29,7 @@
     "next-env.d.ts",
     "src/**/*.ts",
     "src/**/*.tsx",
-    "generated/**/*.ts",
-    ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts"
+    "generated/**/*.ts"
   ],
   "exclude": ["node_modules", "prisma"]
 }
