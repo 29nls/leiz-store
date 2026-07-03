@@ -39,6 +39,10 @@ const ACTION_LABELS: Record<string, string> = {
   force_cancel: "⛔ Order dibatalkan paksa",
 };
 
+function isSafeDiscordPathSegment(value: string, pattern: RegExp): boolean {
+  return typeof value === "string" && pattern.test(value);
+}
+
 // ─── Process action + PATCH Discord message (synchronous) ─────────────────────
 
 async function processAndPatch(
@@ -89,7 +93,18 @@ async function processAndPatch(
     : `❌ Gagal memproses order: ${result.error}`;
 
   // 3. PATCH the original message via Discord webhook
-  const patchUrl = `https://discord.com/api/v10/webhooks/${applicationId}/${token}/messages/@original`;
+  if (
+    !isSafeDiscordPathSegment(applicationId, /^\d+$/) ||
+    !isSafeDiscordPathSegment(token, /^[A-Za-z0-9._-]+$/)
+  ) {
+    console.error("[Discord] Invalid webhook identifiers");
+    return;
+  }
+
+  const patchUrl = new URL(
+    `/api/v10/webhooks/${encodeURIComponent(applicationId)}/${encodeURIComponent(token)}/messages/@original`,
+    "https://discord.com"
+  ).toString();
 
   try {
     const res = await fetch(patchUrl, {
