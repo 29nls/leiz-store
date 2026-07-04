@@ -5,7 +5,6 @@ import "@/styles/performance-animations.css";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import CartDrawer from "@/components/cart/CartDrawer";
-import LivePurchaseTicker from "@/components/layout/LivePurchaseTicker";
 import { PerformanceHints } from "@/components/performance/resource-hints";
 import { ThirdPartyScripts } from "@/components/performance/third-party-scripts";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -149,7 +148,6 @@ export default function RootLayout({
         <div className="flex-1">{children}</div>
         <Footer />
         <CartDrawer />
-        <LivePurchaseTicker />
         
         {/* Third-party scripts loaded optimally */}
         <ThirdPartyScripts />

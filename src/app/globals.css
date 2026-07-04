@@ -515,22 +515,12 @@ body {
   to { transform: rotate(360deg); }
 }
 
-/* Live Ticker Animation - Smooth infinite scroll with GPU acceleration */
-@keyframes live-ticker-scroll {
-  0%   { transform: translate3d(0%, 0, 0); }
-  100% { transform: translate3d(-33.333%, 0, 0); }
-}
-
 .animate-ticker   { animation: dn-ticker   36s linear infinite; }
 .animate-fade-up  { animation: dn-fade-up  0.5s cubic-bezier(0.16,1,0.3,1) both; }
 .animate-fade-in  { animation: dn-fade-in  0.4s ease both; }
 .animate-scale-in { animation: dn-scale-in 0.35s cubic-bezier(0.16,1,0.3,1) both; }
 .animate-pulse-dn { animation: dn-pulse    2.5s ease-in-out infinite; }
 .animate-spin-dn  { animation: dn-spin     0.7s linear infinite; }
-.animate-live-ticker { 
-  animation: live-ticker-scroll 45s linear infinite;
-  will-change: transform;
-}
 
 /* Stagger delays */
 .stagger-1 { animation-delay: 0.06s; }
@@ -542,31 +532,6 @@ body {
 
 /* Ticker pause on hover */
 .ticker-wrap:hover .animate-ticker { animation-play-state: paused; }
-.live-ticker-wrapper:hover .animate-live-ticker { animation-play-state: paused; }
-
-/* ════════════════════════════════════════════════
-   LIVE PURCHASE TICKER — mobile responsive
-   ════════════════════════════════════════════════ */
-@media (max-width: 640px) {
-  .live-ticker-wrapper {
-    bottom: 8px !important;
-    width: calc(100vw - 16px) !important;
-  }
-  .live-ticker-container {
-    border-radius: 8px !important;
-  }
-  .ticker-track {
-    padding: 8px 0 !important;
-  }
-  .ticker-item {
-    padding-left: 16px !important;
-    padding-right: 16px !important;
-    gap: 6px !important;
-  }
-  .ticker-item span {
-    font-size: 11px !important;
-  }
-}
 
 /* ════════════════════════════════════════════════
    LAYOUT UTILITIES
