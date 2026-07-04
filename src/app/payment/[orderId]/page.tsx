@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
   Clock,
@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/icons";
 import { formatPrice, cn } from "@/lib/utils";
 import { PAYMENT_ACCOUNTS, type PaymentAccount } from "@/lib/payment/constants";
+import { subscribeToRow } from "@/lib/supabase-browser";
 
 interface OrderData {
   id: string;
@@ -155,6 +156,10 @@ export default function PaymentPage() {
   const [confirmed, setConfirmed] = useState(false);
   const [paymentProofBase64, setPaymentProofBase64] = useState<string | null>(null);
   const [paymentProofName, setPaymentProofName] = useState<string | null>(null);
+  const [realtimeConnected, setRealtimeConnected] = useState(false);
+  const [statusChanged, setStatusChanged] = useState(false);
+  const [previousStatus, setPreviousStatus] = useState<string | null>(null);
+  const statusChangeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -174,33 +179,71 @@ export default function PaymentPage() {
     reader.readAsDataURL(file);
   };
 
-  // Fetch order data via a lightweight API
+  const loadOrder = useCallback(async () => {
+    if (!orderId) return;
+    try {
+      const res = await fetch(`/api/orders/track?orderId=${orderId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setOrder(data.data);
+        setError(null);
+      }
+    } catch {
+      setError("Gagal memuat data order");
+    } finally {
+      setLoading(false);
+    }
+  }, [orderId]);
+
+  // Initial load
+  useEffect(() => {
+    loadOrder();
+  }, [loadOrder]);
+
+  // Real-time subscription to order changes (single filtered channel)
   useEffect(() => {
     if (!orderId) return;
 
-    async function loadOrder() {
-      try {
-        // Use the track endpoint to get order data
-        const res = await fetch(`/api/orders/track?orderId=${orderId}`);
-        if (res.ok) {
-          const data = await res.json();
-          setOrder(data.data);
-        } else {
-          setError("Order tidak ditemukan");
+    let mounted = true;
+
+    const cleanup = subscribeToRow(
+      "order",
+      `id=eq.${orderId}`,
+      (payload) => {
+        if (!mounted) return;
+        if (payload.new && payload.new.id === orderId) {
+          const newOrder = payload.new as OrderData;
+          setOrder((prev) => {
+            if (prev && prev.status !== newOrder.status) {
+              setPreviousStatus(prev.status);
+              setStatusChanged(true);
+              if (statusChangeTimerRef.current) clearTimeout(statusChangeTimerRef.current);
+              statusChangeTimerRef.current = setTimeout(() => setStatusChanged(false), 5000);
+            }
+            return newOrder;
+          });
+          setRealtimeConnected(true);
         }
-      } catch {
-        setError("Gagal memuat data order");
-      } finally {
-        setLoading(false);
-      }
-    }
+      },
+      "UPDATE",
+      `payment-realtime-${orderId}`
+    );
 
-    loadOrder();
-
-    // Poll for status changes every 15 seconds
-    const interval = setInterval(loadOrder, 15000);
-    return () => clearInterval(interval);
+    return () => {
+      mounted = false;
+      cleanup();
+      if (statusChangeTimerRef.current) clearTimeout(statusChangeTimerRef.current);
+    };
   }, [orderId]);
+
+  // Fallback polling (only if realtime fails)
+  useEffect(() => {
+    if (!orderId) return;
+    const interval = setInterval(() => {
+      if (!realtimeConnected) loadOrder();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [orderId, realtimeConnected, loadOrder]);
 
   const handleConfirmTransfer = async () => {
     if (!order || confirming) return;
@@ -319,7 +362,43 @@ export default function PaymentPage() {
           <span className={cn("text-sm font-medium", statusDisplay.color)}>
             {statusDisplay.label}
           </span>
+          {/* Connection indicator */}
+          <div className="ml-auto flex items-center gap-1.5" title={realtimeConnected ? "Real-time terhubung" : "Menghubungkan..."}>
+            <span className={cn(
+              "h-2 w-2 rounded-full",
+              realtimeConnected ? "bg-emerald-400 animate-pulse" : "bg-text-muted/30"
+            )} />
+            <span className="text-xs text-text-muted/60 hidden sm:inline">
+              {realtimeConnected ? "Live" : "..."}
+            </span>
+          </div>
         </motion.div>
+
+        {/* Real-time status change notification */}
+        <AnimatePresence>
+          {statusChanged && previousStatus && (
+            <motion.div
+              initial={{ opacity: 0, y: -10, height: 0 }}
+              animate={{ opacity: 1, y: 0, height: "auto" }}
+              exit={{ opacity: 0, y: -10, height: 0 }}
+              className="mb-6 overflow-hidden"
+            >
+              <div className="flex items-center gap-3 p-4 rounded-2xl bg-primary/10 border border-primary/20">
+                <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
+                <div className="text-sm">
+                  <span className="text-text-muted">Status diperbarui: </span>
+                  <span className={cn("font-medium", getStatusDisplay(previousStatus).color)}>
+                    {getStatusDisplay(previousStatus).label}
+                  </span>
+                  <span className="text-text-muted"> → </span>
+                  <span className={cn("font-medium", statusDisplay.color)}>
+                    {statusDisplay.label}
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Payment Success */}
         {isPaid && (
