@@ -83,8 +83,7 @@ export type OrderStatus =
 export type ManualPaymentMethod =
   | "bank_transfer"
   | "gopay"
-  | "dana"
-  | "seabank";
+  | "dana";
 
 export interface Order {
   id: string;

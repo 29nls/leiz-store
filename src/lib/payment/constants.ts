@@ -22,33 +22,25 @@ export interface PaymentAccount {
 export const PAYMENT_ACCOUNTS: PaymentAccount[] = [
   {
     method: "bank_transfer",
-    label: "Bank Transfer (BCA)",
+    label: "Bank Transfer (Jago)",
     icon: "🏦",
-    accountName: "LEIZ STORE",
-    accountNumber: "1234567890",
-    bankName: "BCA",
+    accountName: "Ridho Kurniawan",
+    accountNumber: "103343988197",
+    bankName: "Jago",
   },
   {
     method: "gopay",
     label: "GoPay",
     icon: "💚",
-    accountName: "LEIZ STORE",
-    accountNumber: "08123456789",
+    accountName: "Ridho Kurniawan",
+    accountNumber: "085942180995",
   },
   {
     method: "dana",
     label: "DANA",
     icon: "💙",
-    accountName: "LEIZ STORE",
-    accountNumber: "08123456789",
-  },
-  {
-    method: "seabank",
-    label: "SeaBank",
-    icon: "🔵",
-    accountName: "LEIZ STORE",
-    accountNumber: "9876543210",
-    bankName: "SeaBank",
+    accountName: "Ridho Kurniawan",
+    accountNumber: "085942180995",
   },
 ];
 
@@ -89,7 +81,7 @@ export function isValidTransition(from: string, to: string): boolean {
 
 // ─── Manual Payment Methods ─────────────────────────────────
 
-export const MANUAL_PAYMENT_METHODS = ["bank_transfer", "gopay", "dana", "seabank"] as const;
+export const MANUAL_PAYMENT_METHODS = ["bank_transfer", "gopay", "dana"] as const;
 export type ManualPaymentMethod = (typeof MANUAL_PAYMENT_METHODS)[number];
 
 export function isManualPaymentMethod(method: string): method is ManualPaymentMethod {

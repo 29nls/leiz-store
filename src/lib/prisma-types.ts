@@ -40,7 +40,6 @@ export const PaymentMethod = {
   BANK_TRANSFER: "bank_transfer",
   GOPAY: "gopay",
   DANA: "dana",
-  SEABANK: "seabank",
 } as const;
 export type PaymentMethod = (typeof PaymentMethod)[keyof typeof PaymentMethod];
 
