@@ -114,7 +114,7 @@ async function processAction(
   token: string,
   originalEmbed: any
 ): Promise<MessageUpdateData> {
-  // 1. Execute the DB action
+  // 1. Execute the DB action (must complete before response)
   let result: { success: boolean; error?: string; order?: any } = { success: false, error: "Unknown action" };
 
   try {
@@ -143,44 +143,7 @@ async function processAction(
 
   const actionLabel = ACTION_LABELS[action] ?? action;
 
-  // 2. Send ephemeral followup to the admin who clicked (fast, ~150ms)
-  if (result.success) {
-    await sendEphemeralFollowup(
-      applicationId,
-      token,
-      `${actionLabel}\nOrder ID: \`${orderId}\`\nStatus: ✅ Berhasil`
-    );
-  } else {
-    await sendEphemeralFollowup(
-      applicationId,
-      token,
-      `❌ **Gagal:** ${result.error ?? "Terjadi kesalahan"}\nAction: ${actionLabel}\nOrder ID: \`${orderId}\``
-    );
-  }
-
-  // 3. Send DM notification to the buyer (synchronous — must complete before response)
-  // Vercel serverless freezes after the response is sent, so we must await this.
-  // Total time: DB (~150ms) + ephemeral (~150ms) + buyer DM (~300ms) = ~600ms,
-  // well within Discord's 3-second limit.
-  if (result.success && result.order) {
-    const order = result.order;
-    const buyerDiscordId = order.buyer_discord_id || order.customer_discord || order.buyerDiscordId || null;
-    const orderNumber = order.order_number || order.orderNumber || orderId;
-    const buyerMessage = BUYER_MESSAGES[action];
-
-    if (buyerDiscordId && buyerMessage) {
-      try {
-        const sent = await sendBuyerNotification(buyerDiscordId, orderNumber, buyerMessage);
-        if (sent) {
-          console.log(`[Discord] Buyer DM sent for order ${orderNumber}`);
-        }
-      } catch (err) {
-        console.error("[Discord] Buyer DM error:", err);
-      }
-    }
-  }
-
-  // 4. Build updated embed for the response
+  // 2. Build updated embed for the response (synchronous)
   const embed = originalEmbed ? JSON.parse(JSON.stringify(originalEmbed)) : null;
   if (embed) {
     embed.color = result.success && action === "accept" ? 0x22c55e : 0xef4444;
@@ -191,12 +154,39 @@ async function processAction(
     ? `${actionLabel} — Order ID: \`${orderId}\`\nOleh: <@${adminId}>`
     : `❌ Gagal memproses order: ${result.error}`;
 
-  // Return the message update data — will be used in the UPDATE_MESSAGE (type 7) response
-  return {
+  const messageData: MessageUpdateData = {
     content,
     embeds: embed ? [embed] : [],
     components: [], // remove buttons
   };
+
+  // 3. Fire-and-forget: Send ephemeral followup to admin (non-blocking)
+  // Do NOT await - this runs after response is returned to Discord
+  // Interaction token is valid for 15 minutes from Discord's POST
+  const followupContent = result.success
+    ? `${actionLabel}\nOrder ID: \`${orderId}\`\nStatus: ✅ Berhasil`
+    : `❌ **Gagal:** ${result.error ?? "Terjadi kesalahan"}\nAction: ${actionLabel}\nOrder ID: \`${orderId}\``;
+  sendEphemeralFollowup(applicationId, token, followupContent).catch((err) =>
+    console.error("[Discord] Ephemeral followup failed:", err)
+  );
+
+  // 4. Fire-and-forget: Send DM notification to buyer (non-blocking)
+  if (result.success && result.order) {
+    const order = result.order;
+    const buyerDiscordId = order.buyer_discord_id || order.customer_discord || order.buyerDiscordId || null;
+    const orderNumber = order.order_number || order.orderNumber || orderId;
+    const buyerMessage = BUYER_MESSAGES[action];
+
+    if (buyerDiscordId && buyerMessage) {
+      sendBuyerNotification(buyerDiscordId, orderNumber, buyerMessage)
+        .then((sent) => {
+          if (sent) console.log(`[Discord] Buyer DM sent for order ${orderNumber}`);
+        })
+        .catch((err) => console.error("[Discord] Buyer DM error:", err));
+    }
+  }
+
+  return messageData;
 }
 
 // ─── POST handler ─────────────────────────────────────────────────────────────
