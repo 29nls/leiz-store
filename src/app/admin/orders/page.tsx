@@ -13,7 +13,7 @@ interface OrderItem {
 
 interface Order {
   id: string; order_number: string; customer_name: string;
-  customer_email: string | null; customer_discord: string | null;
+  customer_discord: string | null;
   status: string; total: number; payment_method: string | null;
   created_at: string; items: OrderItem[];
 }
@@ -171,7 +171,7 @@ export default function AdminOrdersPage() {
               ) : orders.map(o => (
                 <tr key={o.id} className="hover:bg-gray-800/30 transition-colors cursor-pointer" onClick={() => setSelected(o)}>
                   <td className="py-3 px-4"><span className="text-white font-medium font-mono text-xs">#{o.order_number}</span></td>
-                  <td className="py-3 px-4"><p className="text-white font-medium">{o.customer_name}</p>{o.customer_email && <p className="text-xs text-gray-500">{o.customer_email}</p>}</td>
+                  <td className="py-3 px-4"><p className="text-white font-medium">{o.customer_name}</p></td>
                   <td className="py-3 px-4 text-center">
                     <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium border ${STATUS_STYLES[o.status] || "bg-gray-500/10 text-gray-400"}`}>{o.status.replace("_", " ")}</span>
                   </td>
@@ -215,7 +215,6 @@ export default function AdminOrdersPage() {
                 <h3 className="text-sm font-medium text-gray-300 mb-2">Pelanggan</h3>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div><span className="text-gray-500">Nama:</span><p className="text-white">{selected.customer_name}</p></div>
-                  {selected.customer_email && <div><span className="text-gray-500">Email:</span><p className="text-white">{selected.customer_email}</p></div>}
                   {selected.customer_discord && <div><span className="text-gray-500">Discord:</span><p className="text-white">{selected.customer_discord}</p></div>}
                   {selected.payment_method && <div><span className="text-gray-500">Pembayaran:</span><p className="text-white capitalize">{selected.payment_method}</p></div>}
                 </div>

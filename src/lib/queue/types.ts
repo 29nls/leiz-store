@@ -7,11 +7,8 @@ export const JobStatus = {
 } as const;
 export type JobStatus = (typeof JobStatus)[keyof typeof JobStatus];
 
-export const JobType = {
-  SEND_INVOICE_EMAIL: "SEND_INVOICE_EMAIL",
-  SEND_INVOICE_WHATSAPP: "SEND_INVOICE_WHATSAPP",
-} as const;
-export type JobType = (typeof JobType)[keyof typeof JobType];
+export const JobType = {} as const;
+export type JobType = string;
 
 export interface Job {
   id: string;

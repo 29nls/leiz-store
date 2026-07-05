@@ -262,49 +262,16 @@ describe("Notification Service", () => {
   });
 
   describe("notifyOrderStatusChange", () => {
-    it("should send WhatsApp notification when phone is provided", async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({ ok: true });
-
+    it("should return null (WhatsApp removed)", async () => {
       const result = await notifyOrderStatusChange(
         {
           orderNumber: "LZ-20240101-ABC123",
           customerName: "Test Customer",
         },
-        "paid",
-        "+6281234567890"
-      );
-
-      expect(result).not.toBeNull();
-      expect(result!.success).toBe(true);
-      expect(result!.channel).toBe(NotificationChannel.WHATSAPP);
-    });
-
-    it("should return null when no phone is provided", async () => {
-      const result = await notifyOrderStatusChange(
-        {
-          orderNumber: "LZ-20240101-ABC123",
-          customerName: "Test Customer",
-        },
-        "completed"
+        "paid"
       );
 
       expect(result).toBeNull();
-    });
-
-    it("should handle unknown status gracefully", async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({ ok: true });
-
-      const result = await notifyOrderStatusChange(
-        {
-          orderNumber: "LZ-20240101-ABC123",
-          customerName: "Test Customer",
-        },
-        "unknown_status",
-        "+6281234567890"
-      );
-
-      expect(result).not.toBeNull();
-      expect(result!.success).toBe(true);
     });
   });
 

@@ -18,10 +18,6 @@ export interface Invoice {
   invoice_no: string;
   status: InvoiceStatus;
   pdf_url?: string | null;
-  sent_via_email: boolean;
-  sent_via_wa: boolean;
-  email_status: SendStatus;
-  wa_status: SendStatus;
   error_log?: Record<string, unknown> | null;
   store_id?: string | null;
   created_at: string;
@@ -33,10 +29,8 @@ export interface InvoiceData {
   invoiceNo: string;
   orderNumber: string;
   customerName: string;
-  customerEmail?: string;
   customerDiscord?: string;
   customerIGN?: string;
-  customerPhone?: string;
   items: InvoiceItemData[];
   subtotal: number;
   tax: number;
@@ -61,7 +55,5 @@ export interface InvoiceItemData {
 export interface InvoiceResult {
   success: boolean;
   invoiceNo?: string;
-  emailSent: boolean;
-  waSent: boolean;
   error?: string;
 }

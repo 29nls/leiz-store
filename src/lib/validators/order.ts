@@ -9,11 +9,9 @@ import { z } from "zod";
 
 export const createOrderSchema = z.object({
   customerName: z.string().min(1, "Name is required").max(100),
-  customerEmail: z.string().email("Invalid email").optional().or(z.literal("")),
   customerDiscord: z.string().min(1, "Discord ID is required").max(100).refine(isValidDiscordId, {
     message: "Discord ID tidak valid. Masukkan User ID numerik (17-19 digit) atau username Discord.",
   }),
-  customerPhone: z.string().max(20).optional().or(z.literal("")),
   customerIGN: z.string().max(100).optional().or(z.literal("")),
   customerNotes: z.string().max(500).optional().or(z.literal("")),
   items: z

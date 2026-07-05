@@ -158,9 +158,7 @@ export const productService = {
 export const orderService = {
   async create(data: {
     customerName: string;
-    customerEmail?: string;
     customerDiscord?: string;
-    customerPhone?: string;
     customerIGN?: string;
     customerNotes?: string;
     items: Array<{ productId: string; quantity: number }>;
@@ -206,9 +204,7 @@ export const orderService = {
             orderNumber,
             status: OrderStatus.PENDING,
             customerName: data.customerName,
-            customerEmail: data.customerEmail,
             customerDiscord: data.customerDiscord,
-            customerPhone: data.customerPhone,
             customerIGN: data.customerIGN,
             customerNotes: data.customerNotes,
             subtotal,

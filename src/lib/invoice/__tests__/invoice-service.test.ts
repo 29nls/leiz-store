@@ -36,13 +36,8 @@ jest.mock("@/lib/supabase", () => ({
   supabaseAdmin: mockSupabaseAdmin,
 }));
 
-jest.mock("@/lib/queue", () => ({
-  enqueue: jest.fn().mockResolvedValue({ id: "job-1" }),
-  processAll: jest.fn(),
-  JobType: {
-    SEND_INVOICE_EMAIL: "SEND_INVOICE_EMAIL",
-    SEND_INVOICE_WHATSAPP: "SEND_INVOICE_WHATSAPP",
-  },
+jest.mock("../pdf-generator", () => ({
+  generateInvoicePdf: jest.fn().mockResolvedValue(Buffer.from("fake-pdf")),
 }));
 
 import { generateAndSendInvoice, getInvoiceByOrder } from "../invoice-service";
@@ -74,13 +69,7 @@ describe("invoice-service", () => {
 
   it("returns existing invoice info if already created", async () => {
     mockResolve = {
-      data: {
-        id: "inv-1",
-        status: "SENT",
-        invoice_no: "INV/2026/01/ABCDE",
-        sent_via_email: true,
-        sent_via_wa: true,
-      },
+      data: { id: "inv-1", status: "SENT", invoice_no: "INV/2026/01/ABCDE" },
       error: null,
     };
 
@@ -91,13 +80,7 @@ describe("invoice-service", () => {
 
   it("handles existing invoice with FAILED status", async () => {
     mockResolve = {
-      data: {
-        id: "inv-1",
-        status: "FAILED",
-        invoice_no: "INV/2026/01/ABCDE",
-        sent_via_email: false,
-        sent_via_wa: false,
-      },
+      data: { id: "inv-1", status: "FAILED", invoice_no: "INV/2026/01/ABCDE" },
       error: null,
     };
 

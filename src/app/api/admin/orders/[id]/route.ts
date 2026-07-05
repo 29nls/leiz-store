@@ -56,7 +56,7 @@ export async function PUT(
 
   try {
     const body = await request.json();
-    const { status, customerName, customerEmail, notes } = body;
+    const { status, customerName, notes } = body;
 
     // ── Fetch current order (for transition validation & notifications) ──────
     const { data: currentOrder, error: fetchError } = await supabaseAdmin
@@ -100,7 +100,6 @@ export async function PUT(
     }
 
     if (customerName !== undefined) updateData.customer_name = customerName;
-    if (customerEmail !== undefined) updateData.customer_email = customerEmail;
     if (notes !== undefined) updateData.notes = notes;
 
     const { data: order, error: updateError } = await supabaseAdmin

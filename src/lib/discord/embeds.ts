@@ -21,10 +21,6 @@ interface OrderData {
   orderNumber?: string;
   customer_name?: string;
   customerName?: string;
-  customer_email?: string | null;
-  customerEmail?: string | null;
-  customer_phone?: string | null;
-  customerPhone?: string | null;
   buyer_discord_id?: string | null;
   customer_discord?: string | null;
   customerDiscord?: string | null;
@@ -87,8 +83,6 @@ export function buildSellerEmbed(order: OrderData) {
 
           { name: "━━━━━━━━━━━━━━━━━", value: "**👤 DATA PEMBELI**", inline: false },
           { name: "Nama", value: customerName, inline: true },
-          { name: "Email", value: order.customer_email || order.customerEmail || "—", inline: true },
-          { name: "WA", value: order.customer_phone || order.customerPhone || "—", inline: true },
           { name: "Discord", value: discordId, inline: true },
           { name: "IGN", value: customerIgn || "—", inline: true },
 

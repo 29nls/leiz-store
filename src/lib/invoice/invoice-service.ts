@@ -1,8 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase";
 import { generateInvoicePdf } from "./pdf-generator";
-import { sendInvoiceEmail, buildInvoiceEmailHtml } from "./email-sender";
-import { sendInvoiceWhatsApp, buildWhatsAppMessage } from "./whatsapp-sender";
-import { enqueue, processAll, JobType } from "@/lib/queue";
 import type { InvoiceData, InvoiceResult, Invoice } from "./types";
 
 async function generateInvoiceNo(): Promise<string> {
@@ -35,10 +32,8 @@ async function getOrderWithItems(orderId: string): Promise<InvoiceData | null> {
     invoiceNo: "",
     orderNumber: order.order_number || orderId,
     customerName: order.customer_name || order.customerName || "-",
-    customerEmail: order.customer_email || order.customerEmail || undefined,
     customerDiscord: order.customer_discord || order.customerDiscord || undefined,
     customerIGN: order.customer_ign || order.customerIGN || undefined,
-    customerPhone: order.customer_phone || order.phone || undefined,
     items,
     subtotal: Number(order.subtotal) || 0,
     tax: Number(order.tax) || 0,
@@ -84,7 +79,7 @@ export async function generateAndSendInvoice(
 ): Promise<InvoiceResult> {
   const { data: existing } = await supabaseAdmin
     .from("invoice")
-    .select("id, status, invoice_no, sent_via_email, sent_via_wa")
+    .select("id, status, invoice_no")
     .eq("order_id", orderId)
     .maybeSingle();
 
@@ -93,15 +88,13 @@ export async function generateAndSendInvoice(
     return {
       success: existing.status === "SENT",
       invoiceNo: existing.invoice_no,
-      emailSent: existing.sent_via_email,
-      waSent: existing.sent_via_wa,
       error: existing.status === "FAILED" ? "Previous attempt failed, check admin panel to retry" : undefined,
     };
   }
 
   const invoiceData = await getOrderWithItems(orderId);
   if (!invoiceData) {
-    return { success: false, emailSent: false, waSent: false, error: "Order not found" };
+    return { success: false, error: "Order not found" };
   }
 
   const invoiceNo = await generateInvoiceNo();
@@ -123,84 +116,32 @@ export async function generateAndSendInvoice(
       insertError.message.toLowerCase().includes("duplicate") ||
       insertError.message.toLowerCase().includes("unique")
     ) {
-      return { success: false, emailSent: false, waSent: false, error: "Invoice already exists" };
+      return { success: false, error: "Invoice already exists" };
     }
     console.error(`[InvoiceService] Insert failed:`, insertError.message);
-    return { success: false, emailSent: false, waSent: false, error: "Failed to create invoice" };
+    return { success: false, error: "Failed to create invoice" };
   }
 
   try {
     const pdfBuffer = await generateInvoicePdf(invoiceData);
     const pdfFilename = `invoice-${invoiceNo}.pdf`;
-
     const pdfUrl = await uploadPdfToStorage(pdfBuffer, pdfFilename);
-
-    const payload = {
-      orderId,
-      invoiceId,
-      invoiceNo,
-      pdfUrl,
-    };
 
     await supabaseAdmin
       .from("invoice")
       .update({
         pdf_url: pdfUrl,
+        status: "SENT",
+        sent_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
       .eq("id", invoiceId);
 
-    // Enqueue email and WhatsApp as separate retryable jobs
-    if (invoiceData.customerEmail) {
-      await enqueue(JobType.SEND_INVOICE_EMAIL, {
-        ...payload,
-        customerEmail: invoiceData.customerEmail,
-        customerName: invoiceData.customerName,
-        orderNumber: invoiceData.orderNumber,
-        currency: invoiceData.currency,
-        total: invoiceData.total,
-        items: invoiceData.items,
-        createdAt: invoiceData.createdAt,
-        paymentMethod: invoiceData.paymentMethod,
-        subtotal: invoiceData.subtotal,
-        tax: invoiceData.tax,
-        discount: invoiceData.discount,
-        storeName: invoiceData.storeName,
-      }, { maxRetries: 3 });
-    }
-
-    if (invoiceData.customerPhone) {
-      await enqueue(JobType.SEND_INVOICE_WHATSAPP, {
-        ...payload,
-        phone: invoiceData.customerPhone,
-        orderNumber: invoiceData.orderNumber,
-        total: invoiceData.total,
-        currency: invoiceData.currency,
-      }, { maxRetries: 3 });
-    }
-
-    const emailQueued = !!invoiceData.customerEmail;
-    const waQueued = !!invoiceData.customerPhone;
-
-    await supabaseAdmin
-      .from("invoice")
-      .update({
-        status: "PENDING",
-        email_status: emailQueued ? "PENDING" : "PENDING",
-        wa_status: waQueued ? "PENDING" : "PENDING",
-        sent_via_email: false,
-        sent_via_wa: false,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", invoiceId);
-
-    console.log(`[InvoiceService] Invoice ${invoiceNo} queued for order ${orderId}: email=${emailQueued}, wa=${waQueued}`);
+    console.log(`[InvoiceService] Invoice ${invoiceNo} generated for order ${orderId}`);
 
     return {
       success: true,
       invoiceNo,
-      emailSent: false,
-      waSent: false,
       error: undefined,
     };
   } catch (err) {
@@ -216,88 +157,12 @@ export async function generateAndSendInvoice(
       })
       .eq("id", invoiceId);
 
-    return { success: false, emailSent: false, waSent: false, error: msg };
+    return { success: false, error: msg };
   }
 }
 
-export async function sendEmailJob(payload: Record<string, unknown>): Promise<boolean> {
-  const { invoiceId, invoiceNo, customerEmail, pdfUrl: _pdfUrl, orderNumber,
-    customerName, currency, total, items, createdAt, paymentMethod,
-    subtotal, tax, discount, storeName } = payload as Record<string, any>;
-
-  if (!customerEmail || !invoiceNo) return false;
-
-  const invoiceData: InvoiceData = {
-    invoiceNo, orderNumber, customerName,
-    customerEmail, items: items || [],
-    subtotal: Number(subtotal) || 0, tax: Number(tax) || 0,
-    discount: Number(discount) || 0, total: Number(total) || 0,
-    currency: currency || "IDR", paymentMethod: paymentMethod || "-",
-    createdAt: createdAt || new Date().toISOString(), storeName: storeName || "LEIZ STORE",
-  };
-
-  try {
-    const pdfBuffer = await generateInvoicePdf(invoiceData);
-    const emailHtml = buildInvoiceEmailHtml(invoiceData);
-    const success = await sendInvoiceEmail(
-      customerEmail,
-      `Invoice #${invoiceNo} - LEIZ STORE`,
-      emailHtml,
-      pdfBuffer,
-      `invoice-${invoiceNo}.pdf`
-    );
-    if (success && invoiceId) {
-      await supabaseAdmin
-        .from("invoice")
-        .update({
-          sent_via_email: true,
-          email_status: "SUCCESS",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", invoiceId);
-    }
-    return success;
-  } catch (err) {
-    console.error(`[InvoiceService] Email job failed for ${invoiceNo}:`, err);
-    return false;
-  }
-}
-
-export async function sendWhatsAppJob(payload: Record<string, unknown>): Promise<boolean> {
-  const { invoiceId, invoiceNo, orderNumber, total, currency, phone, orderId, pdfUrl } = payload as Record<string, any>;
-  if (!phone) return false;
-
-  const waMessage = buildWhatsAppMessage({
-    invoiceNo, orderNumber, total: Number(total) || 0, currency: currency || "IDR", pdfUrl,
-  });
-  const success = await sendInvoiceWhatsApp(phone, waMessage, orderId || "");
-
-  if (success && invoiceId) {
-    await supabaseAdmin
-      .from("invoice")
-      .update({
-        sent_via_wa: true,
-        wa_status: "SUCCESS",
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", invoiceId);
-  }
-  return success;
-}
-
-export async function processInvoiceJob(job: { type: string; payload: Record<string, unknown> }): Promise<boolean> {
-  switch (job.type) {
-    case JobType.SEND_INVOICE_EMAIL:
-      return sendEmailJob(job.payload);
-    case JobType.SEND_INVOICE_WHATSAPP:
-      return sendWhatsAppJob(job.payload);
-    default:
-      return false;
-  }
-}
-
-export async function processPendingJobs(maxJobs = 10): Promise<number> {
-  return processAll(processInvoiceJob, [JobType.SEND_INVOICE_EMAIL, JobType.SEND_INVOICE_WHATSAPP], maxJobs);
+export async function processPendingJobs(_maxJobs = 10): Promise<number> {
+  return 0;
 }
 
 export async function getInvoiceByOrder(orderId: string): Promise<Invoice | null> {
@@ -317,7 +182,7 @@ export async function listInvoices(options: {
 
   let query = supabaseAdmin
     .from("invoice")
-    .select("*, order:order(order_number, customer_name, customer_email, total, currency)", { count: "exact" });
+    .select("*, order:order(order_number, customer_name, total, currency)", { count: "exact" });
 
   if (status) query = query.eq("status", status);
 
@@ -351,10 +216,6 @@ export async function resendInvoice(invoiceId: string): Promise<boolean> {
     .from("invoice")
     .update({
       status: "PENDING",
-      sent_via_email: false,
-      sent_via_wa: false,
-      email_status: "PENDING",
-      wa_status: "PENDING",
       error_log: null,
       updated_at: new Date().toISOString(),
     })
@@ -364,38 +225,32 @@ export async function resendInvoice(invoiceId: string): Promise<boolean> {
   const invoiceData = await getOrderWithItems(orderId);
   if (!invoiceData) return false;
 
-  if (invoiceData.customerEmail) {
-    await enqueue(JobType.SEND_INVOICE_EMAIL, {
-      orderId,
-      invoiceId,
-      invoiceNo: invoice.invoice_no,
-      pdfUrl: invoice.pdf_url,
-      customerEmail: invoiceData.customerEmail,
-      customerName: invoiceData.customerName,
-      orderNumber: invoiceData.orderNumber,
-      currency: invoiceData.currency,
-      total: invoiceData.total,
-      items: invoiceData.items,
-      createdAt: invoiceData.createdAt,
-      paymentMethod: invoiceData.paymentMethod,
-      subtotal: invoiceData.subtotal,
-      tax: invoiceData.tax,
-      discount: invoiceData.discount,
-      storeName: invoiceData.storeName,
-    }, { maxRetries: 3 });
-  }
+  try {
+    const pdfBuffer = await generateInvoicePdf(invoiceData);
+    const pdfFilename = `invoice-${invoice.invoice_no}.pdf`;
+    const pdfUrl = await uploadPdfToStorage(pdfBuffer, pdfFilename);
 
-  if (invoiceData.customerPhone) {
-    await enqueue(JobType.SEND_INVOICE_WHATSAPP, {
-      orderId,
-      invoiceId,
-      invoiceNo: invoice.invoice_no,
-      phone: invoiceData.customerPhone,
-      orderNumber: invoiceData.orderNumber,
-      total: invoiceData.total,
-      currency: invoiceData.currency,
-    }, { maxRetries: 3 });
-  }
+    await supabaseAdmin
+      .from("invoice")
+      .update({
+        pdf_url: pdfUrl,
+        status: "SENT",
+        sent_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", invoiceId);
 
-  return true;
+    return true;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    await supabaseAdmin
+      .from("invoice")
+      .update({
+        status: "FAILED",
+        error_log: JSON.stringify([msg]),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", invoiceId);
+    return false;
+  }
 }

@@ -12,7 +12,7 @@ interface OrderItem {
 
 interface Order {
   id: string; order_number: string; customer_name: string;
-  customer_email: string | null; customer_discord: string | null;
+  customer_discord: string | null;
   customer_ign: string | null; customer_notes: string | null;
   status: string; subtotal: number; tax: number; total: number;
   payment_method: string | null; payment_ref: string | null;
@@ -142,7 +142,6 @@ export default function OrderDetailPage() {
           <h3 className="text-sm font-medium text-gray-300 mb-3">Pelanggan</h3>
           <div className="space-y-2 text-sm">
             <div><span className="text-gray-500">Nama:</span><p className="text-white">{order.customer_name}</p></div>
-            {order.customer_email && <div><span className="text-gray-500">Email:</span><p className="text-white">{order.customer_email}</p></div>}
             {order.customer_discord && <div><span className="text-gray-500">Discord:</span><p className="text-white">{order.customer_discord}</p></div>}
             {order.customer_ign && <div><span className="text-gray-500">IGN:</span><p className="text-white">{order.customer_ign}</p></div>}
           </div>

@@ -60,9 +60,8 @@ export async function generateInvoicePdf(data: InvoiceData): Promise<Buffer> {
 
     doc.font("Helvetica").fontSize(9).fillColor("#555555")
       .text(data.customerName, leftCol, 180)
-      .text(data.customerEmail || "", leftCol, 194)
-      .text("Discord: " + (data.customerDiscord || "-"), leftCol, 208)
-      .text("IGN: " + (data.customerIGN || "-"), leftCol, 222);
+      .text("Discord: " + (data.customerDiscord || "-"), leftCol, 194)
+      .text("IGN: " + (data.customerIGN || "-"), leftCol, 208);
 
     const tableTop = 250;
     const colX = {

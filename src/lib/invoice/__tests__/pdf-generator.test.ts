@@ -5,7 +5,6 @@ const sampleData: InvoiceData = {
   invoiceNo: "INV/2026/07/ABC123",
   orderNumber: "LZ-20260705-XYZ789",
   customerName: "Budi Santoso",
-  customerEmail: "budi@example.com",
   items: [
     { name: "Produk A", quantity: 2, price: 50000, total: 100000 },
     { name: "Produk B", quantity: 1, price: 75000, total: 75000 },

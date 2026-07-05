@@ -8,7 +8,7 @@ Next.js 16 (App Router) + React 19 + Supabase (PostgreSQL/Auth/Storage/Realtime)
 - `discord-interactions-nextjs` — Discord bots in Next.js serverless (timeouts, file attachments)
 - `frontend-design` — Distinctive visual design guidance, typography, aesthetic direction
 - `high-end-visual-design` — High-end agency design: fonts, spacing, shadows, card structures
-- `leiz-store-invoice` — Invoice system (PDF, Brevo SMTP, Fonnte WhatsApp, queue, cron, admin panel)
+- `leiz-store-invoice` — Invoice system (PDF, queue, cron, admin panel)
 - `minimalist-ui` — Clean editorial-style interfaces, warm monochrome, bento grids
 - `shadcn` — shadcn/ui component management (add, search, fix, style, compose)
 - `supabase` — All Supabase tasks (DB, Auth, Storage, Realtime, RLS, CLI, migrations)
@@ -19,8 +19,6 @@ Next.js 16 (App Router) + React 19 + Supabase (PostgreSQL/Auth/Storage/Realtime)
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
 - `JWT_SECRET`, `CRON_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`
 - `DISCORD_BOT_TOKEN`, `DISCORD_SELLER_CHANNEL_ID`, `DISCORD_PUBLIC_KEY`
-- `BREVO_SMTP_HOST`/`PORT`/`USER`/`PASS`, `BREVO_FROM_EMAIL`, `BREVO_FROM_NAME`
-- `WHATSAPP_API_URL=https://api.fonnte.com/send`, `WHATSAPP_API_KEY`
 - `INVOICE_STORAGE_BUCKET=invoices`
 
 ## Key Patterns
@@ -35,7 +33,7 @@ Next.js 16 (App Router) + React 19 + Supabase (PostgreSQL/Auth/Storage/Realtime)
 Buyer checkout → POST /api/orders → PENDING → PENDING_PAYMENT
   → Buyer uploads proof → POST /api/orders/[id]/confirm → WAITING_CONFIRMATION
   → Discord embed sent to seller channel (rich embed + 4 action buttons)
-  → Admin clicks Accept → status=PAID → invoice generated → email (Brevo) + WA (Fonnte)
+  → Admin clicks Accept → status=PAID → invoice generated → stored in Supabase Storage
 ```
 
 ### Order State Machine (13 statuses)

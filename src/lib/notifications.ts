@@ -297,36 +297,9 @@ export async function notifyNewOrder(order: {
 }
 
 export async function notifyOrderStatusChange(
-  order: { orderNumber: string; customerName: string },
-  newStatus: string,
-  customerPhone?: string
+  _order: { orderNumber: string; customerName: string },
+  _newStatus: string
 ): Promise<NotificationResult | null> {
-  const statusEmoji: Record<string, string> = {
-    PAID: "✅",
-    PROCESSING: "⚙️",
-    COMPLETED: "🎉",
-    CANCELLED: "❌",
-  };
-
-  const message = [
-    `${statusEmoji[newStatus] || "📋"} *Order ${newStatus.toUpperCase()}*`,
-    ``,
-    `📋 Order: \`${order.orderNumber}\``,
-    `👤 Customer: ${order.customerName}`,
-    ``,
-    `Status updated to: *${newStatus}*`,
-  ].join("\n");
-
-  if (customerPhone) {
-    return sendNotification({
-      channel: NotificationChannel.WHATSAPP,
-      recipient: customerPhone,
-      subject: `Order ${newStatus}`,
-      body: message,
-      priority: "normal",
-    });
-  }
-
   return null;
 }
 

@@ -9,11 +9,9 @@ import { getSupabaseBrowser, subscribeToTable } from "@/lib/supabase-browser";
 
 interface Invoice {
   id: string; order_id: string; invoice_no: string; status: string;
-  sent_via_email: boolean; sent_via_wa: boolean;
-  email_status: string; wa_status: string;
   pdf_url: string | null; error_log: string | null;
   created_at: string; sent_at: string | null;
-  order?: { order_number: string; customer_name: string; customer_email: string; total: number; currency: string } | null;
+  order?: { order_number: string; customer_name: string; total: number; currency: string } | null;
 }
 
 const STATUSES = ["ALL", "PENDING", "SENT", "FAILED"];
@@ -50,7 +48,7 @@ export default function AdminInvoicesPage() {
   const fetchInvoices = useCallback(async () => {
     setLoading(true); setError("");
     try {
-      let q = supabase.from("invoice").select("*, order:order(order_number, customer_name, customer_email, total, currency)", { count: "exact" });
+      let q = supabase.from("invoice").select("*, order:order(order_number, customer_name, total, currency)", { count: "exact" });
       if (statusFilter !== "ALL") q = q.eq("status", statusFilter);
       const from = (page - 1) * limit;
       const { data, error: err, count } = await q.order("created_at", { ascending: false }).range(from, from + limit - 1);
@@ -79,7 +77,7 @@ export default function AdminInvoicesPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error?.message || "Gagal resend");
-      showOk("Resend dikirimkan ke antrian");
+      showOk("Invoice akan dibuat ulang");
       setSelected(p => p ? { ...p, status: "PENDING" } : null);
       fetchInvoices();
     } catch (e: any) { setError(e.message || "Gagal resend"); }
@@ -110,17 +108,15 @@ export default function AdminInvoicesPage() {
                 <th className="text-left py-3 px-4 text-gray-400 font-medium">Pesanan</th>
                 <th className="text-left py-3 px-4 text-gray-400 font-medium">Pelanggan</th>
                 <th className="text-center py-3 px-4 text-gray-400 font-medium">Status</th>
-                <th className="text-center py-3 px-4 text-gray-400 font-medium">Email</th>
-                <th className="text-center py-3 px-4 text-gray-400 font-medium">WA</th>
                 <th className="text-right py-3 px-4 text-gray-400 font-medium">Waktu</th>
                 <th className="text-center py-3 px-4 text-gray-400 font-medium">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-800/50">
               {loading ? (
-                <tr><td colSpan={8} className="py-12 text-center"><div className="flex items-center justify-center gap-2 text-gray-400"><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500" /> Memuat...</div></td></tr>
+                <tr><td colSpan={6} className="py-12 text-center"><div className="flex items-center justify-center gap-2 text-gray-400"><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500" /> Memuat...</div></td></tr>
               ) : invoices.length === 0 ? (
-                <tr><td colSpan={8} className="py-12 text-center"><div className="flex flex-col items-center gap-2 text-gray-500"><FileText className="h-10 w-10 opacity-30" /><p>Tidak ada invoice</p></div></td></tr>
+                <tr><td colSpan={6} className="py-12 text-center"><div className="flex flex-col items-center gap-2 text-gray-500"><FileText className="h-10 w-10 opacity-30" /><p>Tidak ada invoice</p></div></td></tr>
               ) : invoices.map(inv => (
                 <tr key={inv.id} className="hover:bg-gray-800/30 transition-colors cursor-pointer" onClick={() => setSelected(inv)}>
                   <td className="py-3 px-4"><span className="text-white font-medium font-mono text-xs">{inv.invoice_no}</span></td>
@@ -128,16 +124,6 @@ export default function AdminInvoicesPage() {
                   <td className="py-3 px-4"><p className="text-white">{inv.order?.customer_name || "-"}</p></td>
                   <td className="py-3 px-4 text-center">
                     <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium border ${STATUS_STYLES[inv.status] || "bg-gray-500/10 text-gray-400"}`}>{inv.status}</span>
-                  </td>
-                  <td className="py-3 px-4 text-center">
-                    {inv.sent_via_email ? <span className="text-green-400 text-xs">&#10003;</span> :
-                     inv.email_status === "FAILED" ? <span className="text-red-400 text-xs">&#10007;</span> :
-                     <span className="text-gray-500 text-xs">-</span>}
-                  </td>
-                  <td className="py-3 px-4 text-center">
-                    {inv.sent_via_wa ? <span className="text-green-400 text-xs">&#10003;</span> :
-                     inv.wa_status === "FAILED" ? <span className="text-red-400 text-xs">&#10007;</span> :
-                     <span className="text-gray-500 text-xs">-</span>}
                   </td>
                   <td className="py-3 px-4 text-right text-gray-400 text-xs">{fmtDate(inv.created_at)}</td>
                   <td className="py-3 px-4 text-center">
@@ -188,26 +174,7 @@ export default function AdminInvoicesPage() {
                   <div><span className="text-gray-500">Invoice:</span><p className="text-white font-mono">{selected.invoice_no}</p></div>
                   <div><span className="text-gray-500">Order:</span><p className="text-white font-mono">{selected.order?.order_number || selected.order_id}</p></div>
                   <div><span className="text-gray-500">Pelanggan:</span><p className="text-white">{selected.order?.customer_name || "-"}</p></div>
-                  <div><span className="text-gray-500">Email:</span><p className="text-white">{selected.order?.customer_email || "-"}</p></div>
                   {selected.order?.total && <div><span className="text-gray-500">Total:</span><p className="text-white font-medium">{fmtIDR(selected.order.total)}</p></div>}
-                </div>
-              </div>
-
-              <div className="bg-gray-800/50 border border-gray-700/50 rounded-lg p-4">
-                <h3 className="text-sm font-medium text-gray-300 mb-2">Status Pengiriman</h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-400">Email</span>
-                    <span className={`font-medium ${selected.email_status === "SUCCESS" ? "text-green-400" : selected.email_status === "FAILED" ? "text-red-400" : "text-yellow-400"}`}>
-                      {selected.email_status || "PENDING"}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-400">WhatsApp</span>
-                    <span className={`font-medium ${selected.wa_status === "SUCCESS" ? "text-green-400" : selected.wa_status === "FAILED" ? "text-red-400" : "text-yellow-400"}`}>
-                      {selected.wa_status || "PENDING"}
-                    </span>
-                  </div>
                 </div>
               </div>
 
@@ -227,7 +194,7 @@ export default function AdminInvoicesPage() {
                   <button onClick={() => handleResend(selected.id)} disabled={resending}
                     className="inline-flex items-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm font-medium disabled:opacity-50 transition-colors">
                     {resending ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" /> : <Send className="h-4 w-4" />}
-                    Kirim Ulang Invoice
+                    Buat Ulang Invoice
                   </button>
                 </div>
               )}

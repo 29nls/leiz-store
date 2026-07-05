@@ -158,7 +158,6 @@ export interface Order {
   orderNumber: string;
   status: OrderStatus;
   customerName: string;
-  customerEmail?: string | null;
   customerDiscord?: string | null;
   customerIGN?: string | null;
   customerNotes?: string | null;
@@ -582,7 +581,6 @@ export namespace Prisma {
     orderNumber: string;
     status: OrderStatus;
     customerName: string;
-    customerEmail?: string;
     customerDiscord?: string;
     customerIGN?: string;
     customerNotes?: string;
