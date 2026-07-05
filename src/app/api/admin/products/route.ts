@@ -121,6 +121,7 @@ export async function POST(request: Request) {
     // Create product images if provided
     if (images && images.length > 0) {
       const imageRecords = images.map((img: any, index: number) => ({
+        id: crypto.randomUUID(),
         product_id: product.id,
         url: img.url,
         alt: img.alt || name,

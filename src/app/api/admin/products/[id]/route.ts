@@ -90,6 +90,7 @@ export async function PUT(
 
       if (images.length > 0) {
         const imageRecords = images.map((img: any, index: number) => ({
+          id: crypto.randomUUID(),
           product_id: id,
           url: img.url,
           alt: img.alt || name || "",
