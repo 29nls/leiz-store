@@ -94,6 +94,7 @@ export async function POST(request: Request) {
 
     // Create product
     const productData: any = {
+      id: crypto.randomUUID(),
       name,
       slug,
       description: description || "",
