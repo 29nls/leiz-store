@@ -200,15 +200,15 @@ export default function CheckoutPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-text mb-2">Discord ID / Username *</label>
+                    <label className="block text-sm font-medium text-text mb-2">Discord User ID *</label>
                     <input
                       type="text"
                       value={formData.discord}
                       onChange={(e) => setFormData({ ...formData, discord: e.target.value })}
                       className="input-premium"
-                      placeholder="cth: __matcha atau 123456789012345678"
+                      placeholder="cth: 123456789012345678"
                     />
-                    <p className="text-xs text-text-muted/60 mt-1">Username Discord atau User ID numerik (17-19 digit). Wajib untuk notifikasi pembayaran.</p>
+                    <p className="text-xs text-text-muted/60 mt-1">User ID numerik 17-19 digit. Cara dapatkan: Settings → Advanced → Developer Mode → klik kanan profil → Copy ID. Wajib untuk notifikasi pembayaran.</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-text mb-2">In-Game Name (IGN)</label>

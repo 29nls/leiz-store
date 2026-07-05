@@ -24,22 +24,34 @@ interface Order {
 
 const STATUS_STYLES: Record<string, string> = {
   PENDING: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
+  PENDING_PAYMENT: "bg-orange-500/10 text-orange-400 border-orange-500/20",
   WAITING_PAYMENT: "bg-orange-500/10 text-orange-400 border-orange-500/20",
+  WAITING_CONFIRMATION: "bg-blue-500/10 text-blue-400 border-blue-500/20",
   PAID: "bg-blue-500/10 text-blue-400 border-blue-500/20",
   PROCESSING: "bg-purple-500/10 text-purple-400 border-purple-500/20",
   COMPLETED: "bg-green-500/10 text-green-400 border-green-500/20",
   CANCELLED: "bg-red-500/10 text-red-400 border-red-500/20",
+  REJECTED: "bg-red-500/10 text-red-400 border-red-500/20",
   REFUNDED: "bg-gray-500/10 text-gray-400 border-gray-500/20",
+  NEEDS_REVIEW: "bg-orange-500/10 text-orange-400 border-orange-500/20",
 };
 
 const TRANSITIONS: Record<string, { status: string; label: string; color: string }[]> = {
   PENDING: [
-    { status: "WAITING_PAYMENT", label: "Menunggu Pembayaran", color: "orange" },
+    { status: "PENDING_PAYMENT", label: "Menunggu Pembayaran", color: "orange" },
+    { status: "CANCELLED", label: "Batalkan", color: "red" },
+  ],
+  PENDING_PAYMENT: [
+    { status: "WAITING_CONFIRMATION", label: "Tandai Dikonfirmasi", color: "blue" },
     { status: "CANCELLED", label: "Batalkan", color: "red" },
   ],
   WAITING_PAYMENT: [
     { status: "PAID", label: "Tandai Dibayar", color: "blue" },
     { status: "CANCELLED", label: "Batalkan", color: "red" },
+  ],
+  WAITING_CONFIRMATION: [
+    { status: "PAID", label: "Terima Pembayaran", color: "blue" },
+    { status: "REJECTED", label: "Tolak", color: "red" },
   ],
   PAID: [
     { status: "PROCESSING", label: "Proses", color: "purple" },
@@ -49,11 +61,13 @@ const TRANSITIONS: Record<string, { status: string; label: string; color: string
     { status: "COMPLETED", label: "Selesai", color: "green" },
     { status: "CANCELLED", label: "Batalkan", color: "red" },
   ],
-  COMPLETED: [], CANCELLED: [], REFUNDED: [],
+  COMPLETED: [], CANCELLED: [], REJECTED: [], REFUNDED: [], NEEDS_REVIEW: [],
 };
 
-function fmtIDR(n: number): string {
-  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
+function fmtIDR(n: number | null | undefined): string {
+  const num = Number(n ?? 0);
+  if (isNaN(num)) return "Rp0";
+  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(num);
 }
 
 function fmtDate(s: string): string {

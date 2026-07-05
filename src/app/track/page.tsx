@@ -55,6 +55,13 @@ const statusConfig: Record<
     bg: "bg-warning/15",
     description: "Your order has been received and is awaiting review.",
   },
+  pending_payment: {
+    label: "Awaiting Payment",
+    icon: CreditCard,
+    color: "text-accent",
+    bg: "bg-accent/15",
+    description: "Please complete your payment to proceed.",
+  },
   waiting_payment: {
     label: "Awaiting Payment",
     icon: CreditCard,
@@ -120,7 +127,7 @@ const statusConfig: Record<
   },
 };
 
-const allStatuses = ["pending", "waiting_payment", "waiting_confirmation", "paid", "processing", "completed"];
+const allStatuses = ["pending", "pending_payment", "waiting_confirmation", "paid", "processing", "completed"];
 
 function StatusTimeline({ currentStatus }: { currentStatus: string }) {
   const normalizedStatus = currentStatus.toLowerCase();

@@ -163,7 +163,7 @@ export async function adminAcceptPayment(
   orderId: string,
   adminId: string
 ): Promise<{ success: boolean; error?: string; order?: any }> {
-  return updateOrderStatus(
+  const result = await updateOrderStatus(
     orderId,
     OrderStatus.PAID,
     "ADMIN",
@@ -171,6 +171,19 @@ export async function adminAcceptPayment(
     "PAYMENT_ACCEPTED",
     { paid_at: new Date().toISOString() }
   );
+
+  if (result.success) {
+    const { error: payErr } = await supabaseAdmin
+      .from("payment")
+      .update({ status: "PAID", verified_at: new Date().toISOString() })
+      .eq("order_id", orderId);
+
+    if (payErr) {
+      console.error("[PaymentService] Failed to update payment status:", payErr.message);
+    }
+  }
+
+  return result;
 }
 
 // ─── Admin: Reject Payment ──────────────────────────────────

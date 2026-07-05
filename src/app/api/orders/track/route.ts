@@ -45,6 +45,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const payment = (order as any).payment;
     const trackingInfo = {
       id: (order as any).id,
       orderNumber: order.orderNumber,
@@ -56,12 +57,24 @@ export async function GET(request: NextRequest) {
         name: item.name,
         quantity: item.quantity,
         price: Number(item.price),
+        total: Number(item.price) * Number(item.quantity),
       })),
       subtotal: order.subtotal,
       tax: order.tax,
       total: order.total,
       currency: order.currency,
       paymentMethod: order.paymentMethod,
+      payment: payment
+        ? {
+            method: payment.method,
+            status: payment.status || (order.status === "PAID" || order.status === "COMPLETED" ? "paid" : payment.status),
+            paidAt: payment.paidAt,
+          }
+        : {
+            method: order.paymentMethod || "",
+            status: order.status === "COMPLETED" || order.status === "PAID" ? "paid" : order.status === "PROCESSING" ? "paid" : "pending",
+            paidAt: null,
+          },
       expiryAt: (order as any).expiryAt,
       confirmedAt: (order as any).confirmedAt,
       statusHistory: [

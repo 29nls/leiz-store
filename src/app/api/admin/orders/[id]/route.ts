@@ -90,6 +90,11 @@ export async function PUT(
       // Set timestamps based on new status
       if (newStatus === "PAID") {
         updateData.paid_at = new Date().toISOString();
+        // Also update the separate payment table so buyer UI sees "paid"
+        await supabaseAdmin
+          .from("payment")
+          .update({ status: "PAID", verified_at: new Date().toISOString() })
+          .eq("order_id", id);
       }
       if (newStatus === "COMPLETED") {
         updateData.completed_at = new Date().toISOString();

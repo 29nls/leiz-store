@@ -93,13 +93,18 @@ export function convertCurrency(
  * Format price in the specified currency
  */
 export function formatPrice(amount: number, currency: Currency = "IDR"): string {
+  const num = Number(amount ?? 0);
+  if (isNaN(num)) {
+    const config = CURRENCIES[currency];
+    return config.symbol + "0";
+  }
   const config = CURRENCIES[currency];
   return new Intl.NumberFormat(config.locale, {
     style: "currency",
     currency: config.code,
     minimumFractionDigits: config.decimals,
     maximumFractionDigits: config.decimals,
-  }).format(amount);
+  }).format(num);
 }
 
 /**

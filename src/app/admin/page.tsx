@@ -42,10 +42,12 @@ interface DashboardData {
   warnings?: string[];
 }
 
-function fmtIDR(n: number): string {
+function fmtIDR(n: number | null | undefined): string {
+  const num = Number(n ?? 0);
+  if (isNaN(num)) return "Rp0";
   return new Intl.NumberFormat("id-ID", {
     style: "currency", currency: "IDR", minimumFractionDigits: 0,
-  }).format(n);
+  }).format(num);
 }
 
 export default function AdminDashboard() {
@@ -179,10 +181,14 @@ export default function AdminDashboard() {
   const statusColor = (s: string) => {
     switch (s) {
       case "PENDING": return "bg-yellow-500/20 text-yellow-400";
+      case "PENDING_PAYMENT": return "bg-orange-500/20 text-orange-400";
       case "WAITING_PAYMENT": return "bg-orange-500/20 text-orange-400";
+      case "WAITING_CONFIRMATION": return "bg-blue-500/20 text-blue-400";
       case "PAID": return "bg-blue-500/20 text-blue-400";
       case "PROCESSING": return "bg-purple-500/20 text-purple-400";
       case "COMPLETED": return "bg-green-500/20 text-green-400";
+      case "NEEDS_REVIEW": return "bg-orange-500/20 text-orange-400";
+      case "REJECTED": return "bg-red-500/20 text-red-400";
       case "CANCELLED": return "bg-red-500/20 text-red-400";
       default: return "bg-gray-500/20 text-gray-400";
     }
