@@ -231,9 +231,9 @@ export default function CheckoutPage() {
                       value={formData.discord}
                       onChange={(e) => setFormData({ ...formData, discord: e.target.value })}
                       className="input-premium"
-                      placeholder="Discord ID atau username"
+                      placeholder="cth: __matcha atau 123456789012345678"
                     />
-                    <p className="text-xs text-text-muted/60 mt-1">Wajib diisi untuk notifikasi pembayaran</p>
+                    <p className="text-xs text-text-muted/60 mt-1">Username Discord atau User ID numerik (17-19 digit). Wajib untuk notifikasi pembayaran.</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-text mb-2">In-Game Name (IGN)</label>

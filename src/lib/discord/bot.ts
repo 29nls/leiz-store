@@ -74,6 +74,12 @@ export async function sendBuyerNotification(
     return false;
   }
 
+  // Discord API requires numeric snowflake for creating DMs
+  if (!/^\d{17,19}$/.test(discordId)) {
+    console.warn(`[Discord] Invalid Discord ID format (not a snowflake), skipping DM: ${discordId}`);
+    return false;
+  }
+
   try {
     // Create DM channel with the user
     const dmRes = await discordApiRequest(

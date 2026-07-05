@@ -10,7 +10,9 @@ import { z } from "zod";
 export const createOrderSchema = z.object({
   customerName: z.string().min(1, "Name is required").max(100),
   customerEmail: z.string().email("Invalid email").optional().or(z.literal("")),
-  customerDiscord: z.string().min(1, "Discord ID is required").max(100),
+  customerDiscord: z.string().min(1, "Discord ID is required").max(100).refine(isValidDiscordId, {
+    message: "Discord ID tidak valid. Masukkan User ID numerik (17-19 digit) atau username Discord.",
+  }),
   customerPhone: z.string().max(20).optional().or(z.literal("")),
   customerIGN: z.string().max(100).optional().or(z.literal("")),
   customerNotes: z.string().max(500).optional().or(z.literal("")),
@@ -32,7 +34,9 @@ export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 
 export const confirmTransferSchema = z.object({
   buyerName: z.string().min(1, "Name is required").max(100),
-  buyerDiscordId: z.string().min(1, "Discord ID is required").max(100),
+  buyerDiscordId: z.string().min(1, "Discord ID is required").max(100).refine(isValidDiscordId, {
+    message: "Discord ID tidak valid. Masukkan User ID numerik (17-19 digit) atau username Discord.",
+  }),
   note: z.string().max(500).optional(),
   paymentProofBase64: z.string().optional(),
 });

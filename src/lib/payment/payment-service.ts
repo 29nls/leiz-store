@@ -113,7 +113,7 @@ export async function confirmTransfer(
     .from("payment_confirmation")
     .select("id")
     .eq("order_id", orderId)
-    .single();
+    .maybeSingle();
 
   if (existing) {
     return { success: false, error: "Transfer already confirmed for this order" };
