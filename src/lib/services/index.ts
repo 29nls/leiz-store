@@ -160,6 +160,7 @@ export const orderService = {
     customerName: string;
     customerEmail?: string;
     customerDiscord?: string;
+    customerPhone?: string;
     customerIGN?: string;
     customerNotes?: string;
     items: Array<{ productId: string; quantity: number }>;
@@ -207,6 +208,7 @@ export const orderService = {
             customerName: data.customerName,
             customerEmail: data.customerEmail,
             customerDiscord: data.customerDiscord,
+            customerPhone: data.customerPhone,
             customerIGN: data.customerIGN,
             customerNotes: data.customerNotes,
             subtotal,

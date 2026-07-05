@@ -157,7 +157,7 @@ export async function sendSellerNotification(orderData: any): Promise<boolean> {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...embed,
-          content: `**Konfirmasi Transfer Baru** — Order \`${orderData.order_number}\`\nAdmin: gunakan Discord bot untuk verifikasi pembayaran.`,
+          content: `🛒 **KONFIRMASI TRANSFER BARU**\n━━━━━━━━━━━━━━━━━\n📋 Order: \`${orderData.order_number}\`\n👤 Pembeli: ${orderData.customer_name || "—"}\n💰 Total: Rp${Number(orderData.total).toLocaleString("id-ID")}\n━━━━━━━━━━━━━━━━━\n> ⚠️ *Gunakan Discord bot untuk verifikasi & action.*`,
         }),
       });
 

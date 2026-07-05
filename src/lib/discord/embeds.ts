@@ -21,6 +21,10 @@ interface OrderData {
   orderNumber?: string;
   customer_name?: string;
   customerName?: string;
+  customer_email?: string | null;
+  customerEmail?: string | null;
+  customer_phone?: string | null;
+  customerPhone?: string | null;
   buyer_discord_id?: string | null;
   customer_discord?: string | null;
   customerDiscord?: string | null;
@@ -42,7 +46,6 @@ interface OrderData {
  * Build the seller notification embed object for Discord
  */
 export function buildSellerEmbed(order: OrderData) {
-  // Collect order items from any property name the data might arrive under
   const rawItems = order.items || order.orderItem || order.order_item || [];
   const items = rawItems
     .map((item) => {
@@ -59,7 +62,7 @@ export function buildSellerEmbed(order: OrderData) {
       const formattedPrice = Number.isFinite(price)
         ? `Rp${price.toLocaleString("id-ID")}`
         : "Rp0";
-      return `• ${itemName} x${quantity} — ${formattedPrice}`;
+      return `• \`${itemName}\` × ${quantity} — ${formattedPrice}`;
     })
     .join("\n") || "—";
 
@@ -72,27 +75,32 @@ export function buildSellerEmbed(order: OrderData) {
   return {
     embeds: [
       {
-        title: "🛒 Konfirmasi Transfer Baru",
-        color: 0xf59e0b, // amber
+        title: "🛒 **KONFIRMASI TRANSFER BARU**",
+        color: 0xf59e0b,
         fields: [
-          { name: "📋 Order", value: `\`${orderNumber}\``, inline: true },
-          { name: "👤 Pembeli", value: customerName, inline: true },
-          { name: "🎮 Discord ID", value: discordId, inline: true },
-          { name: "🎮 IGN", value: customerIgn || "—", inline: true },
-          { name: "💰 Total", value: `Rp${Number(order.total).toLocaleString("id-ID")}`, inline: true },
-          { name: "💳 Metode", value: paymentMethod, inline: true },
-          { name: "📝 Catatan", value: order.customer_notes || "—", inline: true },
-          { name: "📊 Status", value: order.status, inline: true },
-          { name: "📦 Produk", value: items, inline: false },
-          {
-            name: "⏰ Waktu Konfirmasi",
-            value: order.confirmed_at
-              ? new Date(order.confirmed_at).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" })
-              : new Date().toLocaleString("id-ID", { timeZone: "Asia/Jakarta" }),
-            inline: false,
-          },
+          { name: "━━━━━━━━━━━━━━━━━", value: "**📋 INFORMASI ORDER**", inline: false },
+          { name: "Order", value: `\`${orderNumber}\``, inline: true },
+          { name: "Status", value: `\`${order.status}\``, inline: true },
+          { name: "Waktu", value: order.confirmed_at
+            ? new Date(order.confirmed_at).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" })
+            : new Date().toLocaleString("id-ID", { timeZone: "Asia/Jakarta" }), inline: false },
+
+          { name: "━━━━━━━━━━━━━━━━━", value: "**👤 DATA PEMBELI**", inline: false },
+          { name: "Nama", value: customerName, inline: true },
+          { name: "Email", value: order.customer_email || order.customerEmail || "—", inline: true },
+          { name: "WA", value: order.customer_phone || order.customerPhone || "—", inline: true },
+          { name: "Discord", value: discordId, inline: true },
+          { name: "IGN", value: customerIgn || "—", inline: true },
+
+          { name: "━━━━━━━━━━━━━━━━━", value: "**💳 PEMBAYARAN**", inline: false },
+          { name: "Total", value: `Rp${Number(order.total).toLocaleString("id-ID")}`, inline: true },
+          { name: "Metode", value: paymentMethod, inline: true },
+          { name: "Catatan", value: order.customer_notes || "—", inline: false },
+
+          { name: "━━━━━━━━━━━━━━━━━", value: "**📦 PRODUK**", inline: false },
+          { name: "Items", value: items, inline: false },
         ],
-        footer: { text: "LEIZ STORE — Payment Verification" },
+        footer: { text: "LEIZ STORE • Payment Verification • " + new Date().toLocaleDateString("id-ID") },
         timestamp: new Date().toISOString(),
       },
     ],
@@ -106,13 +114,14 @@ export function buildBuyerEmbed(orderNumber: string, message: string) {
   return {
     embeds: [
       {
-        title: "📦 Update Pesanan — LEIZ STORE",
-        color: 0x7c3aed, // primary purple
+        title: "📦 **UPDATE PESANAN**",
+        color: 0x7c3aed,
         description: message,
         fields: [
-          { name: "📋 Order", value: `\`${orderNumber}\``, inline: true },
+          { name: "━━━━━━━━━━━━━━━━━", value: "**📋 INFORMASI ORDER**", inline: false },
+          { name: "Order", value: `\`${orderNumber}\``, inline: true },
         ],
-        footer: { text: "LEIZ STORE" },
+        footer: { text: "LEIZ STORE • " + new Date().toLocaleDateString("id-ID") },
         timestamp: new Date().toISOString(),
       },
     ],
@@ -125,17 +134,17 @@ export function buildBuyerEmbed(orderNumber: string, message: string) {
 export function buildAdminButtons(orderId: string) {
   return [
     {
-      type: 1, // ActionRow
+      type: 1,
       components: [
         {
-          type: 2, // Button
-          style: 3, // Success (green)
+          type: 2,
+          style: 3,
           label: "✅ Pembayaran sudah masuk",
           custom_id: `payment_accept_${orderId}`,
         },
         {
           type: 2,
-          style: 4, // Danger (red)
+          style: 4,
           label: "❌ Pembayaran belum masuk",
           custom_id: `payment_reject_${orderId}`,
         },
@@ -146,7 +155,7 @@ export function buildAdminButtons(orderId: string) {
       components: [
         {
           type: 2,
-          style: 2, // Secondary (grey)
+          style: 2,
           label: "🚫 Cancel order",
           custom_id: `payment_cancel_${orderId}`,
         },

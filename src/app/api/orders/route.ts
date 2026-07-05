@@ -27,7 +27,7 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
     );
   }
 
-  const { customerName, customerEmail, customerDiscord, customerIGN, customerNotes, items, paymentMethod, currency } = parsed.data;
+  const { customerName, customerEmail, customerDiscord, customerPhone, customerIGN, customerNotes, items, paymentMethod, currency } = parsed.data;
 
   // Discord ID is required for all manual payment methods
   if (!customerDiscord) {
@@ -42,6 +42,7 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
     customerName,
     customerEmail: customerEmail || undefined,
     customerDiscord: customerDiscord || undefined,
+    customerPhone: customerPhone || undefined,
     customerIGN: customerIGN || undefined,
     customerNotes: customerNotes || undefined,
     items,

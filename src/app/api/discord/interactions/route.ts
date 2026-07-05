@@ -100,10 +100,10 @@ interface MessageUpdateData {
 // ─── Buyer DM messages per action ────────────────────────────────────────
 
 const BUYER_MESSAGES: Record<string, string> = {
-  accept: "Pembayaran Anda sudah dikonfirmasi masuk! 🎉\n\nPesanan sedang diproses dan akan segera dikirim.\nTerima kasih telah berbelanja di LEIZ STORE 🙏",
-  reject: "Pembayaran Anda tidak dapat diverifikasi. ⚠️\n\nSilakan hubungi admin untuk informasi lebih lanjut atau lakukan upload ulang bukti transfer.",
-  cancel: "Pesanan Anda telah dibatalkan. 🚫\n\nJika Anda memiliki pertanyaan, silakan hubungi admin LEIZ STORE.",
-  force_cancel: "Pesanan Anda telah dibatalkan paksa. ⛔\n\nJika Anda memiliki pertanyaan, silakan hubungi admin LEIZ STORE.",
+  accept: "**Pembayaran Anda telah dikonfirmasi!** 🎉\n\nPesanan sedang diproses dan akan segera dikirim. Kami akan memberitahu Anda ketika pesanan sudah selesai.\n\nTerima kasih telah berbelanja di **LEIZ STORE** 🙏",
+  reject: "**Pembayaran tidak dapat diverifikasi.** ⚠️\n\nEmail atau nomor WhatsApp pesanan mungkin bermasalah. Silakan periksa kembali atau hubungi admin untuk informasi lebih lanjut.\n\nKamu bisa melakukan upload ulang bukti transfer melalui website.",
+  cancel: "**Pesanan dibatalkan.** 🚫\n\nPesanan kamu telah dibatalkan. Jika ada pertanyaan, silakan hubungi admin LEIZ STORE.\n\nTerima kasih 🙏",
+  force_cancel: "**Pesanan dibatalkan paksa.** ⛔\n\nPesanan kamu telah dibatalkan oleh sistem. Silakan hubungi admin LEIZ STORE untuk informasi lebih lanjut.\n\nTerima kasih 🙏",
 };
 
 async function processAction(

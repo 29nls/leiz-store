@@ -46,6 +46,7 @@ export default function CheckoutPage() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    phone: "",
     discord: "",
     ign: "",
     notes: "",
@@ -71,6 +72,7 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           customerName: formData.name,
           customerEmail: formData.email || undefined,
+          customerPhone: formData.phone || undefined,
           customerDiscord: formData.discord || undefined,
           customerIGN: formData.ign || undefined,
           customerNotes: formData.notes || undefined,
@@ -210,6 +212,17 @@ export default function CheckoutPage() {
                       className="input-premium"
                       placeholder="your@email.com"
                     />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-text mb-2">No. WhatsApp</label>
+                    <input
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      className="input-premium"
+                      placeholder="+62xxx atau 08xxx"
+                    />
+                    <p className="text-xs text-text-muted/60 mt-1">Untuk dikirim invoice via WhatsApp</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-text mb-2">Discord ID / Username *</label>
