@@ -30,6 +30,7 @@ import {
   adminCancelOrder,
   adminForceCancelOrder,
 } from "@/lib/payment/payment-service";
+import { generateAndSendInvoice } from "@/lib/invoice";
 
 export const dynamic = "force-dynamic";
 
@@ -183,6 +184,19 @@ async function processAction(
           if (sent) console.log(`[Discord] Buyer DM sent for order ${orderNumber}`);
         })
         .catch((err) => console.error("[Discord] Buyer DM error:", err));
+    }
+
+    // 5. Fire-and-forget: Generate & send invoice on payment accept (non-blocking)
+    if (action === "accept") {
+      generateAndSendInvoice(orderId)
+        .then((invResult) => {
+          if (invResult.success) {
+            console.log(`[Discord] Invoice ${invResult.invoiceNo} sent for order ${orderId}`);
+          } else {
+            console.warn(`[Discord] Invoice generation partially failed for order ${orderId}:`, invResult.error);
+          }
+        })
+        .catch((err) => console.error("[Discord] Invoice generation error:", err));
     }
   }
 

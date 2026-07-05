@@ -166,6 +166,13 @@ if (!globalThis.crypto?.randomUUID) {
   });
 }
 
+// Polyfill TextEncoder/TextDecoder for pdfkit in jsdom
+if (typeof globalThis.TextEncoder === "undefined") {
+  const { TextEncoder, TextDecoder } = require("util");
+  globalThis.TextEncoder = TextEncoder;
+  globalThis.TextDecoder = TextDecoder;
+}
+
 // Suppress console.error in tests
 const originalError = console.error;
 beforeAll(() => {

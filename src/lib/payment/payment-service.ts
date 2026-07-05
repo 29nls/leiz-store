@@ -52,10 +52,13 @@ async function updateOrderStatus(
     ...extraFields,
   };
 
+  // Atomic conditional update: only succeed if status hasn't changed since we read it.
+  // This prevents double-processing when admin clicks the button multiple times.
   const { data: updated, error } = await supabaseAdmin
     .from("order")
     .update(updateData)
     .eq("id", orderId)
+    .eq("status", currentStatus)
     .select("*")
     .single();
 

@@ -10,6 +10,7 @@ import {
   ShoppingCart,
   Settings,
   Users,
+  FileText,
   LogOut,
   Menu,
   X,
@@ -22,6 +23,7 @@ const navItems = [
   { href: "/admin/products", label: "Produk", icon: Package },
   { href: "/admin/categories", label: "Kategori", icon: FolderTree },
   { href: "/admin/orders", label: "Pesanan", icon: ShoppingCart },
+  { href: "/admin/invoices", label: "Invoice", icon: FileText },
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/settings", label: "Pengaturan", icon: Settings },
 ];

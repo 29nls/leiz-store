@@ -97,6 +97,11 @@ Proyek ini menggunakan GitHub Actions untuk automated testing dan deployment ke 
 - `JWT_SECRET` — JWT signing secret (required di production)
 - `DISCORD_PUBLIC_KEY` — Discord interaction verification
 - `DISCORD_BOT_TOKEN` — Discord bot token
+- `CRON_SECRET` — Secret untuk cron endpoints (`/api/cron/process-jobs`)
+- `ADMIN_EMAIL` / `ADMIN_PASSWORD` — Admin login credentials (via Supabase Auth)
+- `BREVO_SMTP_HOST` / `BREVO_SMTP_PORT` / `BREVO_SMTP_USER` / `BREVO_SMTP_PASS` — Brevo SMTP untuk invoice email
+- `BREVO_FROM_EMAIL` / `BREVO_FROM_NAME` — Email pengirim invoice
+- `INVOICE_STORAGE_BUCKET` — Supabase Storage bucket untuk PDF invoice
 
 ---
 
@@ -148,7 +153,9 @@ leiz-store/
 │   │   ├── checkout/            # Checkout flow (4 steps)
 │   │   ├── payment/             # Payment confirmation page
 │   │   ├── products/            # Product catalog & detail
-│   │   └── api/                 # REST API endpoints
+│   │   ├── api/                 # REST API endpoints
+│   │   │   ├── admin/invoices/  # Admin invoice API (list + resend)
+│   │   │   └── cron/process-jobs/  # Cron: drain job queue
 │   ├── components/              # React components
 │   │   ├── cart/                # Cart components
 │   │   ├── checkout/            # Checkout components
@@ -159,6 +166,15 @@ leiz-store/
 │   ├── lib/                     # Utility libraries
 │   │   ├── api/                 # API client utilities
 │   │   ├── discord/             # Discord integration
+│   │   ├── invoice/             # Invoice system (PDF, email, WhatsApp)
+│   │   │   ├── invoice-service.ts   # Orchestrator
+│   │   │   ├── pdf-generator.ts     # A4 PDF via pdfkit
+│   │   │   ├── email-sender.ts      # Brevo SMTP (nodemailer)
+│   │   │   ├── whatsapp-sender.ts   # WhatsApp notification
+│   │   │   └── types.ts
+│   │   ├── queue/               # Persistent job queue (Supabase)
+│   │   │   ├── queue-service.ts # Enqueue, dequeue, retry
+│   │   │   └── types.ts
 │   │   ├── payment/             # Payment service & constants
 │   │   ├── validators/          # Zod validators
 │   │   ├── auth.ts              # JWT utilities (lazy init)
@@ -183,6 +199,19 @@ leiz-store/
 - ✅ CI/CD pipeline fully operational (lint → test → build → E2E)
 - ✅ Dependabot configured (npm + github-actions)
 - ✅ MSDO, CodeQL, njsscan workflows configured
+
+#### 📄 Invoice System
+
+- ✅ Invoice generation (PDF via pdfkit — A4, IDR/USD, multi-item, diskon, pajak)
+- ✅ Email delivery via Brevo SMTP (nodemailer, HTML template + PDF attachment)
+- ✅ WhatsApp notification (via existing API atau fallback `whatsapp_queue` table)
+- ✅ Persistent job queue (`job_queue` table) dengan retry + exponential backoff
+- ✅ Idempotency guards: atomic `UPDATE orders` + `ON CONFLICT DO NOTHING` on INSERT invoice
+- ✅ Admin invoice page: tabel, filter status, pagination, modal detail, tombol resend
+- ✅ Admin REST API: `GET /api/admin/invoices` (list) + `POST` (resend action)
+- ✅ Cron endpoint `GET /api/cron/process-jobs` (maxDuration 120s, auth via Bearer/x-cron-secret)
+- ✅ Vercel CRON job (every 5 menit, `vercel.json`)
+- ✅ 29+ unit tests (pdf-generator, email-sender, whatsapp-sender, invoice-service, queue-service)
 
 #### 🔐 Security Hardening
 
