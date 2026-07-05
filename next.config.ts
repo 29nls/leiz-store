@@ -53,6 +53,9 @@ const nextConfig: NextConfig = {
   // Powered-by header removal
   poweredByHeader: false,
 
+  // Keep pdfkit as external module so __dirname resolves correctly
+  serverExternalPackages: ["pdfkit"],
+
   // Experimental optimizations
   experimental: {
     optimizePackageImports: [

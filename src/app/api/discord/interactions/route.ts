@@ -62,27 +62,33 @@ async function sendEphemeralFollowup(
     return;
   }
 
-  try {
-    const url = new URL(
-      `/api/v10/webhooks/${encodeURIComponent(applicationId)}/${encodeURIComponent(token)}`,
-      "https://discord.com"
-    ).toString();
+  const url = new URL(
+    `/api/v10/webhooks/${encodeURIComponent(applicationId)}/${encodeURIComponent(token)}`,
+    "https://discord.com"
+  ).toString();
 
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        content,
-        flags: 64, // EPHEMERAL — only the clicking user sees this
-      }),
-    });
+  const body = JSON.stringify({ content, flags: 64 });
 
-    if (!res.ok) {
-      const body = await res.text();
-      console.error("[Discord] Ephemeral followup failed:", res.status, body);
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) {
+      await new Promise(r => setTimeout(r, 1000 * attempt));
     }
-  } catch (err) {
-    console.error("[Discord] Ephemeral followup network error:", err);
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+      });
+      if (res.ok) return;
+      const bodyText = await res.text();
+      console.error(`[Discord] Ephemeral followup failed:`, res.status, bodyText);
+    } catch (err) {
+      if (attempt < 2) {
+        console.warn(`[Discord] Ephemeral followup retry ${attempt + 1}/3:`, (err as Error).message);
+      } else {
+        console.error("[Discord] Ephemeral followup network error:", err);
+      }
+    }
   }
 }
 

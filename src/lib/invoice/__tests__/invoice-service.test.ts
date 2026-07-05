@@ -11,6 +11,7 @@ mockSupabaseQuery = {
   select: jest.fn().mockReturnThis(),
   eq: jest.fn().mockReturnThis(),
   single: jest.fn().mockReturnThis(),
+  maybeSingle: jest.fn().mockReturnThis(),
   insert: jest.fn().mockReturnThis(),
   update: jest.fn().mockReturnThis(),
   order: jest.fn().mockReturnThis(),
@@ -53,6 +54,7 @@ describe("invoice-service", () => {
     mockSupabaseQuery.select.mockReturnThis();
     mockSupabaseQuery.eq.mockReturnThis();
     mockSupabaseQuery.single.mockReturnThis();
+    mockSupabaseQuery.maybeSingle.mockReturnThis();
     mockSupabaseQuery.insert.mockReturnThis();
     mockSupabaseQuery.update.mockReturnThis();
     mockSupabaseQuery.order.mockReturnThis();

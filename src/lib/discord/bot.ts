@@ -34,11 +34,26 @@ async function discordApiRequest(
     headers["Content-Type"] = "application/json";
   }
 
-  return fetch(`https://discord.com/api/v10${endpoint}`, {
-    method: "POST",
-    headers,
-    body: isFormData ? body : JSON.stringify(body),
-  });
+  const url = `https://discord.com/api/v10${endpoint}`;
+  const payload = { method: "POST", headers, body: isFormData ? body : JSON.stringify(body) };
+
+  let lastErr: Error | null = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) {
+      const delay = Math.min(1000 * Math.pow(2, attempt), 5000);
+      await new Promise(r => setTimeout(r, delay));
+    }
+    try {
+      const res = await fetch(url, payload as any);
+      return res;
+    } catch (err) {
+      lastErr = err instanceof Error ? err : new Error(String(err));
+      if (attempt < 2) {
+        console.warn(`[Discord] API retry ${attempt + 1}/3 for ${endpoint}: ${lastErr.message}`);
+      }
+    }
+  }
+  throw lastErr || new Error("Discord API request failed");
 }
 
 // ─── Send Seller Notification ───────────────────────────────
@@ -151,23 +166,28 @@ export async function sendSellerNotification(orderData: any): Promise<boolean> {
 
   // Fallback: use webhook (no interactive buttons, just embed)
   if (config.webhookUrl) {
-    try {
-      const res = await fetch(config.webhookUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...embed,
-          content: `🛒 **KONFIRMASI TRANSFER BARU**\n━━━━━━━━━━━━━━━━━\n📋 Order: \`${orderData.order_number}\`\n👤 Pembeli: ${orderData.customer_name || "—"}\n💰 Total: Rp${Number(orderData.total).toLocaleString("id-ID")}\n━━━━━━━━━━━━━━━━━\n> ⚠️ *Gunakan Discord bot untuk verifikasi & action.*`,
-        }),
-      });
-
-      if (res.ok) {
-        console.log("[Discord] Seller notification sent via webhook");
-        return true;
+    const webhookBody = JSON.stringify({
+      ...embed,
+      content: `🛒 **KONFIRMASI TRANSFER BARU**\n━━━━━━━━━━━━━━━━━\n📋 Order: \`${orderData.order_number}\`\n👤 Pembeli: ${orderData.customer_name || "—"}\n💰 Total: Rp${Number(orderData.total).toLocaleString("id-ID")}\n━━━━━━━━━━━━━━━━━\n> ⚠️ *Gunakan Discord bot untuk verifikasi & action.*`,
+    });
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) await new Promise(r => setTimeout(r, 1000 * attempt));
+      try {
+        const res = await fetch(config.webhookUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: webhookBody,
+        });
+        if (res.ok) {
+          console.log("[Discord] Seller notification sent via webhook");
+          return true;
+        }
+        await res.body?.cancel();
+      } catch (err) {
+        console.warn(`[Discord] Webhook retry ${attempt + 1}/3:`, (err as Error).message);
       }
-    } catch (err) {
-      console.error("[Discord] Webhook error:", err);
     }
+    console.error("[Discord] Webhook failed after 3 attempts");
   }
 
   console.warn("[Discord] No notification method configured — skipping seller notification");

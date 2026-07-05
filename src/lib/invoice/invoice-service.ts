@@ -86,7 +86,7 @@ export async function generateAndSendInvoice(
     .from("invoice")
     .select("id, status, invoice_no, sent_via_email, sent_via_wa")
     .eq("order_id", orderId)
-    .single();
+    .maybeSingle();
 
   if (existing) {
     console.log(`[InvoiceService] Invoice already exists for order ${orderId}: ${existing.invoice_no} (${existing.status})`);
@@ -305,7 +305,7 @@ export async function getInvoiceByOrder(orderId: string): Promise<Invoice | null
     .from("invoice")
     .select("*")
     .eq("order_id", orderId)
-    .single();
+    .maybeSingle();
   return data || null;
 }
 
