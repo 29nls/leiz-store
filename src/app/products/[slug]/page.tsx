@@ -237,7 +237,7 @@ export default function ProductDetailPage() {
 
             {/* What's Included Section */}
             <div className="space-y-3 pt-4 border-t border-white/[0.05]">
-              <h3 className="text-[13px] font-semibold text-text uppercase tracking-wider">What's Included</h3>
+              <h2 className="text-[13px] font-semibold text-text uppercase tracking-wider">What's Included</h2>
               <ul className="space-y-2">
                 {[
                   `${product.stock} ${product.unit} available`,
@@ -258,7 +258,7 @@ export default function ProductDetailPage() {
 
             {/* Delivery Method */}
             <div className="space-y-3 pt-4 border-t border-white/[0.05]">
-              <h3 className="text-[13px] font-semibold text-text uppercase tracking-wider">Delivery Method</h3>
+              <h2 className="text-[13px] font-semibold text-text uppercase tracking-wider">Delivery Method</h2>
               <div className="flex items-start gap-3 p-4 rounded-xl bg-[#0D1420] border border-[#1A2840]">
                 <div className="flex h-10 w-10 items-center justify-center flex-shrink-0 rounded-lg bg-primary/10 border border-primary/20">
                   <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -277,7 +277,7 @@ export default function ProductDetailPage() {
 
             {/* How To Redeem */}
             <div className="space-y-3 pt-4 border-t border-white/[0.05]">
-              <h3 className="text-[13px] font-semibold text-text uppercase tracking-wider">How To Redeem</h3>
+              <h2 className="text-[13px] font-semibold text-text uppercase tracking-wider">How To Redeem</h2>
               <ol className="space-y-3">
                 {[
                   { step: "1", text: "Complete your purchase and join our Discord server" },

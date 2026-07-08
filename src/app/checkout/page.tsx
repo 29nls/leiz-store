@@ -190,8 +190,9 @@ export default function CheckoutPage() {
                 <h2 className="text-xl font-semibold text-text">Customer Information</h2>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-text mb-2">Name *</label>
+                    <label htmlFor="name" className="block text-sm font-medium text-text mb-2">Name *</label>
                     <input
+                      id="name"
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -200,8 +201,9 @@ export default function CheckoutPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-text mb-2">Discord User ID *</label>
+                    <label htmlFor="discord" className="block text-sm font-medium text-text mb-2">Discord User ID *</label>
                     <input
+                      id="discord"
                       type="text"
                       value={formData.discord}
                       onChange={(e) => setFormData({ ...formData, discord: e.target.value })}
@@ -211,8 +213,9 @@ export default function CheckoutPage() {
                     <p className="text-xs text-text-muted/60 mt-1">User ID numerik 17-19 digit. Cara dapatkan: Settings → Advanced → Developer Mode → klik kanan profil → Copy ID. Wajib untuk notifikasi pembayaran.</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-text mb-2">In-Game Name (IGN)</label>
+                    <label htmlFor="ign" className="block text-sm font-medium text-text mb-2">In-Game Name (IGN)</label>
                     <input
+                      id="ign"
                       type="text"
                       value={formData.ign}
                       onChange={(e) => setFormData({ ...formData, ign: e.target.value })}
@@ -221,8 +224,9 @@ export default function CheckoutPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-text mb-2">Notes</label>
+                    <label htmlFor="notes" className="block text-sm font-medium text-text mb-2">Notes</label>
                     <textarea
+                      id="notes"
                       value={formData.notes}
                       onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                       rows={3}

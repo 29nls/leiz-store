@@ -188,6 +188,34 @@ const nextConfig: NextConfig = {
           value: "camera=(), microphone=(), geolocation=(), interest-cohort=()",
         },
         {
+          key: "Cross-Origin-Opener-Policy",
+          value: "same-origin",
+        },
+        {
+          key: "Cross-Origin-Resource-Policy",
+          value: "same-origin",
+        },
+        {
+          key: "X-Permitted-Cross-Domain-Policies",
+          value: "none",
+        },
+        {
+          key: "Content-Security-Policy",
+          value: [
+            "default-src 'self'",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com https://vercel.live",
+            "style-src 'self' 'unsafe-inline'",
+            "img-src 'self' data: blob: https://placehold.co https://*.supabase.co https://*.amazonaws.com https://*.r2.cloudflarestorage.com https://*.cloudinary.com",
+            "font-src 'self'",
+            "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://va.vercel-scripts.com",
+            "frame-ancestors 'none'",
+            "base-uri 'self'",
+            "object-src 'none'",
+            "form-action 'self'",
+            "upgrade-insecure-requests",
+          ].join("; "),
+        },
+        {
           key: "Strict-Transport-Security",
           value: "max-age=31536000; includeSubDomains; preload",
         },

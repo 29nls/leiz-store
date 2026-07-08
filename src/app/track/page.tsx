@@ -263,7 +263,9 @@ export default function TrackOrderPage() {
           <div className="flex gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-text-muted/40" />
+              <label htmlFor="order-number" className="sr-only">Order number</label>
               <input
+                id="order-number"
                 type="text"
                 value={orderNumber}
                 onChange={(e) => setOrderNumber(e.target.value)}
@@ -343,6 +345,7 @@ export default function TrackOrderPage() {
                       <span className="font-mono text-sm text-text-muted">{order.orderNumber}</span>
                       <button
                         onClick={() => handleCopy(order.orderNumber)}
+                        aria-label={copied ? "Order number copied" : "Copy order number"}
                         className="text-text-muted/40 hover:text-text-muted transition-colors"
                       >
                         {copied ? (
