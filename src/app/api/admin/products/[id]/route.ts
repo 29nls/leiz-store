@@ -123,19 +123,17 @@ export async function DELETE(
   const { id } = await params;
 
   try {
-    // Delete product images first (cascade should handle this, but being explicit)
-    await supabaseAdmin.from("product_image").delete().eq("product_id", id);
-
+    // Soft delete: set is_active = false to preserve order history
     const { error } = await supabaseAdmin
       .from("product")
-      .delete()
+      .update({ is_active: false, updated_at: new Date().toISOString() })
       .eq("id", id);
 
     if (error) throw error;
 
     return NextResponse.json({
       success: true,
-      message: "Product deleted successfully",
+      message: "Produk berhasil dinonaktifkan",
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
