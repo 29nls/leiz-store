@@ -128,6 +128,7 @@ export default function AdminProductsPage() {
   const [formErr, setFormErr] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [serverErr, setServerErr] = useState("");
+  const [uploading, setUploading] = useState(false);
   const [delTarget, setDelTarget] = useState<Product | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [okMsg, setOkMsg] = useState("");
@@ -302,107 +303,131 @@ export default function AdminProductsPage() {
     } catch (e: any) { setError(e.message); }
   }, [fetchProducts, showOk]);
 
+  // ── Image upload ──────────────────────────────────────────
+
+  const handleUpload = useCallback(async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      setServerErr("File harus berupa gambar");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setServerErr("File maksimal 5MB");
+      return;
+    }
+    setUploading(true);
+    setServerErr("");
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) { setServerErr(data.error || "Gagal upload"); return; }
+      setForm((prev) => ({ ...prev, image_url: data.url }));
+    } catch (e: any) { setServerErr(e.message || "Gagal upload"); }
+    finally { setUploading(false); }
+  }, []);
+
   // ── Render ─────────────────────────────────────────────────
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Produk</h1>
-          <p className="text-gray-400 text-sm mt-1">Kelola semua produk toko Anda</p>
+          <h1 className="text-2xl font-bold text-text-primary">Produk</h1>
+          <p className="text-text-secondary text-sm mt-1">Kelola semua produk toko Anda</p>
         </div>
-        <button onClick={openCreate} className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-lg shadow-blue-600/20">
+        <button onClick={openCreate} className="inline-flex items-center gap-2 px-4 py-2.5 bg-ember hover:bg-ember-bright text-void text-sm font-medium rounded-lg transition-all duration-200 shadow-lg shadow-ember/20">
           <Plus className="h-4 w-4" /> Tambah Produk
         </button>
       </div>
 
-      {okMsg && <div className="bg-green-500/10 border border-green-500/30 text-green-400 px-4 py-3 rounded-lg text-sm flex items-center gap-2 animate-fade-in"><Check className="h-4 w-4" />{okMsg}</div>}
+      {okMsg && <div className="bg-success/10 border border-success/20 text-success px-4 py-3 rounded-lg text-sm flex items-center gap-2 animate-fade-in"><Check className="h-4 w-4" />{okMsg}</div>}
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-          <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari produk..." className="w-full pl-10 pr-4 py-2.5 bg-gray-900 border border-gray-800 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-tertiary" />
+          <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari produk..." className="w-full pl-10 pr-4 py-2.5 bg-surface border border-border rounded-lg text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-arcane/50 focus:border-arcane/50 text-sm" />
         </div>
-        <select value={catFilter} onChange={e => setCatFilter(e.target.value)} className="px-4 py-2.5 bg-gray-900 border border-gray-800 rounded-lg text-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50">
+        <select value={catFilter} onChange={e => setCatFilter(e.target.value)} className="px-4 py-2.5 bg-surface border border-border rounded-lg text-text-secondary text-sm focus:outline-none focus:ring-2 focus:ring-arcane/50">
           <option value="">Semua Kategori</option>
           {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
       </div>
 
       {error && (
-        <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
+        <div className="bg-error/10 border border-error/20 text-error px-4 py-3 rounded-lg text-sm flex items-center gap-2">
           <AlertTriangle className="h-4 w-4 flex-shrink-0" />{error}
           <button onClick={() => setError("")} className="ml-auto hover:text-red-300"><X className="h-4 w-4" /></button>
         </div>
       )}
 
-      <div className="bg-gray-900/80 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="bg-surface border border-border rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-800 bg-gray-900/50">
-                <th className="text-left py-3 px-4 text-gray-400 font-medium">Produk</th>
-                <th className="text-left py-3 px-4 text-gray-400 font-medium">Kategori</th>
-                <th className="text-right py-3 px-4 text-gray-400 font-medium">Harga</th>
-                <th className="text-center py-3 px-4 text-gray-400 font-medium">Stok</th>
-                <th className="text-center py-3 px-4 text-gray-400 font-medium">Status</th>
-                <th className="text-right py-3 px-4 text-gray-400 font-medium">Aksi</th>
+              <tr className="border-b border-border bg-surface-raised">
+                <th className="text-left py-3 px-4 text-text-secondary font-medium">Produk</th>
+                <th className="text-left py-3 px-4 text-text-secondary font-medium">Kategori</th>
+                <th className="text-right py-3 px-4 text-text-secondary font-medium">Harga</th>
+                <th className="text-center py-3 px-4 text-text-secondary font-medium">Stok</th>
+                <th className="text-center py-3 px-4 text-text-secondary font-medium">Status</th>
+                <th className="text-right py-3 px-4 text-text-secondary font-medium">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-800/50">
+            <tbody className="divide-y divide-border">
               {loading ? (
                 <tr><td colSpan={6} className="py-12 text-center">
-                  <div className="flex items-center justify-center gap-2 text-gray-400">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500" /> Memuat produk...
+                  <div className="flex items-center justify-center gap-2 text-text-secondary">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-arcane" /> Memuat produk...
                   </div>
                 </td></tr>
               ) : products.length === 0 ? (
                 <tr><td colSpan={6} className="py-12 text-center">
-                  <div className="flex flex-col items-center gap-2 text-gray-500">
+                  <div className="flex flex-col items-center gap-2 text-text-tertiary">
                     <Package className="h-10 w-10 opacity-30" /><p>Tidak ada produk</p>
-                    <button onClick={openCreate} className="text-blue-400 hover:text-blue-300 text-sm font-medium">Tambah produk</button>
+                     <button onClick={openCreate} className="text-arcane hover:text-arcane text-sm font-medium">Tambah produk</button>
                   </div>
                 </td></tr>
               ) : products.map(p => (
-                <tr key={p.id} className="hover:bg-gray-800/30 transition-colors">
+                <tr key={p.id} className="hover:bg-surface-raised transition-colors">
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center overflow-hidden flex-shrink-0">
+                      <div className="w-10 h-10 rounded-lg bg-surface-raised flex items-center justify-center overflow-hidden flex-shrink-0">
                         {p.images?.[0]?.url ? (
                           <img src={p.images[0].url} alt={p.name} className="w-full h-full object-cover"
-                            onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                        ) : <ImageIcon className="h-5 w-5 text-gray-600" />}
+                            onError={e => { (e.target as HTMLImageElement).src = "https://placehold.co/400x400/222329/D3BC8E?text=LEIZ"; }} />
+                        ) : <ImageIcon className="h-5 w-5 text-text-tertiary" />}
                       </div>
                       <div>
-                        <p className="text-white font-medium max-w-[250px] truncate">{p.name}</p>
-                        {p.badge && <span className={`inline-block text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded ${
-                          p.badge === "HOT" ? "bg-red-500/20 text-red-400" : p.badge === "NEW" ? "bg-green-500/20 text-green-400" :
-                          p.badge === "BEST_SELLER" ? "bg-purple-500/20 text-purple-400" : p.badge === "LIMITED" ? "bg-yellow-500/20 text-yellow-400" :
-                          "bg-gray-500/20 text-gray-400"
+                        <p className="text-text-primary font-medium max-w-[250px] truncate">{p.name}</p>
+                        {p.badge &&                         <span className={`inline-block text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded ${
+                          p.badge === "HOT" ? "bg-error/20 text-error" : p.badge === "NEW" ? "bg-success/20 text-success" :
+                          p.badge === "BEST_SELLER" ? "bg-arcane/20 text-arcane" : p.badge === "LIMITED" ? "bg-warning/20 text-warning" :
+                          "bg-surface-raised text-text-tertiary"
                         }`}>{p.badge}</span>}
                       </div>
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-gray-400">{p.category?.name || "-"}</td>
-                  <td className="py-3 px-4 text-right text-white font-medium">
+                  <td className="py-3 px-4 text-text-secondary">{p.category?.name || "-"}</td>
+                  <td className="py-3 px-4 text-right text-text-primary font-medium">
                     {fmtIDR(p.price)}
-                    {p.compare_price && <span className="block text-xs text-gray-500 line-through">{fmtIDR(p.compare_price)}</span>}
+                    {p.compare_price && <span className="block text-xs text-text-tertiary line-through">{fmtIDR(p.compare_price)}</span>}
                   </td>
                   <td className="py-3 px-4 text-center">
-                    <span className={`font-medium ${p.stock <= 0 ? "text-red-400" : p.stock <= p.min_stock ? "text-yellow-400" : "text-green-400"}`}>{p.stock}</span>
-                    <span className="text-gray-500 text-xs block">{p.unit}</span>
+                    <span className={`font-medium ${p.stock <= 0 ? "text-error" : p.stock <= p.min_stock ? "text-warning" : "text-success"}`}>{p.stock}</span>
+                    <span className="text-text-tertiary text-xs block">{p.unit}</span>
                   </td>
                   <td className="py-3 px-4 text-center">
                     <button onClick={() => toggleActive(p)} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
-                      p.is_active ? "bg-green-500/10 text-green-400 hover:bg-green-500/20" : "bg-red-500/10 text-red-400 hover:bg-red-500/20"
+                      p.is_active ? "bg-success/10 text-success hover:bg-success/20" : "bg-error/10 text-error hover:bg-error/20"
                     }`}>
                       {p.is_active ? <><Eye className="h-3 w-3" /> Aktif</> : <><EyeOff className="h-3 w-3" /> Nonaktif</>}
                     </button>
                   </td>
                   <td className="py-3 px-4 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <button onClick={() => openEdit(p)} className="p-2 text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg" title="Edit"><Edit3 className="h-4 w-4" /></button>
-                      <button onClick={() => setDelTarget(p)} className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg" title="Hapus"><Trash2 className="h-4 w-4" /></button>
+                      <button onClick={() => openEdit(p)} className="p-2 text-text-secondary hover:text-arcane hover:bg-arcane/10 rounded-lg" title="Edit"><Edit3 className="h-4 w-4" /></button>
+                      <button onClick={() => setDelTarget(p)} className="p-2 text-text-secondary hover:text-error hover:bg-error/10 rounded-lg" title="Hapus"><Trash2 className="h-4 w-4" /></button>
                     </div>
                   </td>
                 </tr>
@@ -411,12 +436,12 @@ export default function AdminProductsPage() {
           </table>
         </div>
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-800">
-            <p className="text-sm text-gray-400">{total} produk</p>
+          <div className="flex items-center justify-between px-4 py-3 border-t border-border">
+            <p className="text-sm text-text-secondary">{total} produk</p>
             <div className="flex items-center gap-2">
-              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} className="p-2 text-gray-400 hover:text-white disabled:opacity-30"><ChevronLeft className="h-4 w-4" /></button>
-              <span className="text-sm text-gray-400 px-2">{page} / {totalPages}</span>
-              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="p-2 text-gray-400 hover:text-white disabled:opacity-30"><ChevronRight className="h-4 w-4" /></button>
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} className="p-2 text-text-secondary hover:text-text-primary disabled:opacity-30"><ChevronLeft className="h-4 w-4" /></button>
+              <span className="text-sm text-text-secondary px-2">{page} / {totalPages}</span>
+              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="p-2 text-text-secondary hover:text-text-primary disabled:opacity-30"><ChevronRight className="h-4 w-4" /></button>
             </div>
           </div>
         )}
@@ -426,85 +451,105 @@ export default function AdminProductsPage() {
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowModal(false)} />
-          <div className="relative w-full max-w-2xl bg-gray-900 border border-gray-800 rounded-xl shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-gray-900 border-b border-gray-800 px-6 py-4 flex items-center justify-between z-10">
-              <h2 className="text-lg font-semibold text-white">{editingId ? "Edit Produk" : "Tambah Produk"}</h2>
-              <button onClick={() => setShowModal(false)} className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg"><X className="h-5 w-5" /></button>
+          <div className="relative w-full max-w-2xl bg-surface border border-border rounded-xl shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-surface border-b border-border px-6 py-4 flex items-center justify-between z-10">
+              <h2 className="text-lg font-semibold text-text-primary">{editingId ? "Edit Produk" : "Tambah Produk"}</h2>
+              <button onClick={() => setShowModal(false)} className="p-2 text-text-secondary hover:text-text-primary hover:bg-surface-raised rounded-lg"><X className="h-5 w-5" /></button>
             </div>
             <div className="p-6 space-y-5">
-              {serverErr && <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg text-sm">{serverErr}</div>}
+              {serverErr && <div className="bg-error/10 border border-error/20 text-error px-4 py-3 rounded-lg text-sm">{serverErr}</div>}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Nama Produk <span className="text-red-400">*</span></label>
+                  <label className="block text-sm font-medium text-text-secondary mb-1.5">Nama Produk <span className="text-error">*</span></label>
                   <input type="text" value={form.name} onChange={e => onNameChange(e.target.value)} placeholder="Nama produk"
-                    className={`w-full px-4 py-2.5 bg-gray-800 border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm ${formErr.name ? "border-red-500" : "border-gray-700"}`} />
-                  {formErr.name && <p className="text-red-400 text-xs mt-1">{formErr.name}</p>}
+                    className={`w-full px-4 py-2.5 bg-surface-raised border rounded-lg text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-arcane/50 text-sm ${formErr.name ? "border-error" : "border-border"}`} />
+                  {formErr.name && <p className="text-error text-xs mt-1">{formErr.name}</p>}
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Slug <span className="text-red-400">*</span></label>
+                  <label className="block text-sm font-medium text-text-secondary mb-1.5">Slug <span className="text-error">*</span></label>
                   <input type="text" value={form.slug} onChange={e => setForm(p => ({ ...p, slug: slugify(e.target.value) }))} placeholder="nama-produk"
-                    className={`w-full px-4 py-2.5 bg-gray-800 border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm font-mono ${formErr.slug ? "border-red-500" : "border-gray-700"}`} />
-                  {formErr.slug && <p className="text-red-400 text-xs mt-1">{formErr.slug}</p>}
+                    className={`w-full px-4 py-2.5 bg-surface-raised border rounded-lg text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-arcane/50 text-sm font-mono ${formErr.slug ? "border-error" : "border-border"}`} />
+                  {formErr.slug && <p className="text-error text-xs mt-1">{formErr.slug}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Harga (Rp) <span className="text-red-400">*</span></label>
+                  <label className="block text-sm font-medium text-text-secondary mb-1.5">Harga (Rp) <span className="text-error">*</span></label>
                   <input type="number" value={form.price} onChange={e => setForm(p => ({ ...p, price: e.target.value }))} placeholder="0" min="0"
-                    className={`w-full px-4 py-2.5 bg-gray-800 border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm ${formErr.price ? "border-red-500" : "border-gray-700"}`} />
-                  {formErr.price && <p className="text-red-400 text-xs mt-1">{formErr.price}</p>}
+                    className={`w-full px-4 py-2.5 bg-surface-raised border rounded-lg text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-arcane/50 text-sm ${formErr.price ? "border-error" : "border-border"}`} />
+                  {formErr.price && <p className="text-error text-xs mt-1">{formErr.price}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Harga Coret (Rp)</label>
+                  <label className="block text-sm font-medium text-text-secondary mb-1.5">Harga Coret (Rp)</label>
                   <input type="number" value={form.compare_price} onChange={e => setForm(p => ({ ...p, compare_price: e.target.value }))} placeholder="0" min="0"
-                    className={`w-full px-4 py-2.5 bg-gray-800 border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm ${formErr.compare_price ? "border-red-500" : "border-gray-700"}`} />
-                  {formErr.compare_price && <p className="text-red-400 text-xs mt-1">{formErr.compare_price}</p>}
+                    className={`w-full px-4 py-2.5 bg-surface-raised border rounded-lg text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-arcane/50 text-sm ${formErr.compare_price ? "border-error" : "border-border"}`} />
+                  {formErr.compare_price && <p className="text-error text-xs mt-1">{formErr.compare_price}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Stok <span className="text-red-400">*</span></label>
+                  <label className="block text-sm font-medium text-text-secondary mb-1.5">Stok <span className="text-error">*</span></label>
                   <input type="number" value={form.stock} onChange={e => setForm(p => ({ ...p, stock: e.target.value }))} placeholder="0" min="0"
-                    className={`w-full px-4 py-2.5 bg-gray-800 border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm ${formErr.stock ? "border-red-500" : "border-gray-700"}`} />
-                  {formErr.stock && <p className="text-red-400 text-xs mt-1">{formErr.stock}</p>}
+                    className={`w-full px-4 py-2.5 bg-surface-raised border rounded-lg text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-arcane/50 text-sm ${formErr.stock ? "border-error" : "border-border"}`} />
+                  {formErr.stock && <p className="text-error text-xs mt-1">{formErr.stock}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Min. Stok <span className="text-red-400">*</span></label>
+                  <label className="block text-sm font-medium text-text-secondary mb-1.5">Min. Stok <span className="text-error">*</span></label>
                   <input type="number" value={form.min_stock} onChange={e => setForm(p => ({ ...p, min_stock: e.target.value }))} placeholder="5" min="0"
-                    className={`w-full px-4 py-2.5 bg-gray-800 border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm ${formErr.min_stock ? "border-red-500" : "border-gray-700"}`} />
-                  {formErr.min_stock && <p className="text-red-400 text-xs mt-1">{formErr.min_stock}</p>}
+                    className={`w-full px-4 py-2.5 bg-surface-raised border rounded-lg text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-arcane/50 text-sm ${formErr.min_stock ? "border-error" : "border-border"}`} />
+                  {formErr.min_stock && <p className="text-error text-xs mt-1">{formErr.min_stock}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Unit <span className="text-red-400">*</span></label>
+                  <label className="block text-sm font-medium text-text-secondary mb-1.5">Unit <span className="text-error">*</span></label>
                   <input type="text" value={form.unit} onChange={e => setForm(p => ({ ...p, unit: e.target.value }))} placeholder="pc"
-                    className={`w-full px-4 py-2.5 bg-gray-800 border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm ${formErr.unit ? "border-red-500" : "border-gray-700"}`} />
-                  {formErr.unit && <p className="text-red-400 text-xs mt-1">{formErr.unit}</p>}
+                    className={`w-full px-4 py-2.5 bg-surface-raised border rounded-lg text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-arcane/50 text-sm ${formErr.unit ? "border-error" : "border-border"}`} />
+                  {formErr.unit && <p className="text-error text-xs mt-1">{formErr.unit}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Badge</label>
-                  <select value={form.badge} onChange={e => setForm(p => ({ ...p, badge: e.target.value }))} className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm">
+                  <label className="block text-sm font-medium text-text-secondary mb-1.5">Badge</label>
+                  <select value={form.badge} onChange={e => setForm(p => ({ ...p, badge: e.target.value }))} className="w-full px-4 py-2.5 bg-surface-raised border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-arcane/50 text-sm">
                     {BADGE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Kategori <span className="text-red-400">*</span></label>
+                  <label className="block text-sm font-medium text-text-secondary mb-1.5">Kategori <span className="text-error">*</span></label>
                   <select value={form.category_id} onChange={e => setForm(p => ({ ...p, category_id: e.target.value }))}
-                    className={`w-full px-4 py-2.5 bg-gray-800 border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm ${formErr.category_id ? "border-red-500" : "border-gray-700"}`}>
+                    className={`w-full px-4 py-2.5 bg-surface-raised border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-arcane/50 text-sm ${formErr.category_id ? "border-error" : "border-border"}`}>
                     <option value="">Pilih kategori...</option>
                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
-                  {formErr.category_id && <p className="text-red-400 text-xs mt-1">{formErr.category_id}</p>}
+                  {formErr.category_id && <p className="text-error text-xs mt-1">{formErr.category_id}</p>}
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Deskripsi</label>
+                  <label className="block text-sm font-medium text-text-secondary mb-1.5">Deskripsi</label>
                   <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder="Deskripsi produk..." rows={3}
-                    className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm resize-none" />
+                    className="w-full px-4 py-2.5 bg-surface-raised border border-border rounded-lg text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-arcane/50 text-sm resize-none" />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-300 mb-1.5">URL Gambar</label>
-                  <div className="flex gap-3">
-                    <input type="url" value={form.image_url} onChange={e => setForm(p => ({ ...p, image_url: e.target.value }))} placeholder="https://example.com/image.jpg"
-                      className="flex-1 px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm" />
+                  <label className="block text-sm font-medium text-text-secondary mb-1.5">Gambar Produk</label>
+                  <div className="flex gap-3 items-start">
+                    <div className="flex-1 space-y-2">
+                      <label className="flex items-center gap-2 cursor-pointer px-4 py-2.5 bg-surface-raised border border-border rounded-lg text-sm text-text-secondary hover:text-text-primary hover:border-arcane/30 transition-all">
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/avif"
+                          className="hidden"
+                          disabled={uploading}
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) handleUpload(f);
+                            e.target.value = "";
+                          }}
+                        />
+                        {uploading ? (
+                          <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-arcane" /> Mengupload...</>
+                        ) : (
+                          <><ImageIcon className="h-4 w-4" /> Pilih File</>
+                        )}
+                      </label>
+                      <input type="url" value={form.image_url} onChange={e => setForm(p => ({ ...p, image_url: e.target.value }))} placeholder="Atau masukkan URL gambar..."
+                        className="w-full px-4 py-2.5 bg-surface-raised border border-border rounded-lg text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-arcane/50 text-sm" />
+                    </div>
                     {form.image_url && (
-                      <div className="w-12 h-12 rounded-lg bg-gray-800 border border-gray-700 overflow-hidden flex-shrink-0">
-                        <img src={form.image_url} alt="" className="w-full h-full object-cover"
-                          onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                      <div className="w-20 h-20 rounded-lg bg-surface-raised border border-border overflow-hidden flex-shrink-0">
+                        <img src={form.image_url} alt={form.name || "Preview"} className="w-full h-full object-cover"
+                          onError={e => { (e.target as HTMLImageElement).src = "https://placehold.co/400x400/222329/D3BC8E?text=LEIZ"; }} />
                       </div>
                     )}
                   </div>
@@ -512,22 +557,22 @@ export default function AdminProductsPage() {
                 <div className="md:col-span-2 flex gap-6">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" checked={form.is_active} onChange={e => setForm(p => ({ ...p, is_active: e.target.checked }))}
-                      className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-blue-600 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer" />
-                    <span className="text-sm text-gray-300">Aktif</span>
+                      className="w-4 h-4 rounded border-border bg-surface-raised text-arcane focus:ring-arcane focus:ring-offset-0 cursor-pointer" />
+                    <span className="text-sm text-text-secondary">Aktif</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" checked={form.is_featured} onChange={e => setForm(p => ({ ...p, is_featured: e.target.checked }))}
-                      className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-purple-600 focus:ring-purple-500 focus:ring-offset-0 cursor-pointer" />
-                    <span className="text-sm text-gray-300">Unggulan</span>
+                      className="w-4 h-4 rounded border-border bg-surface-raised text-arcane focus:ring-arcane focus:ring-offset-0 cursor-pointer" />
+                    <span className="text-sm text-text-secondary">Unggulan</span>
                   </label>
                 </div>
               </div>
             </div>
-            <div className="sticky bottom-0 bg-gray-900 border-t border-gray-800 px-6 py-4 flex items-center justify-end gap-3">
-              <button onClick={() => setShowModal(false)} className="px-4 py-2.5 text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg">Batal</button>
+            <div className="sticky bottom-0 bg-surface border-t border-border px-6 py-4 flex items-center justify-end gap-3">
+              <button onClick={() => setShowModal(false)} className="px-4 py-2.5 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-raised rounded-lg">Batal</button>
               <button onClick={handleSave} disabled={saving}
-                className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 disabled:from-gray-700 disabled:to-gray-700 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg flex items-center gap-2 shadow-lg shadow-blue-600/20">
-                {saving ? <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" /> Menyimpan...</> : <><Check className="h-4 w-4" /> {editingId ? "Simpan" : "Buat"}</>}
+                className="px-6 py-2.5 bg-ember hover:bg-ember-bright disabled:bg-surface-raised disabled:text-text-tertiary disabled:cursor-not-allowed text-void text-sm font-medium rounded-lg flex items-center gap-2 shadow-lg shadow-ember/20">
+                {saving ? <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-void" /> Menyimpan...</> : <><Check className="h-4 w-4" /> {editingId ? "Simpan" : "Buat"}</>}
               </button>
             </div>
           </div>
@@ -538,17 +583,17 @@ export default function AdminProductsPage() {
       {delTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setDelTarget(null)} />
-          <div className="relative w-full max-w-md bg-gray-900 border border-gray-800 rounded-xl shadow-2xl p-6">
+          <div className="relative w-full max-w-md bg-surface border border-border rounded-xl shadow-2xl p-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center"><AlertTriangle className="h-6 w-6 text-red-400" /></div>
-              <div><h3 className="text-lg font-semibold text-white">Hapus Produk</h3><p className="text-sm text-gray-400">Tindakan ini tidak dapat dibatalkan</p></div>
+              <div className="w-12 h-12 rounded-full bg-error/10 flex items-center justify-center"><AlertTriangle className="h-6 w-6 text-error" /></div>
+              <div><h3 className="text-lg font-semibold text-text-primary">Hapus Produk</h3><p className="text-sm text-text-secondary">Tindakan ini tidak dapat dibatalkan</p></div>
             </div>
-            <p className="text-gray-300 text-sm mb-6">Apakah Anda yakin ingin menghapus <span className="text-white font-medium">&quot;{delTarget.name}&quot;</span>?</p>
+            <p className="text-text-secondary text-sm mb-6">Apakah Anda yakin ingin menghapus <span className="text-text-primary font-medium">&quot;{delTarget.name}&quot;</span>?</p>
             <div className="flex items-center justify-end gap-3">
-              <button onClick={() => setDelTarget(null)} disabled={deleting} className="px-4 py-2.5 text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg">Batal</button>
+              <button onClick={() => setDelTarget(null)} disabled={deleting} className="px-4 py-2.5 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-raised rounded-lg">Batal</button>
               <button onClick={handleDelete} disabled={deleting}
-                className="px-6 py-2.5 bg-red-600 hover:bg-red-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg flex items-center gap-2">
-                {deleting ? <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" /> Menghapus...</> : <><Trash2 className="h-4 w-4" /> Ya, Hapus</>}
+                className="px-6 py-2.5 bg-error hover:bg-error/80 disabled:bg-surface-raised disabled:cursor-not-allowed text-void text-sm font-medium rounded-lg flex items-center gap-2">
+                {deleting ? <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-void" /> Menghapus...</> : <><Trash2 className="h-4 w-4" /> Ya, Hapus</>}
               </button>
             </div>
           </div>

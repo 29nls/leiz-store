@@ -7,7 +7,10 @@ import type { Currency } from "@/lib/currency";
 import { createOrderSchema } from "@/lib/validators/order";
 
 
-export const POST = withErrorHandling(async (req: NextRequest) => {
+export const POST = withErrorHandling(async (
+  req: NextRequest,
+  _context: { params: Promise<Record<string, string>> }
+) => {
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
 

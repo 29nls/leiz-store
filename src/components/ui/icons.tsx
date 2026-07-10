@@ -130,6 +130,8 @@ export {
   Palette,
   Boxes,
   Store,
+  Landmark,
+  Wallet,
 } from 'lucide-react';
 
 /**

@@ -143,10 +143,10 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-950">
+      <div className="min-h-screen flex items-center justify-center bg-void">
         <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500" />
-          <p className="text-gray-400 text-sm animate-pulse">Memuat panel admin...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-ember" />
+          <p className="text-text-secondary text-sm animate-pulse">Memuat panel admin...</p>
         </div>
       </div>
     );
@@ -157,7 +157,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100 flex">
+    <div className="min-h-screen bg-void text-text-primary flex">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
@@ -169,22 +169,22 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       {/* Sidebar */}
       <aside
         className={`
-          fixed top-0 left-0 z-50 h-full w-64 bg-gray-900/95 backdrop-blur-sm border-r border-gray-800
+          fixed top-0 left-0 z-50 h-full w-64 bg-surface-raised backdrop-blur-sm border-r border-border
           transform transition-transform duration-200 ease-in-out
           lg:translate-x-0 lg:static lg:z-auto
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
         `}
       >
-        <div className="flex items-center justify-between h-16 px-6 border-b border-gray-800">
+        <div className="flex items-center justify-between h-16 px-6 border-b border-border">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+            <div className="w-8 h-8 rounded-lg bg-ember flex items-center justify-center text-void font-bold text-sm">
               L
             </div>
-            <span className="text-lg font-bold text-white">Leiz Admin</span>
+            <span className="text-lg font-bold text-text-primary">Leiz Admin</span>
           </div>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="lg:hidden text-gray-400 hover:text-white transition-colors"
+            className="lg:hidden text-text-secondary hover:text-text-primary transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -203,8 +203,8 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                   flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium
                   transition-all duration-150
                   ${active
-                    ? "bg-gradient-to-r from-blue-600/80 to-purple-600/80 text-white shadow-lg shadow-blue-600/10"
-                    : "text-gray-400 hover:text-white hover:bg-gray-800/50"
+                    ? "bg-arcane/15 text-arcane border border-arcane/25 shadow-lg shadow-arcane/10"
+                    : "text-text-secondary hover:text-text-primary hover:bg-surface-raised"
                   }
                 `}
               >
@@ -215,11 +215,11 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           })}
         </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-800 bg-gray-900/50">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border bg-surface-raised">
           <button
             onClick={handleLogout}
             className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-sm font-medium
-                       text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all duration-150"
+                       text-text-secondary hover:text-error hover:bg-error/10 transition-all duration-150"
           >
             <LogOut className="h-5 w-5" />
             Keluar
@@ -230,18 +230,18 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
-        <header className="h-16 flex items-center justify-between gap-4 px-6 border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm">
+        <header className="h-16 flex items-center justify-between gap-4 px-6 border-b border-border bg-surface-raised backdrop-blur-sm">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden text-gray-400 hover:text-white transition-colors"
+              className="lg:hidden text-text-secondary hover:text-text-primary transition-colors"
             >
               <Menu className="h-6 w-6" />
             </button>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-sm text-gray-400">
-                Halo, <span className="text-white font-medium">{adminName}</span>
+              <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
+              <span className="text-sm text-text-secondary">
+                Halo, <span className="text-text-primary font-medium">{adminName}</span>
               </span>
             </div>
           </div>
@@ -250,7 +250,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             {connectionStatus === "error" && (
               <button
                 onClick={checkAuth}
-                className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1 px-2 py-1 rounded bg-red-500/10"
+                className="text-xs text-error hover:text-error flex items-center gap-1 px-2 py-1 rounded bg-error/10"
               >
                 <AlertTriangle className="h-3 w-3" />
                 Koneksi error

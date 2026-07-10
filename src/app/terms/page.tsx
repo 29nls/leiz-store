@@ -12,18 +12,18 @@ export default function TermsOfServicePage() {
     <main className="min-h-screen pt-24 pb-16 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto">
       <Link
         href="/"
-        className="inline-flex items-center text-sm text-white/50 hover:text-white mb-8 transition-colors"
+        className="inline-flex items-center text-sm text-text-secondary hover:text-text-primary mb-8 transition-colors"
       >
         <ArrowLeft className="w-4 h-4 mr-2" />
         Back to Home
       </Link>
 
-      <div className="bg-white/5 border border-white/10 rounded-2xl p-8 sm:p-12 backdrop-blur-sm">
-        <h1 className="text-3xl font-bold text-white mb-8">Terms of Service</h1>
+      <div className="bg-surface border border-border rounded-2xl p-8 sm:p-12 backdrop-blur-sm">
+        <h1 className="text-3xl font-bold text-text-primary mb-8">Terms of Service</h1>
 
-        <div className="space-y-8 text-white/70 leading-relaxed">
+        <div className="space-y-8 text-text-secondary leading-relaxed">
           <section>
-            <h2 className="text-xl font-semibold text-white mb-4">1. Pendahuluan</h2>
+            <h2 className="text-xl font-semibold text-text-primary mb-4">1. Pendahuluan</h2>
             <p>
               Selamat datang di Leiz Store. Dengan mengakses dan menggunakan layanan kami, Anda menyetujui
               untuk terikat dengan Syarat dan Ketentuan ini. Jika Anda tidak setuju dengan bagian mana pun
@@ -32,7 +32,7 @@ export default function TermsOfServicePage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-white mb-4">2. Layanan dan Produk</h2>
+            <h2 className="text-xl font-semibold text-text-primary mb-4">2. Layanan dan Produk</h2>
             <p>
               Leiz Store menyediakan layanan digital, top-up, dan akun premium. Semua produk digital yang
               telah berhasil dikirimkan ke pembeli tidak dapat dikembalikan (non-refundable) kecuali
@@ -41,7 +41,7 @@ export default function TermsOfServicePage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-white mb-4">3. Pembayaran dan Verifikasi</h2>
+            <h2 className="text-xl font-semibold text-text-primary mb-4">3. Pembayaran dan Verifikasi</h2>
             <p>
               Pembayaran dilakukan melalui transfer bank atau e-wallet (GoPay, DANA, dll) yang tersedia di
               halaman checkout. Pesanan hanya akan diproses setelah pembayaran berhasil diverifikasi oleh
@@ -51,7 +51,7 @@ export default function TermsOfServicePage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-white mb-4">4. Kebijakan Anti-Kecurangan</h2>
+            <h2 className="text-xl font-semibold text-text-primary mb-4">4. Kebijakan Anti-Kecurangan</h2>
             <p>
               Tindakan pemalsuan bukti transfer, percobaan penipuan, atau *chargeback* palsu akan berakibat
               pada pemblokiran permanen dari layanan kami, dan jika diperlukan, akan kami laporkan kepada
@@ -60,7 +60,7 @@ export default function TermsOfServicePage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-white mb-4">5. Perubahan Syarat</h2>
+            <h2 className="text-xl font-semibold text-text-primary mb-4">5. Perubahan Syarat</h2>
             <p>
               Kami berhak untuk memodifikasi atau mengganti Syarat dan Ketentuan ini kapan saja. Setiap
               perubahan akan langsung berlaku setelah diterbitkan di halaman ini. Penggunaan berkelanjutan
@@ -69,7 +69,7 @@ export default function TermsOfServicePage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-white mb-4">6. Kontak Kami</h2>
+            <h2 className="text-xl font-semibold text-text-primary mb-4">6. Kontak Kami</h2>
             <p>
               Jika Anda memiliki pertanyaan tentang Syarat dan Ketentuan ini, silakan hubungi kami melalui
               server Discord kami atau informasi kontak yang tersedia di situs web.
@@ -77,7 +77,7 @@ export default function TermsOfServicePage() {
           </section>
         </div>
 
-        <div className="mt-12 pt-8 border-t border-white/10 text-sm text-white/40">
+        <div className="mt-12 pt-8 border-t border-border text-sm text-text-tertiary">
           Terakhir diperbarui: {new Date().toLocaleDateString("id-ID")}
         </div>
       </div>

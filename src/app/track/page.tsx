@@ -16,6 +16,7 @@ import {
   AlertCircle,
 } from "@/components/ui/icons";
 import { formatPrice, cn } from "@/lib/utils";
+import { getStatusStyle } from "@/lib/status-colors";
 
 interface OrderItem {
   name: string;
@@ -46,83 +47,61 @@ interface OrderData {
 
 const statusConfig: Record<
   string,
-  { label: string; icon: typeof CheckCircle2; color: string; bg: string; description: string }
+  { label: string; icon: typeof CheckCircle2; description: string }
 > = {
   pending: {
     label: "Pending",
     icon: Clock,
-    color: "text-warning",
-    bg: "bg-warning/15",
     description: "Your order has been received and is awaiting review.",
   },
   pending_payment: {
     label: "Awaiting Payment",
     icon: CreditCard,
-    color: "text-accent",
-    bg: "bg-accent/15",
     description: "Please complete your payment to proceed.",
   },
   waiting_payment: {
     label: "Awaiting Payment",
     icon: CreditCard,
-    color: "text-accent",
-    bg: "bg-accent/15",
     description: "Please complete your payment to proceed.",
   },
   waiting_confirmation: {
-    label: "Verifikasi Admin",
+    label: "Awaiting Verification",
     icon: Clock,
-    color: "text-blue-400",
-    bg: "bg-blue-500/15",
-    description: "Menunggu verifikasi admin.",
+    description: "Awaiting admin verification.",
   },
   paid: {
-    label: "Sukses",
+    label: "Paid",
     icon: CheckCircle2,
-    color: "text-success",
-    bg: "bg-success/15",
-    description: "Pembayaran terverifikasi! Pesanan Anda sedang diproses.",
+    description: "Payment verified! Your order is being processed.",
   },
   processing: {
     label: "Processing",
     icon: Package,
-    color: "text-primary",
-    bg: "bg-primary/15",
     description: "Your order is being prepared for delivery.",
   },
   completed: {
     label: "Completed",
     icon: CheckCircle2,
-    color: "text-success",
-    bg: "bg-success/15",
     description: "Your order has been delivered successfully!",
   },
   cancelled: {
     label: "Cancelled",
     icon: XCircle,
-    color: "text-error",
-    bg: "bg-error/15",
     description: "This order has been cancelled.",
   },
   rejected: {
-    label: "Ditolak",
+    label: "Rejected",
     icon: XCircle,
-    color: "text-error",
-    bg: "bg-error/15",
-    description: "Pembayaran ditolak oleh admin.",
+    description: "Payment rejected by admin.",
   },
   force_cancelled: {
-    label: "Dibatalkan",
+    label: "Cancelled",
     icon: XCircle,
-    color: "text-error",
-    bg: "bg-error/15",
-    description: "Pesanan dibatalkan secara paksa.",
+    description: "Order forcefully cancelled.",
   },
   refunded: {
     label: "Refunded",
     icon: ArrowLeft,
-    color: "text-text-muted",
-    bg: "bg-surface/60",
     description: "This order has been refunded.",
   },
 };
@@ -152,8 +131,8 @@ function StatusTimeline({ currentStatus }: { currentStatus: string }) {
                   isCompleted
                     ? "bg-success border-success text-white shadow-lg shadow-success/20"
                     : isCurrent
-                      ? "bg-primary/20 border-primary text-primary shadow-lg shadow-primary/20 glow-primary"
-                      : "bg-surface/40 border-white/5 text-text-muted/30"
+                      ? "bg-primary/20 border-primary text-primary shadow-lg shadow-primary/20 shadow-ember/30"
+                      : "bg-surface/40 border-border text-text-secondary/30"
                 )}
               >
                 <Icon className="h-4 w-4" />
@@ -162,7 +141,7 @@ function StatusTimeline({ currentStatus }: { currentStatus: string }) {
                 <div
                   className={cn(
                     "w-0.5 h-8 rounded-full transition-all duration-500",
-                    isCompleted && !isCurrent ? "bg-success" : "bg-surface-light/50"
+                    isCompleted && !isCurrent ? "bg-success" : "bg-surface-raised/50"
                   )}
                 />
               )}
@@ -173,7 +152,7 @@ function StatusTimeline({ currentStatus }: { currentStatus: string }) {
               <p
                 className={cn(
                   "text-sm font-medium transition-colors duration-300",
-                  isCompleted || isCurrent ? "text-text" : "text-text-muted/40"
+                  isCompleted || isCurrent ? "text-text" : "text-text-secondary/40"
                 )}
               >
                 {config.label}
@@ -182,7 +161,7 @@ function StatusTimeline({ currentStatus }: { currentStatus: string }) {
                 <motion.p
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="text-xs text-text-muted/60 mt-0.5"
+                  className="text-xs text-text-secondary/60 mt-0.5"
                 >
                   {config.description}
                 </motion.p>
@@ -234,7 +213,7 @@ export default function TrackOrderPage() {
   };
 
   const formatDate = (date: string) =>
-    new Date(date).toLocaleDateString("id-ID", {
+    new Date(date).toLocaleDateString("en-US", {
       day: "numeric",
       month: "long",
       year: "numeric",
@@ -247,14 +226,14 @@ export default function TrackOrderPage() {
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <Link
           href="/products"
-          className="inline-flex items-center gap-2 text-sm text-text-muted hover:text-text mb-8 transition-colors group"
+          className="inline-flex items-center gap-2 text-sm text-text-secondary hover:text-text mb-8 transition-colors group"
         >
           <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform duration-300" />
           Continue Shopping
         </Link>
 
         <h1 className="text-3xl lg:text-4xl font-bold text-text mb-2">Track Your Order</h1>
-        <p className="text-text-muted mb-10">
+        <p className="text-text-secondary mb-10">
           Enter your order number to check the current status and details.
         </p>
 
@@ -262,7 +241,7 @@ export default function TrackOrderPage() {
         <form onSubmit={handleSearch} className="mb-10">
           <div className="flex gap-3">
             <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-text-muted/40" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-text-secondary/40" />
               <label htmlFor="order-number" className="sr-only">Order number</label>
               <input
                 id="order-number"
@@ -270,7 +249,7 @@ export default function TrackOrderPage() {
                 value={orderNumber}
                 onChange={(e) => setOrderNumber(e.target.value)}
                 placeholder="e.g. LZ-20260622-A1B2C3"
-                className="input-premium pl-12 uppercase tracking-wider font-mono"
+                className="rounded-xl border border-border bg-surface pl-12 uppercase tracking-wider font-mono"
               />
             </div>
             <button
@@ -278,7 +257,7 @@ export default function TrackOrderPage() {
               disabled={loading || !orderNumber.trim()}
               className={cn(
                 "flex items-center gap-2 rounded-full px-8 py-3.5 text-sm font-semibold transition-all duration-300 active:scale-[0.97]",
-                "bg-primary text-white shadow-lg shadow-primary/20 hover:bg-primary-light",
+                "bg-primary text-white shadow-lg shadow-primary/20 hover:bg-ember-bright",
                 (loading || !orderNumber.trim()) && "opacity-50 cursor-not-allowed"
               )}
             >
@@ -321,7 +300,7 @@ export default function TrackOrderPage() {
               className="space-y-6"
             >
               {/* Order Header */}
-              <div className="card-premium p-6 sm:p-8">
+              <div className="rounded-2xl border border-border bg-surface p-6 sm:p-8">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                   <div>
                     <div className="flex items-center gap-3 mb-1">
@@ -329,8 +308,8 @@ export default function TrackOrderPage() {
                       <span
                         className={cn(
                           "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold",
-                          statusConfig[order.status.toLowerCase()]?.bg || "bg-surface",
-                          statusConfig[order.status.toLowerCase()]?.color || "text-text"
+                          getStatusStyle(order.status).bg,
+                          getStatusStyle(order.status).color
                         )}
                       >
                         {(() => {
@@ -342,11 +321,11 @@ export default function TrackOrderPage() {
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-sm text-text-muted">{order.orderNumber}</span>
+                      <span className="font-mono text-sm text-text-secondary">{order.orderNumber}</span>
                       <button
                         onClick={() => handleCopy(order.orderNumber)}
                         aria-label={copied ? "Order number copied" : "Copy order number"}
-                        className="text-text-muted/40 hover:text-text-muted transition-colors"
+                        className="text-text-secondary/40 hover:text-text-secondary transition-colors"
                       >
                         {copied ? (
                           <CheckCircle className="h-4 w-4 text-success" />
@@ -358,29 +337,29 @@ export default function TrackOrderPage() {
                   </div>
                   <div className="text-right">
                     <p className="text-2xl font-bold text-primary">{formatPrice(order.total)}</p>
-                    <p className="text-xs text-text-muted mt-0.5">{formatDate(order.createdAt)}</p>
+                    <p className="text-xs text-text-secondary mt-0.5">{formatDate(order.createdAt)}</p>
                   </div>
                 </div>
 
                 {/* Status Timeline */}
-                <div className="p-5 rounded-2xl bg-surface/30 border border-white/5">
+                <div className="p-5 rounded-2xl bg-surface/30 border border-border">
                   <h3 className="text-sm font-semibold text-text mb-4">Order Progress</h3>
                   <StatusTimeline currentStatus={order.status} />
                 </div>
               </div>
 
               {/* Items */}
-              <div className="card-premium p-6 sm:p-8">
+              <div className="rounded-2xl border border-border bg-surface p-6 sm:p-8">
                 <h3 className="text-sm font-semibold text-text mb-4">Items Ordered</h3>
                 <div className="space-y-3">
                   {order.items.map((item, i) => (
                     <div
                       key={i}
-                      className="flex items-center justify-between p-4 rounded-2xl bg-surface/40 border border-white/5"
+                      className="flex items-center justify-between p-4 rounded-2xl bg-surface/40 border border-border"
                     >
                       <div className="flex-1 min-w-0">
                         <h4 className="text-sm font-medium truncate">{item.name}</h4>
-                        <p className="text-xs text-text-muted mt-0.5">
+                        <p className="text-xs text-text-secondary mt-0.5">
                           {formatPrice(item.price)} × {item.quantity}
                         </p>
                       </div>
@@ -390,16 +369,16 @@ export default function TrackOrderPage() {
                 </div>
 
                 {/* Totals */}
-                <div className="space-y-2 pt-4 mt-4 border-t border-white/5">
-                  <div className="flex justify-between text-sm text-text-muted">
+                <div className="space-y-2 pt-4 mt-4 border-t border-border">
+                  <div className="flex justify-between text-sm text-text-secondary">
                     <span>Subtotal</span>
                     <span>{formatPrice(order.subtotal)}</span>
                   </div>
-                  <div className="flex justify-between text-sm text-text-muted">
+                  <div className="flex justify-between text-sm text-text-secondary">
                     <span>Tax (11%)</span>
                     <span>{formatPrice(order.tax)}</span>
                   </div>
-                  <div className="flex justify-between text-lg font-bold pt-2 border-t border-white/5">
+                  <div className="flex justify-between text-lg font-bold pt-2 border-t border-border">
                     <span>Total</span>
                     <span className="text-primary">{formatPrice(order.total)}</span>
                   </div>
@@ -407,17 +386,17 @@ export default function TrackOrderPage() {
               </div>
 
               {/* Payment Info */}
-              <div className="card-premium p-6 sm:p-8">
+              <div className="rounded-2xl border border-border bg-surface p-6 sm:p-8">
                 <h3 className="text-sm font-semibold text-text mb-4">Payment Information</h3>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 rounded-2xl bg-surface/30 border border-white/5">
-                    <p className="text-xs text-text-muted/60 mb-1">Method</p>
+                  <div className="p-4 rounded-2xl bg-surface/30 border border-border">
+                    <p className="text-xs text-text-secondary/60 mb-1">Method</p>
                     <p className="text-sm font-medium capitalize">
                       {order.paymentMethod?.replace("_", " ")}
                     </p>
                   </div>
-                  <div className="p-4 rounded-2xl bg-surface/30 border border-white/5">
-                    <p className="text-xs text-text-muted/60 mb-1">Payment Status</p>
+                  <div className="p-4 rounded-2xl bg-surface/30 border border-border">
+                    <p className="text-xs text-text-secondary/60 mb-1">Payment Status</p>
                     <p
                       className={cn(
                         "text-sm font-medium capitalize",
@@ -432,14 +411,14 @@ export default function TrackOrderPage() {
                     </p>
                   </div>
                   {order.paidAt && (
-                    <div className="p-4 rounded-2xl bg-surface/30 border border-white/5">
-                      <p className="text-xs text-text-muted/60 mb-1">Paid At</p>
+                    <div className="p-4 rounded-2xl bg-surface/30 border border-border">
+                      <p className="text-xs text-text-secondary/60 mb-1">Paid At</p>
                       <p className="text-sm font-medium">{formatDate(order.paidAt)}</p>
                     </div>
                   )}
                   {order.completedAt && (
-                    <div className="p-4 rounded-2xl bg-surface/30 border border-white/5">
-                      <p className="text-xs text-text-muted/60 mb-1">Completed At</p>
+                    <div className="p-4 rounded-2xl bg-surface/30 border border-border">
+                      <p className="text-xs text-text-secondary/60 mb-1">Completed At</p>
                       <p className="text-sm font-medium">{formatDate(order.completedAt)}</p>
                     </div>
                   )}

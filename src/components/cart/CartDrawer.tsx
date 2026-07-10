@@ -8,22 +8,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Plus, Minus, Trash2, ShoppingBag, ArrowRight } from "@/components/ui/icons";
 import { formatPrice } from "@/lib/utils";
 
-/* ── DN design tokens ── */
-const S = {
-  bg:        "#222329",
-  border:    "#3B4354",
-  borderSub: "rgba(255,255,255,0.06)",
-  gold:      "#D3BC8E",
-  goldBg:    "rgba(211,188,142,0.08)",
-  text:      "#FFFFFF",
-  textSec:   "#CCCCCC",
-  textMuted: "#999999",
-  primary:   "#7C3AED",
-  danger:    "#FF5E41",
-  success:   "#34D399",
-  font:      "Helvetica, Arial, system-ui, sans-serif",
-};
-
 export default function CartDrawer() {
   const cartStore      = useCartStore();
   const items: CartItem[] = cartStore.items;
@@ -47,7 +31,8 @@ export default function CartDrawer() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
-            style={{ position: "fixed", inset: 0, zIndex: 50, background: "rgba(0,0,0,0.65)", backdropFilter: "blur(6px)" }}
+            className="bg-black/65 backdrop-blur-[6px]"
+            style={{ position: "fixed", inset: 0, zIndex: 50 }}
             onClick={() => setIsOpen(false)}
           />
 
@@ -57,34 +42,31 @@ export default function CartDrawer() {
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", bounce: 0, duration: 0.38 }}
+            className="bg-void border-l border-border"
             style={{
               position: "fixed", right: 0, top: 0, zIndex: 50,
               height: "100%", width: "100%", maxWidth: "420px",
-              background: S.bg,
-              borderLeft: `1px solid rgba(211,188,142,0.10)`,
               display: "flex", flexDirection: "column",
             }}
           >
             {/* ── Header ── */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px", height: "66px", borderBottom: `1px solid rgba(211,188,142,0.08)`, flexShrink: 0 }}>
+            <div className="border-b border-border" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px", height: "66px", flexShrink: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "34px", height: "34px", borderRadius: "4px", background: S.goldBg, border: `1px solid rgba(211,188,142,0.18)` }}>
-                  <ShoppingBag size={15} style={{ color: S.gold }} />
+                <div className="flex items-center justify-center w-[34px] h-[34px] rounded bg-ember-dim border border-ember">
+                  <ShoppingBag size={15} className="text-ember" />
                 </div>
-                <span style={{ fontFamily: S.font, fontSize: "15px", fontWeight: 400, color: S.text }}>
+                <span className="text-[15px] text-text-primary">
                   Shopping Cart
                 </span>
                 {getItemCount() > 0 && (
-                  <span style={{ display: "flex", alignItems: "center", justifyContent: "center", minWidth: "20px", height: "20px", borderRadius: "10px", background: S.primary, padding: "0 6px", fontFamily: S.font, fontSize: "10px", fontWeight: 700, color: "#FFFFFF" }}>
+                  <span className="flex items-center justify-center min-w-[20px] h-[20px] rounded-[10px] bg-ember px-1.5 text-[10px] font-bold text-void">
                     {getItemCount()}
                   </span>
                 )}
               </div>
               <button
                 onClick={() => setIsOpen(false)}
-                style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "32px", height: "32px", borderRadius: "4px", background: "none", border: "none", color: S.textMuted, cursor: "pointer", transition: "color 0.2s ease" }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = S.text)}
-                onMouseLeave={(e) => (e.currentTarget.style.color = S.textMuted)}
+                className="flex items-center justify-center w-8 h-8 rounded text-text-tertiary cursor-pointer transition-colors hover:text-text-primary"
                 aria-label="Close cart"
               >
                 <X size={16} />
@@ -96,20 +78,19 @@ export default function CartDrawer() {
               {items.length === 0 ? (
                 /* Empty state */
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", textAlign: "center", padding: "40px 24px" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "72px", height: "72px", borderRadius: "8px", background: "rgba(255,255,255,0.03)", border: `1px solid ${S.border}`, marginBottom: "20px" }}>
-                    <ShoppingBag size={28} style={{ color: "rgba(153,153,153,0.35)" }} />
+                  <div className="flex items-center justify-center w-[72px] h-[72px] rounded-lg bg-surface border border-border mb-5">
+                    <ShoppingBag size={28} className="text-text-tertiary opacity-35" />
                   </div>
-                  <p style={{ fontFamily: S.font, fontSize: "15px", color: S.textSec, marginBottom: "8px" }}>
+                  <p className="text-[15px] text-text-secondary mb-2">
                     Your cart is empty
                   </p>
-                  <p style={{ fontFamily: S.font, fontSize: "13px", color: S.textMuted, marginBottom: "24px" }}>
+                  <p className="text-[13px] text-text-tertiary mb-6">
                     Browse the catalog and add items to get started.
                   </p>
                   <Link
                     href="/products"
                     onClick={() => setIsOpen(false)}
                     className="btn-primary"
-                    style={{ fontSize: "13px" }}
                   >
                     Browse Items
                   </Link>
@@ -124,49 +105,49 @@ export default function CartDrawer() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, x: 80 }}
                       transition={{ duration: 0.25 }}
-                      style={{ display: "flex", gap: "12px", padding: "14px", borderRadius: "8px", background: "#1A1B20", border: `1px solid ${S.border}`, marginBottom: "8px" }}
+                      className="flex gap-3 p-3.5 rounded-lg bg-surface-raised border border-border mb-2"
                     >
                       {/* Thumbnail */}
-                      <div style={{ position: "relative", width: "64px", height: "64px", borderRadius: "4px", overflow: "hidden", flexShrink: 0, background: "#222329" }}>
+                      <div className="relative w-16 h-16 rounded bg-void overflow-hidden flex-shrink-0">
                         <Image
                           src={item.image}
                           alt={item.name}
                           fill
                           className="object-cover"
                           sizes="64px"
+                          onError={(e) => {
+                            const target = e.currentTarget as HTMLImageElement;
+                            target.src = "https://placehold.co/400x400/222329/D3BC8E?text=LEIZ";
+                          }}
                         />
                       </div>
 
                       {/* Info */}
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <h3 style={{ fontFamily: S.font, fontSize: "13px", fontWeight: 400, color: S.text, marginBottom: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <h3 className="text-[13px] text-text-primary mb-1 overflow-hidden text-ellipsis whitespace-nowrap">
                           {item.name}
                         </h3>
-                        <p style={{ fontFamily: S.font, fontSize: "14px", fontWeight: 700, color: S.text, marginBottom: "10px" }}>
+                        <p className="text-[14px] font-bold text-text-primary mb-2.5">
                           {formatPrice(item.price)}
                         </p>
 
                         {/* Qty + delete row */}
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                           {/* Qty stepper */}
-                          <div style={{ display: "flex", alignItems: "center", borderRadius: "4px", border: `1px solid ${S.border}`, background: "#222329", padding: "2px" }}>
+                          <div className="flex items-center rounded border border-border bg-void p-0.5">
                             <button
                               onClick={() => updateQuantity(item.productId, item.quantity - 1)}
-                              style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "26px", height: "26px", borderRadius: "4px", background: "none", border: "none", color: S.textMuted, cursor: "pointer", transition: "color 0.2s ease, background 0.2s ease" }}
-                              onMouseEnter={(e) => { e.currentTarget.style.color = S.gold; e.currentTarget.style.background = S.goldBg; }}
-                              onMouseLeave={(e) => { e.currentTarget.style.color = S.textMuted; e.currentTarget.style.background = "none"; }}
+                              className="flex items-center justify-center w-[26px] h-[26px] rounded bg-transparent border-none text-text-tertiary cursor-pointer transition-colors hover:text-ember hover:bg-ember-dim"
                               aria-label="Decrease quantity"
                             >
                               <Minus size={11} />
                             </button>
-                            <span style={{ width: "28px", textAlign: "center", fontFamily: S.font, fontSize: "13px", color: S.text }}>
+                            <span className="w-7 text-center text-[13px] text-text-primary">
                               {item.quantity}
                             </span>
                             <button
                               onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                              style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "26px", height: "26px", borderRadius: "4px", background: "none", border: "none", color: S.textMuted, cursor: "pointer", transition: "color 0.2s ease, background 0.2s ease" }}
-                              onMouseEnter={(e) => { e.currentTarget.style.color = S.gold; e.currentTarget.style.background = S.goldBg; }}
-                              onMouseLeave={(e) => { e.currentTarget.style.color = S.textMuted; e.currentTarget.style.background = "none"; }}
+                              className="flex items-center justify-center w-[26px] h-[26px] rounded bg-transparent border-none text-text-tertiary cursor-pointer transition-colors hover:text-ember hover:bg-ember-dim"
                               aria-label="Increase quantity"
                             >
                               <Plus size={11} />
@@ -176,9 +157,7 @@ export default function CartDrawer() {
                           {/* Delete */}
                           <button
                             onClick={() => removeItem(item.productId)}
-                            style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "28px", height: "28px", borderRadius: "4px", background: "none", border: "none", color: "rgba(255,94,65,0.45)", cursor: "pointer", transition: "color 0.2s ease" }}
-                            onMouseEnter={(e) => (e.currentTarget.style.color = S.danger)}
-                            onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,94,65,0.45)")}
+                            className="flex items-center justify-center w-7 h-7 rounded bg-transparent border-none text-error/45 cursor-pointer transition-colors hover:text-error"
                             aria-label={`Remove ${item.name}`}
                           >
                             <Trash2 size={13} />
@@ -193,22 +172,22 @@ export default function CartDrawer() {
 
             {/* ── Footer ── */}
             {items.length > 0 && (
-              <div style={{ borderTop: `1px solid rgba(211,188,142,0.08)`, padding: "20px 16px", flexShrink: 0 }}>
+              <div className="border-t border-border" style={{ padding: "20px 16px", flexShrink: 0 }}>
 
                 {/* Totals */}
-                <div style={{ marginBottom: "16px" }}>
+                <div className="mb-4">
                   {[
                     { label: "Subtotal", value: formatPrice(getSubtotal()) },
                     { label: "Tax (11%)", value: formatPrice(getTax()) },
                   ].map((row) => (
                     <div key={row.label} style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-                      <span style={{ fontFamily: S.font, fontSize: "13px", color: S.textMuted }}>{row.label}</span>
-                      <span style={{ fontFamily: S.font, fontSize: "13px", color: S.textMuted }}>{row.value}</span>
+                      <span className="text-[13px] text-text-tertiary">{row.label}</span>
+                      <span className="text-[13px] text-text-tertiary">{row.value}</span>
                     </div>
                   ))}
-                  <div style={{ display: "flex", justifyContent: "space-between", paddingTop: "10px", borderTop: `1px solid rgba(255,255,255,0.06)`, marginTop: "8px" }}>
-                    <span style={{ fontFamily: S.font, fontSize: "15px", fontWeight: 400, color: S.text }}>Total</span>
-                    <span style={{ fontFamily: S.font, fontSize: "16px", fontWeight: 700, color: S.text }}>
+                  <div className="border-t border-border" style={{ display: "flex", justifyContent: "space-between", paddingTop: "10px", marginTop: "8px" }}>
+                    <span className="text-[15px] text-text-primary">Total</span>
+                    <span className="text-[16px] font-bold text-text-primary">
                       {formatPrice(getTotal())}
                     </span>
                   </div>
@@ -218,32 +197,14 @@ export default function CartDrawer() {
                 <div style={{ display: "flex", gap: "8px" }}>
                   <button
                     onClick={clearCart}
-                    style={{
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      padding: "10px 16px", borderRadius: "4px",
-                      border: `1px solid ${S.border}`, background: "transparent",
-                      fontFamily: S.font, fontSize: "13px", color: S.textMuted,
-                      cursor: "pointer", transition: "color 0.2s ease, border-color 0.2s ease",
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.color = S.text; e.currentTarget.style.borderColor = "#999999"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.color = S.textMuted; e.currentTarget.style.borderColor = S.border; }}
+                    className="flex items-center justify-center px-4 py-2.5 rounded border border-border bg-transparent text-[13px] text-text-tertiary cursor-pointer transition-colors hover:text-text-primary hover:border-text-tertiary"
                   >
                     Clear
                   </button>
                   <Link
                     href="/checkout"
                     onClick={() => setIsOpen(false)}
-                    style={{
-                      flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
-                      padding: "10px 16px", borderRadius: "4px",
-                      background: S.primary, color: "#FFFFFF",
-                      fontFamily: S.font, fontSize: "13px", fontWeight: 400,
-                      textDecoration: "none",
-                      boxShadow: "0 4px 16px rgba(124,58,237,0.28)",
-                      transition: "background 0.2s ease",
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = "#9F5FFF")}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = S.primary)}
+                    className="btn-primary flex-1"
                   >
                     Checkout
                     <ArrowRight size={13} />

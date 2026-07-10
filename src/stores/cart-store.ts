@@ -4,6 +4,8 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { CartStore } from "@/types";
 
+const TAX_RATE = 0.11;
+
 export const useCartStore = create<CartStore>()(
   persist(
     (set, get) => ({
@@ -50,7 +52,7 @@ export const useCartStore = create<CartStore>()(
       getSubtotal: () =>
         get().items.reduce((sum, item) => sum + item.price * item.quantity, 0),
 
-      getTax: () => Math.round(get().getSubtotal() * 0.11),
+      getTax: () => Math.round(get().getSubtotal() * TAX_RATE),
 
       getTotal: () => get().getSubtotal() + get().getTax(),
 

@@ -6,6 +6,7 @@ import {
   TrendingUp, RefreshCw, DollarSign, Info,
 } from "lucide-react";
 import { subscribeToTable } from "@/lib/supabase-browser";
+import { getStatusBadge } from "@/lib/status-colors";
 import Link from "next/link";
 
 interface Stats {
@@ -102,8 +103,8 @@ export default function AdminDashboard() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="flex flex-col items-center gap-3">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500" />
-          <p className="text-gray-400 text-sm">Memuat dashboard...</p>
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-ember" />
+          <p className="text-text-secondary text-sm">Memuat dashboard...</p>
         </div>
       </div>
     );
@@ -117,10 +118,10 @@ export default function AdminDashboard() {
   if (error && !data) {
     return (
       <div className="space-y-4">
-        <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg flex items-center gap-2">
+          <div className="bg-error/10 border border-error/30 text-error px-4 py-3 rounded-lg flex items-center gap-2">
           <AlertTriangle className="h-4 w-4 flex-shrink-0" />
           <span>{error}</span>
-          <button onClick={() => fetchData()} className="ml-auto hover:text-red-300">
+          <button onClick={() => fetchData()} className="ml-auto hover:text-error">
             <RefreshCw className="h-4 w-4" />
           </button>
         </div>
@@ -134,18 +135,18 @@ export default function AdminDashboard() {
       value: stats?.totalProducts || 0,
       sub: `${stats?.activeProducts || 0} aktif`,
       icon: Package,
-      color: "text-blue-400",
-      bg: "bg-blue-500/10",
-      border: "border-blue-500/20",
+      color: "text-ember",
+      bg: "bg-ember/10",
+      border: "border-ember/20",
       href: "/admin/products",
     },
     {
       label: "Total Kategori",
       value: stats?.totalCategories || 0,
       icon: FolderTree,
-      color: "text-green-400",
-      bg: "bg-green-500/10",
-      border: "border-green-500/20",
+      color: "text-arcane",
+      bg: "bg-arcane/10",
+      border: "border-arcane/20",
       href: "/admin/categories",
     },
     {
@@ -153,58 +154,42 @@ export default function AdminDashboard() {
       value: stats?.totalOrders || 0,
       sub: `${stats?.completedOrders || 0} selesai`,
       icon: ShoppingCart,
-      color: "text-purple-400",
-      bg: "bg-purple-500/10",
-      border: "border-purple-500/20",
+      color: "text-arcane",
+      bg: "bg-arcane/10",
+      border: "border-arcane/20",
       href: "/admin/orders",
     },
     {
       label: "Pesanan Pending",
       value: stats?.pendingOrders || 0,
       icon: Clock,
-      color: "text-yellow-400",
-      bg: "bg-yellow-500/10",
-      border: "border-yellow-500/20",
+      color: "text-warning",
+      bg: "bg-warning/10",
+      border: "border-warning/20",
       href: "/admin/orders",
     },
     {
       label: "Total Pendapatan",
       value: fmtIDR(stats?.totalRevenue || 0),
       icon: DollarSign,
-      color: "text-emerald-400",
-      bg: "bg-emerald-500/10",
-      border: "border-emerald-500/20",
+      color: "text-ember",
+      bg: "bg-ember/10",
+      border: "border-ember/20",
       href: "/admin/orders",
     },
   ];
-
-  const statusColor = (s: string) => {
-    switch (s) {
-      case "PENDING": return "bg-yellow-500/20 text-yellow-400";
-      case "PENDING_PAYMENT": return "bg-orange-500/20 text-orange-400";
-      case "WAITING_PAYMENT": return "bg-orange-500/20 text-orange-400";
-      case "WAITING_CONFIRMATION": return "bg-blue-500/20 text-blue-400";
-      case "PAID": return "bg-blue-500/20 text-blue-400";
-      case "PROCESSING": return "bg-purple-500/20 text-purple-400";
-      case "COMPLETED": return "bg-green-500/20 text-green-400";
-      case "NEEDS_REVIEW": return "bg-orange-500/20 text-orange-400";
-      case "REJECTED": return "bg-red-500/20 text-red-400";
-      case "CANCELLED": return "bg-red-500/20 text-red-400";
-      default: return "bg-gray-500/20 text-gray-400";
-    }
-  };
 
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-          <p className="text-gray-400 mt-1">Ringkasan toko Anda</p>
+          <h1 className="text-2xl font-bold text-text-primary">Dashboard</h1>
+          <p className="text-text-secondary mt-1">Ringkasan toko Anda</p>
         </div>
         <button
           onClick={() => fetchData(true)}
           disabled={refreshing}
-          className="flex items-center gap-2 px-3 py-2 text-sm text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-50"
+          className="flex items-center gap-2 px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-surface-raised rounded-lg transition-colors disabled:opacity-50"
         >
           <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
           Refresh
@@ -213,14 +198,14 @@ export default function AdminDashboard() {
 
       {/* Warnings banner */}
       {warnings && warnings.length > 0 && (
-        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4">
-          <div className="flex items-start gap-3">
-            <Info className="h-5 w-5 text-yellow-400 flex-shrink-0 mt-0.5" />
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-yellow-300">
-                Beberapa data tidak dapat dimuat
-              </p>
-              <ul className="text-xs text-yellow-400/80 space-y-0.5">
+          <div className="bg-warning/10 border border-warning/20 rounded-xl p-4">
+            <div className="flex items-start gap-3">
+              <Info className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-warning">
+                  Beberapa data tidak dapat dimuat
+                </p>
+                <ul className="text-xs text-warning/80 space-y-0.5">
                 {warnings.map((w, i) => (
                   <li key={i}>• {w}</li>
                 ))}
@@ -239,29 +224,29 @@ export default function AdminDashboard() {
                className={`${card.bg} border ${card.border} rounded-xl p-5 hover:scale-[1.02] transition-all duration-200 group`}
              >
             <div className="flex items-center justify-between mb-2">
-              <p className="text-sm text-gray-400">{card.label}</p>
+              <p className="text-sm text-text-secondary">{card.label}</p>
               <card.icon className={`h-5 w-5 ${card.color} opacity-60 group-hover:opacity-100 transition-opacity`} />
             </div>
             <p className={`text-2xl font-bold ${card.color}`}>
               {typeof card.value === "number" ? card.value.toLocaleString("id-ID") : card.value}
             </p>
-            {card.sub && <p className="text-xs text-gray-500 mt-1">{card.sub}</p>}
+            {card.sub && <p className="text-xs text-text-tertiary mt-1">{card.sub}</p>}
            </Link>
         ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Orders */}
-        <div className="bg-gray-900/80 border border-gray-800 rounded-xl p-6">
+        <div className="bg-surface border border-border rounded-xl p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-white">Pesanan Terbaru</h2>
-            <Link href="/admin/orders" className="text-sm text-blue-400 hover:text-blue-300 transition-colors">
+            <h2 className="text-lg font-semibold text-text-primary">Pesanan Terbaru</h2>
+            <Link href="/admin/orders" className="text-sm text-arcane hover:text-arcane transition-colors">
               Lihat semua →
              </Link>
           </div>
 
           {recentOrders.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-8 text-gray-500">
+            <div className="flex flex-col items-center gap-2 py-8 text-text-tertiary">
               <ShoppingCart className="h-8 w-8 opacity-30" />
               <p className="text-sm">Belum ada pesanan</p>
             </div>
@@ -271,15 +256,15 @@ export default function AdminDashboard() {
 <Link
                    key={order.id}
                    href={`/admin/orders/${order.id}`}
-                   className="flex items-center justify-between p-3 rounded-lg bg-gray-800/30 hover:bg-gray-800/60 transition-colors group"
+                   className="flex items-center justify-between p-3 rounded-lg bg-surface-raised hover:bg-surface-raised transition-colors group"
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-white truncate">#{order.order_number}</p>
-                    <p className="text-xs text-gray-400 truncate">{order.customer_name}</p>
+                    <p className="text-sm font-medium text-text-primary truncate">#{order.order_number}</p>
+                    <p className="text-xs text-text-secondary truncate">{order.customer_name}</p>
                   </div>
                   <div className="text-right flex-shrink-0 ml-3">
-                    <p className="text-sm font-medium text-white">{fmtIDR(order.total)}</p>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${statusColor(order.status)}`}>
+                    <p className="text-sm font-medium text-text-primary">{fmtIDR(order.total)}</p>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium border ${getStatusBadge(order.status)}`}>
                       {order.status.replace("_", " ")}
                     </span>
                   </div>
@@ -290,16 +275,16 @@ export default function AdminDashboard() {
         </div>
 
         {/* Low Stock Alerts */}
-        <div className="bg-gray-900/80 border border-gray-800 rounded-xl p-6">
+        <div className="bg-surface border border-border rounded-xl p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-white">Stok Menipis</h2>
-            <Link href="/admin/products" className="text-sm text-blue-400 hover:text-blue-300 transition-colors">
+            <h2 className="text-lg font-semibold text-text-primary">Stok Menipis</h2>
+            <Link href="/admin/products" className="text-sm text-arcane hover:text-arcane transition-colors">
                Ke produk →
              </Link>
           </div>
 
           {lowStock.length === 0 ? (
-            <div className="flex items-center gap-2 text-green-400 text-sm py-8 justify-center">
+            <div className="flex items-center gap-2 text-success text-sm py-8 justify-center">
               <TrendingUp className="h-5 w-5" />
               Semua stok aman
             </div>
@@ -308,17 +293,17 @@ export default function AdminDashboard() {
               {lowStock.map((product) => (
                 <div
                   key={product.id}
-                  className="flex items-center justify-between p-3 rounded-lg bg-red-500/5 border border-red-500/10"
+                  className="flex items-center justify-between p-3 rounded-lg bg-error/5 border border-error/10"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <AlertTriangle className="h-4 w-4 text-red-400 flex-shrink-0" />
+                    <AlertTriangle className="h-4 w-4 text-error flex-shrink-0" />
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{product.name}</p>
-                      <p className="text-xs text-gray-500">Min: {product.min_stock}</p>
+                      <p className="text-sm font-medium text-text-primary truncate">{product.name}</p>
+                      <p className="text-xs text-text-tertiary">Min: {product.min_stock}</p>
                     </div>
                   </div>
                   <span className={`text-sm font-bold flex-shrink-0 ml-3 ${
-                    product.stock <= 0 ? "text-red-400" : "text-yellow-400"
+                    product.stock <= 0 ? "text-error" : "text-warning"
                   }`}>
                     {product.stock}
                   </span>

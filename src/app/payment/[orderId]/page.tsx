@@ -19,6 +19,7 @@ import {
 import { formatPrice, cn } from "@/lib/utils";
 import { PAYMENT_ACCOUNTS, type PaymentAccount } from "@/lib/payment/constants";
 import { subscribeToRow } from "@/lib/supabase-browser";
+import { getStatusStyle } from "@/lib/status-colors";
 
 interface OrderData {
   id: string;
@@ -37,17 +38,22 @@ interface OrderData {
 }
 
 function getStatusDisplay(status: string) {
-  const map: Record<string, { label: string; color: string; icon: typeof Clock }> = {
-    PENDING_PAYMENT: { label: "Menunggu Pembayaran", color: "text-amber-400", icon: Clock },
-    WAITING_CONFIRMATION: { label: "Menunggu Verifikasi Admin", color: "text-blue-400", icon: Clock },
-    PAID: { label: "Pembayaran Dikonfirmasi", color: "text-emerald-400", icon: CheckCircle2 },
-    NEEDS_REVIEW: { label: "Perlu Pengecekan Ulang", color: "text-orange-400", icon: AlertCircle },
-    REJECTED: { label: "Pembayaran Ditolak", color: "text-red-400", icon: XCircle },
-    CANCELLED: { label: "Dibatalkan", color: "text-red-400", icon: XCircle },
-    FORCE_CANCELLED: { label: "Dibatalkan oleh Admin", color: "text-red-400", icon: XCircle },
-    EXPIRED: { label: "Kedaluwarsa", color: "text-text-muted", icon: XCircle },
+  const style = getStatusStyle(status);
+  const iconMap: Record<string, typeof Clock> = {
+    PENDING_PAYMENT: Clock,
+    WAITING_CONFIRMATION: Clock,
+    PAID: CheckCircle2,
+    NEEDS_REVIEW: AlertCircle,
+    REJECTED: XCircle,
+    CANCELLED: XCircle,
+    FORCE_CANCELLED: XCircle,
+    EXPIRED: XCircle,
   };
-  return map[status] || { label: status, color: "text-text-muted", icon: Clock };
+  return {
+    label: style.label,
+    color: style.color,
+    icon: iconMap[status] || Clock,
+  };
 }
 
 function CountdownTimer({ expiryAt }: { expiryAt: string }) {
@@ -78,7 +84,7 @@ function CountdownTimer({ expiryAt }: { expiryAt: string }) {
   }, [expiryAt]);
 
   return (
-    <div className={cn("font-mono text-2xl font-bold", isExpired ? "text-red-400" : "text-amber-400")}>
+    <div className={cn("font-mono text-2xl font-bold", isExpired ? "text-error" : "text-warning")}>
       {timeLeft}
     </div>
   );
@@ -96,46 +102,46 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={handleCopy}
-      className="inline-flex items-center gap-1 rounded-lg bg-surface/60 border border-white/5 px-3 py-1.5 text-xs text-text-muted hover:text-text hover:bg-surface transition-all"
+      className="inline-flex items-center gap-1 rounded-lg bg-surface/60 border border-border px-3 py-1.5 text-xs text-text-secondary hover:text-text hover:bg-surface transition-all"
     >
-      {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
-      {copied ? "Copied!" : "Salin"}
+      {copied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
+       {copied ? "Copied!" : "Copy"}
     </button>
   );
 }
 
 function PaymentAccountCard({ account, amount }: { account: PaymentAccount; amount: number }) {
   return (
-    <div className="p-5 rounded-2xl bg-surface/40 border border-white/5 space-y-3">
+    <div className="p-5 rounded-lg bg-surface/40 border border-border space-y-3">
       <div className="flex items-center gap-3">
-        <span className="text-2xl">{account.icon}</span>
+        <account.icon className="h-7 w-7 text-primary" />
         <div>
           <p className="font-semibold text-text">{account.label}</p>
           {account.bankName && (
-            <p className="text-xs text-text-muted">{account.bankName}</p>
+            <p className="text-xs text-text-secondary">{account.bankName}</p>
           )}
         </div>
       </div>
 
       <div className="space-y-2">
-        <div className="flex items-center justify-between p-3 rounded-xl bg-surface/60 border border-white/5">
+        <div className="flex items-center justify-between p-3 rounded-lg bg-surface/60 border border-border">
           <div>
-            <p className="text-xs text-text-muted">Nomor Rekening / ID</p>
+             <p className="text-xs text-text-secondary">Account Number / ID</p>
             <p className="font-mono font-semibold text-text mt-0.5">{account.accountNumber}</p>
           </div>
           <CopyButton text={account.accountNumber} />
         </div>
 
-        <div className="flex items-center justify-between p-3 rounded-xl bg-surface/60 border border-white/5">
+        <div className="flex items-center justify-between p-3 rounded-lg bg-surface/60 border border-border">
           <div>
-            <p className="text-xs text-text-muted">Atas Nama</p>
+             <p className="text-xs text-text-secondary">Account Holder</p>
             <p className="font-semibold text-text mt-0.5">{account.accountName}</p>
           </div>
         </div>
 
-        <div className="flex items-center justify-between p-3 rounded-xl bg-primary/5 border border-primary/20">
+        <div className="flex items-center justify-between p-3 rounded-lg bg-primary/5 border border-primary/20">
           <div>
-            <p className="text-xs text-text-muted">Jumlah Transfer</p>
+             <p className="text-xs text-text-secondary">Transfer Amount</p>
             <p className="font-mono text-lg font-bold text-primary mt-0.5">{formatPrice(amount)}</p>
           </div>
           <CopyButton text={String(amount)} />
@@ -166,7 +172,7 @@ export default function PaymentPage() {
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      setError("Ukuran gambar maksimal 5MB");
+      setError("Image must be at most 5MB");
       return;
     }
 
@@ -189,7 +195,7 @@ export default function PaymentPage() {
         setError(null);
       }
     } catch {
-      setError("Gagal memuat data order");
+      setError("Failed to load order data");
     } finally {
       setLoading(false);
     }
@@ -272,10 +278,10 @@ export default function PaymentPage() {
           prev ? { ...prev, status: "WAITING_CONFIRMATION" } : prev
         );
       } else {
-        setError(data.error?.message || "Gagal konfirmasi transfer");
+        setError(data.error?.message || "Failed to confirm transfer");
       }
     } catch {
-      setError("Terjadi kesalahan. Coba lagi.");
+      setError("Something went wrong. Please try again.");
     } finally {
       setConfirming(false);
     }
@@ -286,7 +292,7 @@ export default function PaymentPage() {
       <main className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary/30 border-t-primary mx-auto" />
-          <p className="text-text-muted text-sm">Memuat data pembayaran...</p>
+           <p className="text-text-secondary text-sm">Loading payment details…</p>
         </div>
       </main>
     );
@@ -296,13 +302,13 @@ export default function PaymentPage() {
     return (
       <main className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
-          <XCircle className="h-12 w-12 text-red-400 mx-auto" />
+          <XCircle className="h-12 w-12 text-error mx-auto" />
           <h1 className="text-xl font-bold text-text">{error}</h1>
           <Link
             href="/products"
-            className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-white"
           >
-            Kembali ke Produk
+            Back to Products
           </Link>
         </div>
       </main>
@@ -326,19 +332,19 @@ export default function PaymentPage() {
       <div className="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8">
         <Link
           href="/products"
-          className="inline-flex items-center gap-2 text-sm text-text-muted hover:text-text mb-8 transition-colors group"
+          className="inline-flex items-center gap-2 text-sm text-text-secondary hover:text-text mb-8 transition-colors group"
         >
           <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
-          Kembali ke Produk
+          Back to Products
         </Link>
 
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl lg:text-3xl font-bold text-text mb-2">
-            Instruksi Pembayaran
+            Payment Instructions
           </h1>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-text-muted">Order:</span>
+            <span className="text-sm text-text-secondary">Order:</span>
             <span className="font-mono font-bold text-primary">
               {order.order_number}
             </span>
@@ -350,12 +356,8 @@ export default function PaymentPage() {
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           className={cn(
-            "flex items-center gap-3 p-4 rounded-2xl border mb-8",
-            isPaid
-              ? "bg-emerald-500/10 border-emerald-500/20"
-              : isTerminal
-                ? "bg-red-500/10 border-red-500/20"
-                : "bg-surface/40 border-white/5"
+            "flex items-center gap-3 p-4 rounded-lg border border-border mb-8",
+            getStatusStyle(order.status).bg
           )}
         >
           <StatusIcon className={cn("h-5 w-5", statusDisplay.color)} />
@@ -363,12 +365,12 @@ export default function PaymentPage() {
             {statusDisplay.label}
           </span>
           {/* Connection indicator */}
-          <div className="ml-auto flex items-center gap-1.5" title={realtimeConnected ? "Real-time terhubung" : "Menghubungkan..."}>
+          <div className="ml-auto flex items-center gap-1.5"              title={realtimeConnected ? "Real-time connected" : "Connecting…"}>
             <span className={cn(
               "h-2 w-2 rounded-full",
-              realtimeConnected ? "bg-emerald-400 animate-pulse" : "bg-text-muted/30"
+              realtimeConnected ? "bg-success animate-pulse" : "bg-text-muted/30"
             )} />
-            <span className="text-xs text-text-muted/60 hidden sm:inline">
+            <span className="text-xs text-text-secondary/60 hidden sm:inline">
               {realtimeConnected ? "Live" : "..."}
             </span>
           </div>
@@ -383,14 +385,14 @@ export default function PaymentPage() {
               exit={{ opacity: 0, y: -10, height: 0 }}
               className="mb-6 overflow-hidden"
             >
-              <div className="flex items-center gap-3 p-4 rounded-2xl bg-primary/10 border border-primary/20">
+              <div className="flex items-center gap-3 p-4 rounded-lg bg-primary/10 border border-primary/20">
                 <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
                 <div className="text-sm">
-                  <span className="text-text-muted">Status diperbarui: </span>
+                   <span className="text-text-secondary">Status updated: </span>
                   <span className={cn("font-medium", getStatusDisplay(previousStatus).color)}>
                     {getStatusDisplay(previousStatus).label}
                   </span>
-                  <span className="text-text-muted"> → </span>
+                  <span className="text-text-secondary"> → </span>
                   <span className={cn("font-medium", statusDisplay.color)}>
                     {statusDisplay.label}
                   </span>
@@ -411,16 +413,16 @@ export default function PaymentPage() {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: "spring", bounce: 0.5 }}
-              className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/15 mx-auto"
+              className="flex h-20 w-20 items-center justify-center rounded-full bg-success/15 mx-auto"
             >
-              <CheckCircle2 className="h-10 w-10 text-emerald-400" />
+              <CheckCircle2 className="h-10 w-10 text-success" />
             </motion.div>
             <h2 className="text-2xl font-bold text-text">
-              Pembayaran Dikonfirmasi!
+              Payment Confirmed!
             </h2>
-            <p className="text-text-muted">
-              Pesanan Anda sedang diproses. Kami akan mengirim notifikasi ke
-              Discord Anda.
+            <p className="text-text-secondary">
+              Your order is being processed. We'll send a notification to
+              your Discord.
             </p>
           </motion.div>
         )}
@@ -428,15 +430,14 @@ export default function PaymentPage() {
         {/* Terminal state (cancelled/expired) */}
         {isTerminal && (
           <div className="text-center py-12 space-y-4">
-            <XCircle className="h-16 w-16 text-red-400 mx-auto" />
+            <XCircle className="h-16 w-16 text-error mx-auto" />
             <h2 className="text-xl font-bold text-text">
               Order {statusDisplay.label}
             </h2>
             <Link
-              href="/products"
-              className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white"
-            >
-              Belanja Lagi
+              href="/products"            className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-white"
+          >
+               Shop Again
             </Link>
           </div>
         )}
@@ -446,13 +447,16 @@ export default function PaymentPage() {
           <div className="space-y-6">
             {/* Countdown Timer */}
             {isPayable && order.expiry_at && (
-              <div className="text-center p-6 rounded-2xl bg-surface/40 border border-white/5">
-                <p className="text-sm text-text-muted mb-2">
-                  Batas Waktu Pembayaran
+              <div className="text-center p-6 rounded-lg bg-surface/40 border border-border">
+                <p className="text-sm text-text-secondary mb-2">
+                  Payment Deadline
                 </p>
                 <CountdownTimer expiryAt={order.expiry_at} />
-                <p className="text-xs text-text-muted/60 mt-2">
-                  Selesaikan pembayaran sebelum waktu habis
+                <p className="text-xs text-text-secondary/60 mt-2">
+                   Complete your payment before time runs out
+                </p>
+                <p className="text-xs text-text-tertiary text-center mt-2">
+                  Orders are usually confirmed within 15–30 minutes during active hours.
                 </p>
               </div>
             )}
@@ -470,7 +474,7 @@ export default function PaymentPage() {
               <div className="space-y-4">
                 <h3 className="text-sm font-semibold text-text flex items-center gap-2">
                   <CreditCard className="h-4 w-4" />
-                  Pilih Metode Pembayaran
+                   Choose Payment Method
                 </h3>
                 {PAYMENT_ACCOUNTS.map((acc) => (
                   <PaymentAccountCard
@@ -488,28 +492,28 @@ export default function PaymentPage() {
                 <div className="space-y-3">
                   <h3 className="text-sm font-semibold text-text flex items-center gap-2">
                     <UploadCloud className="h-4 w-4" />
-                    Upload Bukti Pembayaran
+                     Upload Payment Proof
                   </h3>
-                  <label className="block w-full rounded-2xl border-2 border-dashed border-white/10 bg-surface/40 p-6 text-center cursor-pointer hover:border-primary/50 transition-colors">
+                  <label className="block w-full rounded-lg border-2 border-dashed border-border bg-surface/40 p-6 text-center cursor-pointer hover:border-primary/50 transition-colors">
                     <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
                     {paymentProofBase64 ? (
                       <div className="space-y-2">
-                        <CheckCircle2 className="h-8 w-8 text-emerald-500 mx-auto" />
-                        <p className="text-sm font-medium text-emerald-400">{paymentProofName}</p>
-                        <p className="text-xs text-text-muted">Klik untuk mengganti gambar</p>
+                        <CheckCircle2 className="h-8 w-8 text-success mx-auto" />
+                         <p className="text-sm font-medium text-success">{paymentProofName}</p>
+                         <p className="text-xs text-text-secondary">Click to change image</p>
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        <ImagePlus className="h-8 w-8 text-text-muted mx-auto" />
-                        <p className="text-sm font-medium text-text">Pilih atau letakkan gambar disini</p>
-                        <p className="text-xs text-text-muted">Maksimal 5MB (JPG, PNG)</p>
+                        <ImagePlus className="h-8 w-8 text-text-secondary mx-auto" />
+                         <p className="text-sm font-medium text-text">Choose or drop an image here</p>
+                         <p className="text-xs text-text-secondary">Max 5MB (JPG, PNG)</p>
                       </div>
                     )}
                   </label>
                 </div>
 
                 {error && (
-                  <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-sm text-red-400">
+                  <div className="p-4 rounded-lg bg-error/10 border border-error/20 text-sm text-error">
                     {error}
                   </div>
                 )}
@@ -518,20 +522,20 @@ export default function PaymentPage() {
                   onClick={handleConfirmTransfer}
                   disabled={confirming}
                   className={cn(
-                    "w-full flex items-center justify-center gap-2 rounded-2xl px-8 py-4 text-sm font-semibold transition-all duration-300 active:scale-[0.98]",
-                    "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-400",
+                    "w-full flex items-center justify-center gap-2 rounded-lg px-8 py-4 text-sm font-semibold transition-all duration-300 active:scale-[0.98]",
+                    "bg-success text-white shadow-lg shadow-success/20 hover:bg-success/80",
                     confirming && "opacity-50 cursor-not-allowed"
                   )}
                 >
                   {confirming ? (
                     <>
                       <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                      Memproses...
+                       Processing…
                     </>
                   ) : (
                     <>
                       <CheckCircle2 className="h-5 w-5" />
-                      Saya Sudah Melakukan Transfer
+                       I've Made the Transfer
                     </>
                   )}
                 </button>
@@ -543,17 +547,17 @@ export default function PaymentPage() {
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-center p-6 rounded-2xl bg-blue-500/10 border border-blue-500/20 space-y-3"
+                className="text-center p-6 rounded-lg bg-ember/10 border border-ember/20 space-y-3"
               >
-                <div className="h-10 w-10 animate-pulse rounded-full bg-blue-500/20 flex items-center justify-center mx-auto">
-                  <Clock className="h-5 w-5 text-blue-400" />
+                <div className="h-10 w-10 animate-pulse rounded-full bg-ember/20 flex items-center justify-center mx-auto">
+                  <Clock className="h-5 w-5 text-ember" />
                 </div>
                 <h3 className="font-semibold text-text">
-                  Menunggu Verifikasi Admin
+                  Awaiting Verification
                 </h3>
-                <p className="text-sm text-text-muted">
-                  Transfer Anda telah dikonfirmasi. Admin akan memverifikasi
-                  pembayaran Anda. Anda akan menerima notifikasi melalui Discord.
+                <p className="text-sm text-text-secondary">
+                   Your transfer has been confirmed. An admin will verify your
+                  payment. You'll get a notification via Discord.
                 </p>
               </motion.div>
             )}
@@ -561,11 +565,11 @@ export default function PaymentPage() {
         )}
 
         {/* Order Summary */}
-        <div className="mt-8 p-5 rounded-2xl bg-surface/40 border border-white/5 space-y-3">
-          <h3 className="text-sm font-semibold text-text">Ringkasan Order</h3>
+        <div className="mt-8 p-5 rounded-lg bg-surface/40 border border-border space-y-3">
+           <h3 className="text-sm font-semibold text-text">Order Summary</h3>
           {order.order_item?.map((item, i) => (
             <div key={i} className="flex justify-between text-sm">
-              <span className="text-text-muted">
+              <span className="text-text-secondary">
                 {item.name} x{item.quantity}
               </span>
               <span className="text-text">
@@ -573,7 +577,7 @@ export default function PaymentPage() {
               </span>
             </div>
           ))}
-          <div className="flex justify-between text-sm font-bold pt-2 border-t border-white/5">
+          <div className="flex justify-between text-sm font-bold pt-2 border-t border-border">
             <span>Total</span>
             <span className="text-primary">{formatPrice(order.total)}</span>
           </div>

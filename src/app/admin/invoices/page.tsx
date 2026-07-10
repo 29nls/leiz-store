@@ -6,6 +6,7 @@ import {
   Eye, Send, CheckCircle, ExternalLink,
 } from "lucide-react";
 import { getSupabaseBrowser, subscribeToTable } from "@/lib/supabase-browser";
+import { getInvoiceStatusBadge } from "@/lib/status-colors";
 
 interface Invoice {
   id: string; order_id: string; invoice_no: string; status: string;
@@ -15,12 +16,6 @@ interface Invoice {
 }
 
 const STATUSES = ["ALL", "PENDING", "SENT", "FAILED"];
-
-const STATUS_STYLES: Record<string, string> = {
-  PENDING: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
-  SENT: "bg-green-500/10 text-green-400 border-green-500/20",
-  FAILED: "bg-red-500/10 text-red-400 border-red-500/20",
-};
 
 function fmtIDR(n: number): string {
   return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
@@ -86,52 +81,52 @@ export default function AdminInvoicesPage() {
 
   return (
     <div className="space-y-6">
-      <div><h1 className="text-2xl font-bold text-white">Invoice</h1><p className="text-gray-400 text-sm mt-1">Kelola invoice pelanggan</p></div>
-      {okMsg && <div className="bg-green-500/10 border border-green-500/30 text-green-400 px-4 py-3 rounded-lg text-sm flex items-center gap-2 animate-fade-in"><CheckCircle className="h-4 w-4" />{okMsg}</div>}
-      {error && <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg text-sm flex items-center gap-2"><AlertTriangle className="h-4 w-4" />{error}<button onClick={() => setError("")} className="ml-auto"><X className="h-4 w-4" /></button></div>}
+      <div><h1 className="text-2xl font-bold text-white">Invoice</h1><p className="text-text-secondary text-sm mt-1">Kelola invoice pelanggan</p></div>
+      {okMsg && <div className="bg-success/10 border border-success/20 text-success px-4 py-3 rounded-lg text-sm flex items-center gap-2 animate-fade-in"><CheckCircle className="h-4 w-4" />{okMsg}</div>}
+      {error && <div className="bg-error/10 border border-error/20 text-error px-4 py-3 rounded-lg text-sm flex items-center gap-2"><AlertTriangle className="h-4 w-4" />{error}<button onClick={() => setError("")} className="ml-auto"><X className="h-4 w-4" /></button></div>}
 
       <div className="flex gap-2 overflow-x-auto pb-1">
         {STATUSES.map(s => (
           <button key={s} onClick={() => setStatusFilter(s)}
-            className={`px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${statusFilter === s ? "bg-blue-600 text-white" : "bg-gray-900 text-gray-400 hover:text-white hover:bg-gray-800 border border-gray-800"}`}>
+            className={`px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${statusFilter === s ? "bg-arcane text-white" : "bg-surface text-text-secondary hover:text-text-primary hover:bg-surface-raised border border-border"}`}>
             {s === "ALL" ? "Semua" : s}
           </button>
         ))}
       </div>
 
-      <div className="bg-gray-900/80 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="bg-surface border border-border rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-800 bg-gray-900/50">
-                <th className="text-left py-3 px-4 text-gray-400 font-medium">Invoice</th>
-                <th className="text-left py-3 px-4 text-gray-400 font-medium">Pesanan</th>
-                <th className="text-left py-3 px-4 text-gray-400 font-medium">Pelanggan</th>
-                <th className="text-center py-3 px-4 text-gray-400 font-medium">Status</th>
-                <th className="text-right py-3 px-4 text-gray-400 font-medium">Waktu</th>
-                <th className="text-center py-3 px-4 text-gray-400 font-medium">Aksi</th>
+              <tr className="border-b border-border bg-surface-raised">
+                <th className="text-left py-3 px-4 text-text-secondary font-medium">Invoice</th>
+                <th className="text-left py-3 px-4 text-text-secondary font-medium">Pesanan</th>
+                <th className="text-left py-3 px-4 text-text-secondary font-medium">Pelanggan</th>
+                <th className="text-center py-3 px-4 text-text-secondary font-medium">Status</th>
+                <th className="text-right py-3 px-4 text-text-secondary font-medium">Waktu</th>
+                <th className="text-center py-3 px-4 text-text-secondary font-medium">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-800/50">
+            <tbody className="divide-y divide-border">
               {loading ? (
-                <tr><td colSpan={6} className="py-12 text-center"><div className="flex items-center justify-center gap-2 text-gray-400"><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500" /> Memuat...</div></td></tr>
+                <tr><td colSpan={6} className="py-12 text-center"><div className="flex items-center justify-center gap-2 text-text-secondary"><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-arcane" /> Memuat...</div></td></tr>
               ) : invoices.length === 0 ? (
-                <tr><td colSpan={6} className="py-12 text-center"><div className="flex flex-col items-center gap-2 text-gray-500"><FileText className="h-10 w-10 opacity-30" /><p>Tidak ada invoice</p></div></td></tr>
+                <tr><td colSpan={6} className="py-12 text-center"><div className="flex flex-col items-center gap-2 text-text-tertiary"><FileText className="h-10 w-10 opacity-30" /><p>Tidak ada invoice</p></div></td></tr>
               ) : invoices.map(inv => (
-                <tr key={inv.id} className="hover:bg-gray-800/30 transition-colors cursor-pointer" onClick={() => setSelected(inv)}>
+                <tr key={inv.id} className="hover:bg-surface-raised transition-colors cursor-pointer" onClick={() => setSelected(inv)}>
                   <td className="py-3 px-4"><span className="text-white font-medium font-mono text-xs">{inv.invoice_no}</span></td>
-                  <td className="py-3 px-4"><span className="text-gray-400 font-mono text-xs">{inv.order?.order_number || inv.order_id.slice(0, 8)}</span></td>
+                  <td className="py-3 px-4"><span className="text-text-secondary font-mono text-xs">{inv.order?.order_number || inv.order_id.slice(0, 8)}</span></td>
                   <td className="py-3 px-4"><p className="text-white">{inv.order?.customer_name || "-"}</p></td>
                   <td className="py-3 px-4 text-center">
-                    <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium border ${STATUS_STYLES[inv.status] || "bg-gray-500/10 text-gray-400"}`}>{inv.status}</span>
+                    <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium border ${getInvoiceStatusBadge(inv.status)}`}>{inv.status}</span>
                   </td>
-                  <td className="py-3 px-4 text-right text-gray-400 text-xs">{fmtDate(inv.created_at)}</td>
+                  <td className="py-3 px-4 text-right text-text-secondary text-xs">{fmtDate(inv.created_at)}</td>
                   <td className="py-3 px-4 text-center">
                     <div className="flex items-center justify-center gap-1">
-                      <button onClick={e => { e.stopPropagation(); setSelected(inv); }} className="p-2 text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg"><Eye className="h-4 w-4" /></button>
+                      <button onClick={e => { e.stopPropagation(); setSelected(inv); }} className="p-2 text-text-secondary hover:text-arcane hover:bg-arcane/10 rounded-lg"><Eye className="h-4 w-4" /></button>
                       {inv.status === "FAILED" && (
                         <button onClick={e => { e.stopPropagation(); handleResend(inv.id); }} disabled={resending}
-                          className="p-2 text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 rounded-lg disabled:opacity-30">
+                          className="p-2 text-text-secondary hover:text-arcane hover:bg-arcane/10 rounded-lg disabled:opacity-30">
                           <Send className="h-4 w-4" />
                         </button>
                       )}
@@ -143,12 +138,12 @@ export default function AdminInvoicesPage() {
           </table>
         </div>
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-800">
-            <p className="text-sm text-gray-400">{total} invoice</p>
+          <div className="flex items-center justify-between px-4 py-3 border-t border-border">
+            <p className="text-sm text-text-secondary">{total} invoice</p>
             <div className="flex items-center gap-2">
-              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} className="p-2 text-gray-400 hover:text-white disabled:opacity-30"><ChevronLeft className="h-4 w-4" /></button>
-              <span className="text-sm text-gray-400 px-2">{page} / {totalPages}</span>
-              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="p-2 text-gray-400 hover:text-white disabled:opacity-30"><ChevronRight className="h-4 w-4" /></button>
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} className="p-2 text-text-secondary hover:text-text-primary disabled:opacity-30"><ChevronLeft className="h-4 w-4" /></button>
+              <span className="text-sm text-text-secondary px-2">{page} / {totalPages}</span>
+              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="p-2 text-text-secondary hover:text-text-primary disabled:opacity-30"><ChevronRight className="h-4 w-4" /></button>
             </div>
           </div>
         )}
@@ -157,42 +152,42 @@ export default function AdminInvoicesPage() {
       {selected && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setSelected(null)} />
-          <div className="relative w-full max-w-2xl bg-gray-900 border border-gray-800 rounded-xl shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-gray-900 border-b border-gray-800 px-6 py-4 flex items-center justify-between z-10">
+          <div className="relative w-full max-w-2xl bg-surface border border-border rounded-xl shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-surface border-b border-border px-6 py-4 flex items-center justify-between z-10">
               <h2 className="text-lg font-semibold text-white">{selected.invoice_no}</h2>
-              <button onClick={() => setSelected(null)} className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg"><X className="h-5 w-5" /></button>
+              <button onClick={() => setSelected(null)} className="p-2 text-text-secondary hover:text-text-primary hover:bg-surface-raised rounded-lg"><X className="h-5 w-5" /></button>
             </div>
             <div className="p-6 space-y-6">
               <div className="flex items-center gap-3">
-                <span className={`inline-flex px-3 py-1.5 rounded-full text-sm font-medium border ${STATUS_STYLES[selected.status]}`}>{selected.status}</span>
-                <span className="text-xs text-gray-500">{fmtDate(selected.created_at)}</span>
+                <span className={`inline-flex px-3 py-1.5 rounded-full text-sm font-medium border ${getInvoiceStatusBadge(selected.status)}`}>{selected.status}</span>
+                <span className="text-xs text-text-tertiary">{fmtDate(selected.created_at)}</span>
               </div>
 
-              <div className="bg-gray-800/50 border border-gray-700/50 rounded-lg p-4">
-                <h3 className="text-sm font-medium text-gray-300 mb-2">Informasi</h3>
+              <div className="bg-surface-raised border border-border rounded-lg p-4">
+                <h3 className="text-sm font-medium text-text-primary mb-2">Informasi</h3>
                 <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div><span className="text-gray-500">Invoice:</span><p className="text-white font-mono">{selected.invoice_no}</p></div>
-                  <div><span className="text-gray-500">Order:</span><p className="text-white font-mono">{selected.order?.order_number || selected.order_id}</p></div>
-                  <div><span className="text-gray-500">Pelanggan:</span><p className="text-white">{selected.order?.customer_name || "-"}</p></div>
-                  {selected.order?.total && <div><span className="text-gray-500">Total:</span><p className="text-white font-medium">{fmtIDR(selected.order.total)}</p></div>}
+                  <div><span className="text-text-tertiary">Invoice:</span><p className="text-white font-mono">{selected.invoice_no}</p></div>
+                  <div><span className="text-text-tertiary">Order:</span><p className="text-white font-mono">{selected.order?.order_number || selected.order_id}</p></div>
+                  <div><span className="text-text-tertiary">Pelanggan:</span><p className="text-white">{selected.order?.customer_name || "-"}</p></div>
+                  {selected.order?.total && <div><span className="text-text-tertiary">Total:</span><p className="text-white font-medium">{fmtIDR(selected.order.total)}</p></div>}
                 </div>
               </div>
 
               {selected.error_log && (
-                <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
-                  <h3 className="text-sm font-medium text-red-400 mb-2">Error Log</h3>
+                <div className="bg-error/10 border border-error/20 rounded-lg p-4">
+                  <h3 className="text-sm font-medium text-error mb-2">Error Log</h3>
                   <pre className="text-xs text-red-300 whitespace-pre-wrap">{selected.error_log}</pre>
                 </div>
               )}
 
               {selected.sent_at && (
-                <p className="text-xs text-gray-500">Terkirim: {fmtDate(selected.sent_at)}</p>
+                <p className="text-xs text-text-tertiary">Terkirim: {fmtDate(selected.sent_at)}</p>
               )}
 
               {selected.status === "FAILED" && (
-                <div className="border-t border-gray-800 pt-4">
+                <div className="border-t border-border pt-4">
                   <button onClick={() => handleResend(selected.id)} disabled={resending}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm font-medium disabled:opacity-50 transition-colors">
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-arcane hover:bg-arcane/80 text-white rounded-lg text-sm font-medium disabled:opacity-50 transition-colors">
                     {resending ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" /> : <Send className="h-4 w-4" />}
                     Buat Ulang Invoice
                   </button>
@@ -200,9 +195,9 @@ export default function AdminInvoicesPage() {
               )}
 
               {selected.pdf_url && (
-                <div className="border-t border-gray-800 pt-4">
+                <div className="border-t border-border pt-4">
                   <a href={selected.pdf_url} target="_blank" rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm font-medium transition-colors">
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-surface-raised hover:bg-surface-raised text-text-primary rounded-lg text-sm font-medium transition-colors">
                     <ExternalLink className="h-4 w-4" />
                     Lihat PDF
                   </a>

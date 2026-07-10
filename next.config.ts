@@ -36,6 +36,34 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "*.cloudinary.com",
       },
+      {
+        protocol: "https",
+        hostname: "*.discordapp.com",
+      },
+      {
+        protocol: "https",
+        hostname: "cdn.discordapp.com",
+      },
+      {
+        protocol: "https",
+        hostname: "i.ibb.co",
+      },
+      {
+        protocol: "https",
+        hostname: "*.imgur.com",
+      },
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+      },
+      {
+        protocol: "https",
+        hostname: "picsum.photos",
+      },
+      {
+        protocol: "https",
+        hostname: "**.picsum.photos",
+      },
     ],
     formats: ["image/avif", "image/webp"],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
@@ -205,7 +233,7 @@ const nextConfig: NextConfig = {
             "default-src 'self'",
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com https://vercel.live",
             "style-src 'self' 'unsafe-inline'",
-            "img-src 'self' data: blob: https://placehold.co https://*.supabase.co https://*.amazonaws.com https://*.r2.cloudflarestorage.com https://*.cloudinary.com",
+            "img-src 'self' data: blob: https://placehold.co https://*.supabase.co https://*.amazonaws.com https://*.r2.cloudflarestorage.com https://*.cloudflarestorage.com https://*.cloudinary.com https://*.discordapp.com https://cdn.discordapp.com https://i.ibb.co https://*.imgur.com https://images.unsplash.com https://picsum.photos",
             "font-src 'self'",
             "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://va.vercel-scripts.com",
             "frame-ancestors 'none'",

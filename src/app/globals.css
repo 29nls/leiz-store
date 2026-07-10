@@ -1,48 +1,64 @@
 @import "tailwindcss";
 
 /* ════════════════════════════════════════════════════════════
-   LEIZ STORE — Genshin Impact Inspired Design System
-   Theme: Mystical Fantasy Adventure · Ethereal Elegance · Cinematic
+   LEIZ STORE — Design System "Ember & Arcane"
+   Ember  = primary action (Dragon) · Arcane = secondary / Nest
+   Single source of truth for color tokens. Components MUST use
+   the Tailwind utilities generated from these (bg-ember, text-arcane,
+   bg-surface, border-border, text-text-secondary, ...). No inline
+   hex, no per-file color constants.
    ════════════════════════════════════════════════════════════ */
 
 @theme inline {
-  /* ── Dark Gaming Premium Design System ── */
-  
-  /* Background Layers */
-  --color-background:     #0A0B0F;   /* Deep space black */
-  --color-surface:        #12141A;   /* Elevated surface */
-  --color-surface-elevated: #1A1D26; /* Higher elevation */
-  
-  /* Accent Colors - Gaming Electric */
-  --color-primary:        #00F0FF;   /* Cyber cyan - primary CTA */
-  --color-secondary:      #7B2FF7;   /* Deep violet - secondary accent */
-  --color-tertiary:       #FF3D71;   /* Hot pink - urgent/limited */
-  --color-success:        #10B981;   /* Success green */
-  --color-warning:        #F59E0B;   /* Warning amber */
-  --color-error:          #EF4444;   /* Error red */
+  /* ── Background layers ── */
+  --color-void:            #0B0B10;   /* base background */
+  --color-background:      #0B0B10;   /* alias of void (legacy name kept) */
+  --color-surface:         #16161D;   /* card, elevated content */
+  --color-surface-raised:  #1F1F29;   /* modal, dropdown, popover */
+  --color-surface-elevated:#1F1F29;   /* legacy alias -> raised */
 
-  /* Text Colors */
-  --color-text-primary:   #FFFFFF;   /* Primary text */
-  --color-text-secondary: #9CA3B4;   /* Secondary text */
-  --color-text-tertiary:  #6B7280;   /* Tertiary text/disabled */
-  
-  /* Borders & Dividers */
-  --color-border:         rgba(255, 255, 255, 0.08);  /* Subtle borders */
-  --color-border-strong:  rgba(255, 255, 255, 0.12);  /* Stronger borders */
+  /* ── Accent — Ember (primary / "Dragon") ── */
+  --color-primary:         #E8783D;   /* legacy name -> redefined to ember */
+  --color-primary-light:   #FF9257;   /* legacy name (was undefined) -> ember bright */
+  --color-ember:           #E8783D;
+  --color-ember-bright:    #FF9257;   /* hover */
+  --color-ember-dim:       #B85A2A;   /* active / pressed */
 
-  /* ── Premium Typography Stack ── */
+  /* ── Accent — Arcane (secondary / "Nest") ── */
+  --color-secondary:       #7B6EF6;   /* legacy name -> redefined to arcane */
+  --color-tertiary:        #7B6EF6;
+  --color-arcane:          #7B6EF6;
+  --color-arcane-bright:   #9B8FFF;
+
+  /* ── Semantic (accessible) ── */
+  --color-success:         #34D399;
+  --color-warning:         #F5A623;
+  --color-error:           #EF4444;
+  --color-danger:          #EF4444;   /* legacy alias so bg-danger resolves */
+
+  /* ── Text ── */
+  --color-text:            #F5F3F0;   /* legacy alias so text-text resolves */
+  --color-text-primary:    #F5F3F0;   /* off-white, not pure white */
+  --color-text-secondary:  #A8A4B8;
+  --color-text-tertiary:   #7D7A8A;
+  --color-text-muted:      #8C889B;   /* legacy alias (files migrated away) */
+
+  /* ── Border ── */
+  --color-border:          rgba(255, 255, 255, 0.08);
+  --color-border-strong:   rgba(232, 120, 61, 0.25);
+
+  /* ── Typography ── */
   --font-sans: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-geist-mono), "SF Mono", "JetBrains Mono", monospace;
 }
 
 :root {
-  --background: #FFFFFF;
-  --foreground: #000000;
+  --background: #0B0B10;
+  --foreground: #F5F3F0;
 }
-
 body.dark {
-  --background: #323339;
-  --foreground: #FFFFFF;
+  --background: #0B0B10;
+  --foreground: #F5F3F0;
 }
 
 /* ════════════════════════════════════════════════
@@ -53,8 +69,8 @@ body.dark {
 }
 
 body {
-  background: #0A0B0F;
-  color: #FFFFFF;
+  background: var(--color-void);
+  color: var(--color-text-primary);
   font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
   font-weight: 400;
   font-size: 16px;
@@ -64,148 +80,78 @@ body {
 }
 
 /* ════════════════════════════════════════════════
-   SCROLLBAR — Dark Gaming
+   SCROLLBAR
    ════════════════════════════════════════════════ */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #1A1D26 #0A0B0F;
+  scrollbar-color: var(--color-surface-raised) var(--color-void);
 }
 *::-webkit-scrollbar { width: 5px; height: 5px; }
-*::-webkit-scrollbar-track { background: #0A0B0F; }
-*::-webkit-scrollbar-thumb { background: #1A1D26; border-radius: 4px; }
+*::-webkit-scrollbar-track { background: var(--color-void); }
+*::-webkit-scrollbar-thumb { background: var(--color-surface-raised); border-radius: 4px; }
 
 /* ════════════════════════════════════════════════
-   DESIGN TOKENS — TYPOGRAPHY SCALE (Genshin Spec)
-   Display: 50px | H2: 36px | H3: 28px | H4: 24px | Body: 16px
-   All weights: 400 (Regular) | Line height increases with smaller sizes
-   ════════════════════════════════════════════════ */
-.dn-h1 {
-  font-family: Helvetica, Arial, system-ui, sans-serif;
-  font-size: clamp(36px, 5vw, 50px);
-  font-weight: 400;
-  line-height: 1.2;
-  letter-spacing: 0px;
-  color: #FFFFFF;
-}
-.dn-h2 {
-  font-family: Helvetica, Arial, system-ui, sans-serif;
-  font-size: clamp(26px, 3.5vw, 36px);
-  font-weight: 400;
-  line-height: 1.3;
-  letter-spacing: 0px;
-  color: #FFFFFF;
-}
-.dn-h3 {
-  font-family: Helvetica, Arial, system-ui, sans-serif;
-  font-size: clamp(20px, 2.5vw, 28px);
-  font-weight: 400;
-  line-height: 1.2;
-  letter-spacing: 0px;
-  color: #FFFFFF;
-}
-.dn-h4 {
-  font-family: Helvetica, Arial, system-ui, sans-serif;
-  font-size: 24px;
-  font-weight: 400;
-  line-height: 1.2;
-  letter-spacing: 0px;
-  color: #FFFFFF;
-}
-.dn-body {
-  font-family: Helvetica, Arial, system-ui, sans-serif;
-  font-size: 16px;
-  font-weight: 400;
-  line-height: 1.5;
-  letter-spacing: 0px;
-  color: #CCCCCC;
-}
-.dn-label {
-  font-family: system-ui, sans-serif;
-  font-size: 16px;
-  font-weight: 400;
-  line-height: 1.25;
-  letter-spacing: 0px;
-  color: #333333;
-}
-.dn-caption {
-  font-family: Helvetica, Arial, system-ui, sans-serif;
-  font-size: 12px;
-  font-weight: 400;
-  line-height: 1.4;
-  letter-spacing: 0px;
-  color: #999999;
-}
-.dn-eyebrow {
-  font-family: Helvetica, Arial, system-ui, sans-serif;
-  font-size: 11px;
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.28em;
-  color: #D3BC8E;
-}
-
-/* ════════════════════════════════════════════════
-   TEXT GRADIENTS
+   TEXT GRADIENTS — Ember / Arcane / Soft (signature)
    ════════════════════════════════════════════════ */
 .text-gold {
-  background: linear-gradient(135deg, #D3BC8E 0%, #E8D5A8 45%, #B8975A 100%);
+  background: linear-gradient(135deg, #E8783D 0%, #FF9257 45%, #FFD23F 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 .text-violet {
-  background: linear-gradient(135deg, #A78BFA 0%, #C084FC 55%, #E879F9 100%);
+  background: linear-gradient(135deg, #7B6EF6 0%, #9B8FFF 55%, #C4BCFF 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 .text-white-soft {
-  background: linear-gradient(160deg, #FFFFFF 0%, rgba(255,255,255,0.80) 100%);
+  background: linear-gradient(160deg, #FFFFFF 0%, rgba(255, 255, 255, 0.80) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 /* ════════════════════════════════════════════════
-   ELEVATION SYSTEM (DN Spec)
+   ELEVATION SYSTEM
    ════════════════════════════════════════════════ */
 .elevation-0 { box-shadow: none; }
-.elevation-1 { box-shadow: 0 2px 4px rgba(0,0,0,.08); }
-.elevation-2 { box-shadow: 0 2px 8px rgba(0,0,0,.15); }
-.elevation-3 { box-shadow: 0 4px 12px rgba(0,0,0,.20); }
-.elevation-4 { box-shadow: 0 8px 24px rgba(0,0,0,.30); }
-.elevation-5 { box-shadow: 0 12px 32px rgba(0,0,0,.40); }
+.elevation-1 { box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08); }
+.elevation-2 { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); }
+.elevation-3 { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.20); }
+.elevation-4 { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.30); }
+.elevation-5 { box-shadow: 0 12px 32px rgba(0, 0, 0, 0.40); }
 
 /* ════════════════════════════════════════════════
    CARD SYSTEM
    ════════════════════════════════════════════════ */
 .dn-card {
-  background: #282930;
-  border: 1px solid #3B4354;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   transition: border-color 0.22s ease, box-shadow 0.22s ease, transform 0.22s ease;
 }
 .dn-card:hover {
-  border-color: rgba(211, 188, 142, 0.32);
-  box-shadow: 0 8px 24px rgba(0,0,0,.30);
+  border-color: var(--color-border-strong);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.30);
 }
 .dn-card-dark {
-  background: rgba(50, 51, 57, 0.95);
-  border: 1px solid #3B4354;
+  background: rgba(31, 31, 41, 0.95);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.30);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.30);
 }
 
 /* Product card — lift on hover */
 .dn-product-card:hover {
   transform: translateY(-3px);
-  border-color: rgba(211, 188, 142, 0.32);
-  box-shadow: 0 12px 32px rgba(0,0,0,.35);
+  border-color: var(--color-border-strong);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
 }
 
 /* ════════════════════════════════════════════════
-   BUTTON SYSTEM (Gaming Premium: sharp, high-contrast)
+   BUTTON SYSTEM (8px radius, shared shape language)
    ════════════════════════════════════════════════ */
 .btn-primary {
   display: inline-flex;
@@ -215,27 +161,27 @@ body {
   padding: 14px 28px;
   border-radius: 8px;
   border: none;
-  background: #00F0FF;
-  color: #0A0B0F;
+  background: var(--color-ember);
+  color: #0B0B10;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 15px;
   font-weight: 600;
   line-height: 1;
   cursor: pointer;
   text-decoration: none;
-  box-shadow: 0 0 20px rgba(0, 240, 255, 0.3);
+  box-shadow: 0 0 20px rgba(232, 120, 61, 0.25);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   white-space: nowrap;
 }
 .btn-primary:hover {
-  background: #33F3FF;
-  box-shadow: 0 0 30px rgba(0, 240, 255, 0.5);
+  background: var(--color-ember-bright);
+  box-shadow: 0 0 30px rgba(232, 120, 61, 0.40);
   transform: translateY(-1px);
 }
 .btn-primary:active { transform: scale(0.98); }
 .btn-primary:disabled {
-  background: #1A1D26;
-  color: #6B7280;
+  background: var(--color-surface-raised);
+  color: var(--color-text-tertiary);
   box-shadow: none;
   cursor: not-allowed;
   transform: none;
@@ -248,9 +194,9 @@ body {
   gap: 8px;
   padding: 14px 28px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--color-border);
   background: rgba(255, 255, 255, 0.05);
-  color: #FFFFFF;
+  color: var(--color-text-primary);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 15px;
   font-weight: 500;
@@ -262,7 +208,7 @@ body {
 }
 .btn-secondary:hover {
   background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.18);
 }
 .btn-secondary:active { transform: scale(0.98); }
 
@@ -275,8 +221,8 @@ body {
   border-radius: 4px;
   border: none;
   background: transparent;
-  color: #CCCCCC;
-  font-family: Helvetica, Arial, system-ui, sans-serif;
+  color: var(--color-text-secondary);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 14px;
   font-weight: 400;
   cursor: pointer;
@@ -285,8 +231,8 @@ body {
   white-space: nowrap;
 }
 .btn-ghost:hover {
-  color: #FFFFFF;
-  background: rgba(255,255,255,0.06);
+  color: var(--color-text-primary);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .btn-gold {
@@ -296,10 +242,10 @@ body {
   gap: 8px;
   padding: 12px 24px;
   border-radius: 4px;
-  border: 1px solid rgba(211,188,142,0.45);
-  background: rgba(211,188,142,0.08);
-  color: #D3BC8E;
-  font-family: Helvetica, Arial, system-ui, sans-serif;
+  border: 1px solid rgba(232, 120, 61, 0.45);
+  background: rgba(232, 120, 61, 0.08);
+  color: var(--color-ember-bright);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 14px;
   font-weight: 400;
   cursor: pointer;
@@ -308,8 +254,8 @@ body {
   white-space: nowrap;
 }
 .btn-gold:hover {
-  background: rgba(211,188,142,0.15);
-  border-color: rgba(211,188,142,0.7);
+  background: rgba(232, 120, 61, 0.15);
+  border-color: rgba(232, 120, 61, 0.7);
 }
 .btn-gold:active { transform: scale(0.98); }
 
@@ -319,60 +265,60 @@ body {
 .btn-full { width: 100%; }
 
 /* ════════════════════════════════════════════════
-   FORM INPUTS (DN Spec: Arial, 4px radius)
+   FORM INPUTS (8px radius to match buttons)
    ════════════════════════════════════════════════ */
 .dn-input {
   width: 100%;
-  height: 40px;
+  height: 44px;
   padding: 0 16px;
-  border-radius: 4px;
-  border: 1px solid #3B4354;
-  background: rgba(255,255,255,0.03);
-  font-family: Arial, system-ui, sans-serif;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.03);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 14px;
   font-weight: 400;
-  color: #FFFFFF;
+  color: var(--color-text-primary);
   outline: none;
   transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
-.dn-input::placeholder { color: #999999; }
+.dn-input::placeholder { color: var(--color-text-tertiary); }
 .dn-input:focus {
-  border-color: #7C3AED;
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.14);
+  border-color: var(--color-arcane);
+  box-shadow: 0 0 0 3px rgba(123, 110, 246, 0.16);
 }
 .dn-input:disabled {
-  background: rgba(255,255,255,0.02);
-  color: #999999;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--color-text-tertiary);
   cursor: not-allowed;
 }
 
 .dn-textarea {
   width: 100%;
   padding: 12px 16px;
-  border-radius: 4px;
-  border: 1px solid #3B4354;
-  background: rgba(255,255,255,0.03);
-  font-family: Arial, system-ui, sans-serif;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.03);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 14px;
   font-weight: 400;
-  color: #FFFFFF;
+  color: var(--color-text-primary);
   outline: none;
   resize: vertical;
   transition: border-color 0.18s ease, box-shadow 0.18s ease;
   line-height: 1.5;
 }
-.dn-textarea::placeholder { color: #999999; }
+.dn-textarea::placeholder { color: var(--color-text-tertiary); }
 .dn-textarea:focus {
-  border-color: #7C3AED;
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.14);
+  border-color: var(--color-arcane);
+  box-shadow: 0 0 0 3px rgba(123, 110, 246, 0.16);
 }
 
 .dn-label-text {
   display: block;
-  font-family: Helvetica, Arial, system-ui, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 14px;
   font-weight: 400;
-  color: #CCCCCC;
+  color: var(--color-text-secondary);
   margin-bottom: 8px;
 }
 
@@ -380,21 +326,21 @@ body {
    NAV SYSTEM
    ════════════════════════════════════════════════ */
 .nav-glass {
-  background: rgba(30, 31, 38, 0.92);
+  background: rgba(11, 11, 16, 0.82);
   backdrop-filter: blur(24px) saturate(150%);
   -webkit-backdrop-filter: blur(24px) saturate(150%);
-  border-bottom: 1px solid rgba(211, 188, 142, 0.10);
+  border-bottom: 1px solid var(--color-border);
 }
 
 /* ════════════════════════════════════════════════
-   BADGE SYSTEM
+   BADGE SYSTEM (legacy; ProductCard uses BADGE_CONFIG)
    ════════════════════════════════════════════════ */
 .dn-badge {
   display: inline-flex;
   align-items: center;
   padding: 3px 8px;
   border-radius: 4px;
-  font-family: Helvetica, Arial, system-ui, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 10px;
   font-weight: 400;
   letter-spacing: 0.04em;
@@ -404,62 +350,61 @@ body {
 .dn-badge-hot    { background: #FF5E41; color: #FFFFFF; }
 .dn-badge-new    { background: #34D399; color: #FFFFFF; }
 .dn-badge-limited{ background: #DB9A45; color: #FFFFFF; }
-.dn-badge-best   { background: #7C3AED; color: #FFFFFF; }
+.dn-badge-best   { background: #7B6EF6; color: #FFFFFF; }
 .dn-badge-sold   { background: #3B4354; color: #999999; }
 .dn-badge-gold   {
-  background: rgba(211,188,142,0.12);
-  border: 1px solid rgba(211,188,142,0.35);
-  color: #D3BC8E;
+  background: rgba(232, 120, 61, 0.12);
+  border: 1px solid rgba(232, 120, 61, 0.35);
+  color: var(--color-ember-bright);
 }
 
 /* ════════════════════════════════════════════════
-   ORNAMENT / DIVIDER SYSTEM
+   ORNAMENT / DIVIDER — signature Ember→Arcane gradient
    ════════════════════════════════════════════════ */
 .dn-divider {
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(211,188,142,0.25) 30%, rgba(211,188,142,0.25) 70%, transparent);
+  background: linear-gradient(90deg, transparent, rgba(232, 120, 61, 0.25) 30%, rgba(123, 110, 246, 0.25) 70%, transparent);
 }
 .dn-divider-subtle {
   height: 1px;
-  background: rgba(255,255,255,0.07);
+  background: var(--color-border);
 }
 .dn-ornament-line {
   display: block;
   height: 1px;
-  background: linear-gradient(90deg, rgba(211,188,142,0.8), rgba(211,188,142,0.1));
+  background: linear-gradient(90deg, var(--color-ember), var(--color-arcane));
   flex-shrink: 0;
 }
 
 /* ════════════════════════════════════════════════
-   GRADIENT BACKGROUNDS
+   GRADIENT BACKGROUNDS — Ember & Arcane
    ════════════════════════════════════════════════ */
 .dn-hero-glow {
   background:
-    radial-gradient(ellipse 75% 55% at 50% -8%, rgba(124,58,237,0.18) 0%, transparent 62%),
-    radial-gradient(ellipse 40% 45% at 88% 50%, rgba(85,106,208,0.08) 0%, transparent 55%),
-    radial-gradient(ellipse 25% 30% at 8% 80%,  rgba(211,188,142,0.04) 0%, transparent 50%);
+    radial-gradient(ellipse 75% 55% at 50% -8%, rgba(123, 110, 246, 0.18) 0%, transparent 62%),
+    radial-gradient(ellipse 40% 45% at 88% 50%, rgba(232, 120, 61, 0.10) 0%, transparent 55%),
+    radial-gradient(ellipse 25% 30% at 8% 80%, rgba(232, 120, 61, 0.05) 0%, transparent 50%);
 }
-.dn-section-alt { background: #222329; }
+.dn-section-alt { background: var(--color-surface); }
 .dn-cta-glow {
   background:
-    radial-gradient(ellipse 65% 70% at 40% 50%, rgba(124,58,237,0.14) 0%, transparent 65%),
-    radial-gradient(ellipse 35% 50% at 80% 25%, rgba(211,188,142,0.06) 0%, transparent 55%);
+    radial-gradient(ellipse 65% 70% at 40% 50%, rgba(123, 110, 246, 0.14) 0%, transparent 65%),
+    radial-gradient(ellipse 35% 50% at 80% 25%, rgba(232, 120, 61, 0.08) 0%, transparent 55%);
 }
 
-/* Genshin Impact Inspired Gradient Backgrounds */
 .gradient-mystical {
-  background: 
-    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(85,106,208,0.20) 0%, transparent 65%),
-    radial-gradient(ellipse 50% 50% at 100% 100%, rgba(211,188,142,0.12) 0%, transparent 60%),
-    radial-gradient(ellipse 40% 50% at 0% 50%, rgba(41,212,255,0.08) 0%, transparent 55%);
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(123, 110, 246, 0.20) 0%, transparent 65%),
+    radial-gradient(ellipse 50% 50% at 100% 100%, rgba(232, 120, 61, 0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 50% at 0% 50%, rgba(232, 120, 61, 0.08) 0%, transparent 55%);
 }
 
 .gradient-hero-enhanced {
-  background: 
-    linear-gradient(180deg, rgba(50, 51, 57, 0) 0%, rgba(50, 51, 57, 1) 100%),
-    radial-gradient(circle at 50% 0%, rgba(85,106,208,0.25) 0%, transparent 50%),
-    radial-gradient(circle at 0% 100%, rgba(211,188,142,0.15) 0%, transparent 50%),
-    radial-gradient(circle at 100% 100%, rgba(41,212,255,0.12) 0%, transparent 50%);
+  background:
+    linear-gradient(180deg, rgba(11, 11, 16, 0) 0%, rgba(11, 11, 16, 1) 100%),
+    radial-gradient(circle at 50% 0%, rgba(123, 110, 246, 0.22) 0%, transparent 50%),
+    radial-gradient(circle at 0% 100%, rgba(232, 120, 61, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 100% 100%, rgba(123, 110, 246, 0.12) 0%, transparent 50%);
 }
 
 /* ════════════════════════════════════════════════
@@ -478,15 +423,15 @@ body {
 }
 
 /* ════════════════════════════════════════════════
-   STATUS COLORS
+   STATUS COLORS (reskin; unified mapping in src/lib/status-colors.ts)
    ════════════════════════════════════════════════ */
 .status-pending        { color: #DB9A45; }
-.status-waiting        { color: #556AD0; }
+.status-waiting        { color: #7B6EF6; }
 .status-paid           { color: #34D399; }
-.status-processing     { color: #7C3AED; }
+.status-processing     { color: #7B6EF6; }
 .status-completed      { color: #34D399; }
 .status-cancelled      { color: #FF5E41; }
-.status-refunded       { color: #999999; }
+.status-refunded       { color: var(--color-text-tertiary); }
 
 /* ════════════════════════════════════════════════
    ANIMATIONS
@@ -534,11 +479,11 @@ body {
 .ticker-wrap:hover .animate-ticker { animation-play-state: paused; }
 
 /* ════════════════════════════════════════════════
-   LAYOUT UTILITIES
+   LAYOUT UTILITIES (standardized to 1280px / max-w-7xl)
    ════════════════════════════════════════════════ */
 .dn-container {
   width: 100%;
-  max-width: 1440px;
+  max-width: 1280px;
   margin-left: auto;
   margin-right: auto;
   padding-left: 24px;
@@ -552,38 +497,38 @@ body {
 }
 
 /* ════════════════════════════════════════════════
-   FOCUS / ACCESSIBILITY
+   FOCUS / ACCESSIBILITY (Arcane focus ring)
    ════════════════════════════════════════════════ */
 *:focus-visible {
-  outline: 2px solid rgba(124, 58, 237, 0.65);
+  outline: 2px solid rgba(123, 110, 246, 0.65);
   outline-offset: 2px;
 }
 
 /* ════════════════════════════════════════════════
    STEP INDICATOR (checkout)
    ════════════════════════════════════════════════ */
-.step-dot-active   { background: #7C3AED; color: #FFFFFF; box-shadow: 0 0 0 3px rgba(124,58,237,0.22); }
+.step-dot-active   { background: var(--color-arcane); color: #FFFFFF; box-shadow: 0 0 0 3px rgba(123, 110, 246, 0.22); }
 .step-dot-done     { background: #34D399; color: #FFFFFF; }
-.step-dot-inactive { background: #282930; color: #999999; border: 1px solid #3B4354; }
+.step-dot-inactive { background: var(--color-surface-raised); color: var(--color-text-tertiary); border: 1px solid var(--color-border); }
 
 /* ════════════════════════════════════════════════
    PAYMENT METHOD CARD
    ════════════════════════════════════════════════ */
 .payment-card {
-  border: 1px solid #3B4354;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
-  background: #282930;
+  background: var(--color-surface);
   cursor: pointer;
   transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
 }
 .payment-card:hover {
-  border-color: rgba(211,188,142,0.35);
-  background: #2D2E38;
+  border-color: rgba(232, 120, 61, 0.35);
+  background: var(--color-surface-raised);
 }
 .payment-card.selected {
-  border-color: #7C3AED;
-  background: rgba(124,58,237,0.10);
-  box-shadow: 0 0 0 1px rgba(124,58,237,0.25);
+  border-color: var(--color-arcane);
+  background: rgba(123, 110, 246, 0.10);
+  box-shadow: 0 0 0 1px rgba(123, 110, 246, 0.25);
 }
 
 /* ════════════════════════════════════════════════
@@ -591,11 +536,11 @@ body {
    ════════════════════════════════════════════════ */
 .dn-scroll {
   scrollbar-width: thin;
-  scrollbar-color: #3B4354 transparent;
+  scrollbar-color: var(--color-surface-raised) transparent;
 }
 .dn-scroll::-webkit-scrollbar { width: 4px; }
 .dn-scroll::-webkit-scrollbar-track { background: transparent; }
-.dn-scroll::-webkit-scrollbar-thumb { background: #3B4354; border-radius: 4px; }
+.dn-scroll::-webkit-scrollbar-thumb { background: var(--color-surface-raised); border-radius: 4px; }
 
 /* ════════════════════════════════════════════════
    MOBILE SAFE AREA

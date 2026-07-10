@@ -1,7 +1,7 @@
 "use client";
 
 import type { CartItem } from "@/types";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -32,7 +32,7 @@ const paymentMethods = [
     id: a.method,
     name: a.label,
     icon: a.icon,
-    desc: `Transfer ke ${a.accountName}`,
+    desc: `Transfer to ${a.accountName}`,
   })),
 ];
 
@@ -42,6 +42,8 @@ export default function CheckoutPage() {
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [discordError, setDiscordError] = useState<string | null>(null);
+  const discordRef = useRef<HTMLInputElement>(null);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
@@ -105,17 +107,33 @@ export default function CheckoutPage() {
     }
   };
 
+  const handleContinue = () => {
+    if (step === 3) {
+      handleComplete();
+      return;
+    }
+    if (step === 1 && !formData.discord.trim()) {
+      setDiscordError(
+        "Discord ID is required so we can notify you when your order ships."
+      );
+      discordRef.current?.focus();
+      return;
+    }
+    setDiscordError(null);
+    setStep(step + 1);
+  };
+
   if (items.length === 0 && step !== 4) {
     return (
       <main className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-surface/60 border border-white/5 mb-6 mx-auto">
-            <Package className="h-10 w-10 text-text-muted/40" />
+          <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-surface/60 border border-border mb-6 mx-auto">
+            <Package className="h-10 w-10 text-text-secondary/40" />
           </div>
           <h1 className="text-2xl font-bold text-text mb-4">Your cart is empty</h1>
           <Link
             href="/products"
-            className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/20 hover:bg-primary-light transition-all duration-300"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/20 hover:bg-ember-bright transition-all duration-300"
           >
             Browse Products
           </Link>
@@ -129,7 +147,7 @@ export default function CheckoutPage() {
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <Link
           href="/products"
-          className="inline-flex items-center gap-2 text-sm text-text-muted hover:text-text mb-8 transition-colors group"
+          className="inline-flex items-center gap-2 text-sm text-text-secondary hover:text-text mb-8 transition-colors group"
         >
           <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform duration-300" />
           Continue Shopping
@@ -148,8 +166,8 @@ export default function CheckoutPage() {
                     step > s.id
                       ? "bg-success text-white shadow-lg shadow-success/20"
                       : step === s.id
-                        ? "bg-primary text-white shadow-lg shadow-primary/20 glow-primary"
-                        : "bg-surface/60 text-text-muted border border-white/5"
+                        ? "bg-primary text-white shadow-lg shadow-primary/20 shadow-ember/30"
+                        : "bg-surface/60 text-text-secondary border border-border"
                   )}
                 >
                   {step > s.id ? <Check className="h-5 w-5" /> : s.id}
@@ -157,7 +175,7 @@ export default function CheckoutPage() {
                 <span
                   className={cn(
                     "text-sm font-medium hidden sm:inline transition-colors duration-300",
-                    step >= s.id ? "text-text" : "text-text-muted/50"
+                    step >= s.id ? "text-text" : "text-text-secondary/50"
                   )}
                 >
                   {s.name}
@@ -167,7 +185,7 @@ export default function CheckoutPage() {
                 <div
                   className={cn(
                     "hidden sm:block h-0.5 flex-1 mx-4 rounded-full transition-all duration-500",
-                    step > s.id ? "bg-success" : "bg-surface-light/50"
+                    step > s.id ? "bg-success" : "bg-surface-raised/50"
                   )}
                 />
               )}
@@ -176,7 +194,7 @@ export default function CheckoutPage() {
         </div>
 
         {/* Step Content */}
-        <div className="card-premium p-6 sm:p-8 lg:p-10">
+        <div className="rounded-lg border border-border bg-surface p-6 sm:p-8 lg:p-10">
           <AnimatePresence mode="wait">
             {step === 1 && (
               <motion.div
@@ -196,7 +214,7 @@ export default function CheckoutPage() {
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="input-premium"
+                      className="rounded-lg border border-border bg-surface"
                       placeholder="Your name"
                     />
                   </div>
@@ -204,13 +222,29 @@ export default function CheckoutPage() {
                     <label htmlFor="discord" className="block text-sm font-medium text-text mb-2">Discord User ID *</label>
                     <input
                       id="discord"
+                      ref={discordRef}
                       type="text"
                       value={formData.discord}
-                      onChange={(e) => setFormData({ ...formData, discord: e.target.value })}
-                      className="input-premium"
-                      placeholder="cth: 123456789012345678"
+                      onChange={(e) => {
+                        setFormData({ ...formData, discord: e.target.value });
+                        if (discordError) setDiscordError(null);
+                      }}
+                      onBlur={() => {
+                        if (!formData.discord.trim()) {
+                          setDiscordError(
+                            "Discord ID is required so we can notify you when your order ships."
+                          );
+                        }
+                      }}
+                      aria-invalid={discordError ? true : undefined}
+                      aria-describedby={discordError ? "discord-error" : undefined}
+                      className={cn("rounded-lg border bg-surface", discordError ? "border-error" : "border-border")}
+                      placeholder="e.g. 123456789012345678"
                     />
-                    <p className="text-xs text-text-muted/60 mt-1">User ID numerik 17-19 digit. Cara dapatkan: Settings → Advanced → Developer Mode → klik kanan profil → Copy ID. Wajib untuk notifikasi pembayaran.</p>
+                    <p className="text-xs text-text-secondary/60 mt-1">Numeric User ID, 17-19 digits. Get it via Settings → Advanced → Developer Mode → right-click your profile → Copy ID. Required for payment notifications.</p>
+                    {discordError && (
+                      <p id="discord-error" className="text-xs text-error mt-1">{discordError}</p>
+                    )}
                   </div>
                   <div>
                     <label htmlFor="ign" className="block text-sm font-medium text-text mb-2">In-Game Name (IGN)</label>
@@ -219,7 +253,7 @@ export default function CheckoutPage() {
                       type="text"
                       value={formData.ign}
                       onChange={(e) => setFormData({ ...formData, ign: e.target.value })}
-                      className="input-premium"
+                      className="rounded-lg border border-border bg-surface"
                       placeholder="Your in-game name"
                     />
                   </div>
@@ -230,7 +264,7 @@ export default function CheckoutPage() {
                       value={formData.notes}
                       onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                       rows={3}
-                      className="input-premium resize-none"
+                      className="rounded-lg border border-border bg-surface resize-none"
                       placeholder="Any special requests or instructions..."
                     />
                   </div>
@@ -252,25 +286,35 @@ export default function CheckoutPage() {
                   {items.map((item: CartItem) => (
                     <div
                       key={item.id}
-                      className="flex items-center gap-4 p-4 rounded-2xl bg-surface/40 border border-white/5"
+                      className="flex items-center gap-4 p-4 rounded-lg bg-surface/40 border border-border"
                     >
-                      <div className="relative h-16 w-16 flex-shrink-0 rounded-xl overflow-hidden bg-surface/60">
-                        <Image src={item.image} alt={item.name} fill className="object-cover" sizes="64px" />
+                      <div className="relative h-16 w-16 flex-shrink-0 rounded-lg overflow-hidden bg-surface/60">
+                        <Image
+                          src={item.image}
+                          alt={item.name}
+                          fill
+                          className="object-cover"
+                          sizes="64px"
+                          onError={(e) => {
+                            const target = e.currentTarget as HTMLImageElement;
+                            target.src = "https://placehold.co/400x400/222329/D3BC8E?text=LEIZ";
+                          }}
+                        />
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="text-sm font-medium truncate">{item.name}</h3>
-                        <p className="text-xs text-text-muted mt-0.5">Qty: {item.quantity}</p>
+                        <p className="text-xs text-text-secondary mt-0.5">Qty: {item.quantity}</p>
                       </div>
                       <p className="text-sm font-semibold text-primary">{formatPrice(item.price * item.quantity)}</p>
                     </div>
                   ))}
                 </div>
-                <div className="space-y-2 pt-4 border-t border-white/5">
-                  <div className="flex justify-between text-sm text-text-muted">
+                <div className="space-y-2 pt-4 border-t border-border">
+                  <div className="flex justify-between text-sm text-text-secondary">
                     <span>Subtotal</span>
                     <span>{formatPrice(getSubtotal())}</span>
                   </div>
-                  <div className="flex justify-between text-lg font-bold pt-2 border-t border-white/5">
+                  <div className="flex justify-between text-lg font-bold pt-2 border-t border-border">
                     <span>Total</span>
                     <span className="text-primary">{formatPrice(getTotal())}</span>
                   </div>
@@ -287,7 +331,7 @@ export default function CheckoutPage() {
                 transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
                 className="space-y-6"
               >
-                <h2 className="text-xl font-semibold text-text">Metode Pembayaran</h2>
+                <h2 className="text-xl font-semibold text-text">Payment Method</h2>
 
                 <div className="space-y-3">
                   {paymentMethods.map((pm) => (
@@ -295,16 +339,16 @@ export default function CheckoutPage() {
                       key={pm.id}
                       onClick={() => setFormData({ ...formData, paymentMethod: pm.id })}
                       className={cn(
-                        "w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all duration-300 text-left",
+                        "w-full flex items-center gap-4 p-4 rounded-lg border-2 transition-all duration-300 text-left",
                         formData.paymentMethod === pm.id
                           ? "border-primary/40 bg-primary/5 shadow-lg shadow-primary/5"
-                          : "border-white/5 bg-surface/40 hover:border-white/10"
+                          : "border-border bg-surface/40 hover:border-border"
                       )}
                     >
-                      <span className="text-3xl">{pm.icon}</span>
+                      <pm.icon className="h-8 w-8 text-primary" />
                       <div className="flex-1">
                         <p className="font-semibold text-text">{pm.name}</p>
-                        <p className="text-xs text-text-muted/60 mt-0.5">{pm.desc}</p>
+                        <p className="text-xs text-text-secondary/60 mt-0.5">{pm.desc}</p>
                       </div>
                       {formData.paymentMethod === pm.id && (
                         <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary">
@@ -337,19 +381,32 @@ export default function CheckoutPage() {
                   <h2 className="text-2xl font-bold text-text">Order Confirmed!</h2>
 
                   {orderNumber && (
-                    <div className="inline-flex items-center gap-2 rounded-xl bg-surface/60 border border-white/5 px-6 py-3">
-                      <span className="text-sm text-text-muted">Order Number:</span>
+                    <div className="inline-flex items-center gap-2 rounded-lg bg-surface/60 border border-border px-6 py-3">
+                      <span className="text-sm text-text-secondary">Order Number:</span>
                       <span className="font-mono font-bold text-primary">{orderNumber}</span>
                     </div>
                   )}
                 </div>
 
-
+                <div className="space-y-2 rounded-lg bg-surface/40 border border-border p-4">
+                  <div className="flex justify-between text-sm text-text-secondary">
+                    <span>Subtotal</span>
+                    <span>{formatPrice(getSubtotal())}</span>
+                  </div>
+                  <div className="flex justify-between text-sm text-text-secondary">
+                    <span>Tax (11%)</span>
+                    <span>{formatPrice(cartStore.getTax())}</span>
+                  </div>
+                  <div className="flex justify-between text-lg font-bold pt-2 border-t border-border">
+                    <span>Total</span>
+                    <span className="text-primary">{formatPrice(getTotal())}</span>
+                  </div>
+                </div>
 
                 <div className="flex justify-center pt-4">
                   <Link
                     href="/products"
-                    className="rounded-full bg-primary px-8 py-3.5 text-sm font-semibold text-white shadow-lg shadow-primary/20 hover:bg-primary-light transition-all duration-300"
+                    className="rounded-lg bg-primary px-8 py-3.5 text-sm font-semibold text-white shadow-lg shadow-primary/20 hover:bg-ember-bright transition-all duration-300"
                   >
                     Continue Shopping
                   </Link>
@@ -360,18 +417,18 @@ export default function CheckoutPage() {
 
           {/* Error Message */}
           {error && (
-            <div className="mt-6 p-4 rounded-2xl bg-error/10 border border-error/20 text-sm text-error">
+            <div className="mt-6 p-4 rounded-lg bg-error/10 border border-error/20 text-sm text-error">
               {error}
             </div>
           )}
 
           {/* Navigation */}
           {step < 4 && (
-            <div className="flex justify-between mt-10 pt-6 border-t border-white/5">
+            <div className="flex justify-between mt-10 pt-6 border-t border-border">
               {step > 1 ? (
-                <button
-                  onClick={() => { setError(null); setStep(step - 1); }}
-                  className="flex items-center gap-2 rounded-full border border-white/10 px-6 py-3 text-sm font-medium text-text-muted hover:text-text hover:bg-surface/40 transition-all duration-300"
+               <button
+                   onClick={() => { setError(null); setDiscordError(null); setStep(step - 1); }}
+                  className="flex items-center gap-2 rounded-lg border border-border px-6 py-3 text-sm font-medium text-text-secondary hover:text-text hover:bg-surface/40 transition-all duration-300"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Back
@@ -380,16 +437,16 @@ export default function CheckoutPage() {
                 <div />
               )}
               <button
-                onClick={() => (step === 3 ? handleComplete() : setStep(step + 1))}
+                onClick={handleContinue}
                 disabled={
-                  (step === 1 && (!formData.name || !formData.discord)) ||
+                  (step === 1 && !formData.name) ||
                   (step === 3 && isSubmitting)
                 }
                 className={cn(
-                  "flex items-center gap-2 rounded-full px-8 py-3.5 text-sm font-semibold transition-all duration-300 active:scale-[0.97]",
+                  "flex items-center gap-2 rounded-lg px-8 py-3.5 text-sm font-semibold transition-all duration-300 active:scale-[0.97]",
                   step === 3
                     ? "bg-success text-white shadow-lg shadow-success/20 hover:bg-success/90"
-                    : "bg-primary text-white shadow-lg shadow-primary/20 hover:bg-primary-light",
+                    : "bg-primary text-white shadow-lg shadow-primary/20 hover:bg-ember-bright",
                   ((step === 1 && !formData.name) || (step === 3 && isSubmitting)) && "opacity-50 cursor-not-allowed"
                 )}
               >
@@ -400,7 +457,7 @@ export default function CheckoutPage() {
                   </>
                 ) : (
                   <>
-                    {step === 3 ? "Buat Order & Bayar" : "Continue"}
+                    {step === 3 ? "Place Order & Pay" : "Continue"}
                     <ArrowRight className="h-4 w-4" />
                   </>
                 )}

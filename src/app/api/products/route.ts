@@ -5,7 +5,10 @@ import { productService } from "@/lib/services";
 import { parsePagination, corsHeaders, handleCors } from "@/lib/middleware";
 import type { Currency } from "@/lib/currency";
 
-export const GET = withErrorHandling(async (req: NextRequest) => {
+export const GET = withErrorHandling(async (
+  req: NextRequest,
+  _context: { params: Promise<Record<string, string>> }
+) => {
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
 

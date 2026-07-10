@@ -41,18 +41,18 @@ export default function ProductFilters({
       {/* Search & Filter Toggle */}
       <div className="flex gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary" />
           <input
             type="text"
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search products..."
-            className="w-full rounded-xl border border-border bg-surface pl-11 pr-4 py-3 text-sm text-text placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all"
+            className="w-full rounded-xl border border-border bg-surface pl-11 pr-4 py-3 text-sm text-text placeholder:text-text-secondary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all"
           />
           {search && (
             <button
               onClick={() => onSearchChange("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text"
             >
               <X className="h-4 w-4" />
             </button>
@@ -64,7 +64,7 @@ export default function ProductFilters({
             "flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-all",
             showFilters
               ? "border-primary bg-primary/10 text-primary"
-              : "border-border bg-surface text-text-muted hover:text-text hover:border-border"
+              : "border-border bg-surface text-text-secondary hover:text-text hover:border-border"
           )}
         >
           <SlidersHorizontal className="h-4 w-4" />
@@ -77,7 +77,7 @@ export default function ProductFilters({
         <div className="rounded-xl border border-border bg-surface p-4 space-y-4 animate-slide-up">
           {/* Categories */}
           <div>
-            <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">
+            <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-3">
               Categories
             </h3>
             <div className="flex flex-wrap gap-2">
@@ -89,7 +89,7 @@ export default function ProductFilters({
                     "px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
                     category === cat.slug
                       ? "bg-primary text-white"
-                      : "bg-surface-light text-text-muted hover:text-text"
+                      : "bg-surface-raised text-text-secondary hover:text-text"
                   )}
                 >
                   {cat.name}
@@ -100,7 +100,7 @@ export default function ProductFilters({
 
           {/* Sort */}
           <div>
-            <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">
+            <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-3">
               Sort By
             </h3>
             <div className="flex flex-wrap gap-2">
@@ -112,7 +112,7 @@ export default function ProductFilters({
                     "px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
                     sort === opt.value
                       ? "bg-primary text-white"
-                      : "bg-surface-light text-text-muted hover:text-text"
+                      : "bg-surface-raised text-text-secondary hover:text-text"
                   )}
                 >
                   {opt.label}

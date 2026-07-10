@@ -8,12 +8,15 @@
 /** Default payment expiry in milliseconds (24 hours) */
 export const PAYMENT_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
+import type { LucideIcon } from "lucide-react";
+import { Landmark, Smartphone, Wallet } from "lucide-react";
+
 // ─── Manual Payment Accounts ────────────────────────────────
 
 export interface PaymentAccount {
   method: string;
   label: string;
-  icon: string;
+  icon: LucideIcon;
   accountName: string;
   accountNumber: string;
   bankName?: string;
@@ -23,7 +26,7 @@ export const PAYMENT_ACCOUNTS: PaymentAccount[] = [
   {
     method: "bank_transfer",
     label: "Bank Transfer (Jago)",
-    icon: "🏦",
+    icon: Landmark,
     accountName: "Ridho Kurniawan",
     accountNumber: "103343988197",
     bankName: "Jago",
@@ -31,14 +34,14 @@ export const PAYMENT_ACCOUNTS: PaymentAccount[] = [
   {
     method: "gopay",
     label: "GoPay",
-    icon: "💚",
+    icon: Wallet,
     accountName: "Ridho Kurniawan",
     accountNumber: "085942180995",
   },
   {
     method: "dana",
     label: "DANA",
-    icon: "💙",
+    icon: Smartphone,
     accountName: "Ridho Kurniawan",
     accountNumber: "085942180995",
   },
