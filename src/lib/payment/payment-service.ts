@@ -8,6 +8,8 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { isValidTransition } from "@/lib/payment/constants";
 import { logOrderStatusChange, type ActorType } from "@/lib/payment/order-logger";
 import { OrderStatus } from "@/lib/prisma-types";
+import crypto from "crypto";
+import { verifyPaymentToken } from "@/lib/payment/confirmation-token";
 
 // ─── Helper: fetch order by ID ──────────────────────────────
 
@@ -82,15 +84,27 @@ async function updateOrderStatus(
 
 // ─── Buyer: Confirm Transfer ────────────────────────────────
 
+/** Check the order-scoped token before accepting an uploaded proof file. */
+export async function validateTransferToken(orderId: string, confirmationToken: string): Promise<boolean> {
+  const order = await getOrder(orderId);
+  return Boolean(order && verifyPaymentToken(confirmationToken, order.payment_confirmation_token_hash));
+}
+
 export async function confirmTransfer(
   orderId: string,
   buyerName: string,
-  buyerDiscordId?: string,
-  note?: string
+  buyerDiscordId: string | undefined,
+  note: string | undefined,
+  confirmationToken: string,
+  paymentProofPath?: string
 ): Promise<{ success: boolean; error?: string; order?: any }> {
   const order = await getOrder(orderId);
   if (!order) {
     return { success: false, error: "Order not found" };
+  }
+
+  if (!verifyPaymentToken(confirmationToken, order.payment_confirmation_token_hash)) {
+    return { success: false, error: "Invalid payment confirmation token" };
   }
 
   // Check status
@@ -125,6 +139,7 @@ export async function confirmTransfer(
   const { error: confirmError } = await supabaseAdmin
     .from("payment_confirmation")
     .insert({
+      id: crypto.randomUUID().replace(/-/g, "").slice(0, 25),
       order_id: orderId,
       buyer_name: buyerName,
       buyer_discord_id: buyerDiscordId || null,
@@ -151,8 +166,18 @@ export async function confirmTransfer(
     "BUYER",
     buyerDiscordId || buyerName,
     "CONFIRM_TRANSFER",
-    { confirmed_at: new Date().toISOString() }
+    {
+      confirmed_at: new Date().toISOString(),
+      ...(paymentProofPath ? { payment_proof: paymentProofPath } : {}),
+    }
   );
+
+  if (!result.success) {
+    // The confirmation insert and order transition are not one database RPC in
+    // legacy deployments. Roll back the record when the conditional status
+    // update loses a race, so a buyer can retry safely.
+    await supabaseAdmin.from("payment_confirmation").delete().eq("order_id", orderId);
+  }
 
   return result;
 }

@@ -69,6 +69,7 @@ const CAMEL_TO_SNAKE: Record<string, string> = {
   entityId: "entity_id",
   change: "change_amount",
   buyerDiscordId: "buyer_discord_id",
+  paymentConfirmationTokenHash: "payment_confirmation_token_hash",
   expiryAt: "expiry_at",
   confirmedAt: "confirmed_at",
   cancelledAt: "cancelled_at",

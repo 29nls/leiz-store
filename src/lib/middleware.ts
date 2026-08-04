@@ -118,9 +118,10 @@ export function checkRateLimit(
  */
 export function addRateLimitHeaders(
   response: NextResponse,
-  result: ReturnType<typeof checkRateLimit>
+  result: ReturnType<typeof checkRateLimit>,
+  limit = 100
 ): NextResponse {
-  response.headers.set("X-RateLimit-Limit", "100");
+  response.headers.set("X-RateLimit-Limit", String(limit));
   response.headers.set("X-RateLimit-Remaining", String(result.remaining));
   response.headers.set("X-RateLimit-Reset", String(Math.ceil(result.resetAt / 1000)));
   return response;

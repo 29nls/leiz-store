@@ -4,6 +4,7 @@
  */
 
 import { prisma } from "@/lib/db";
+import { supabaseAdmin } from "@/lib/supabase";
 import type {
   Prisma,
 } from "@/lib/prisma-types";
@@ -212,6 +213,36 @@ export const orderRepository = {
 
   async create(data: Prisma.OrderCreateInput) {
     return prisma.order.create({ data });
+  },
+
+  /**
+   * Creates an order, reserves stock, writes order items, and writes inventory
+   * logs inside the PostgreSQL transaction implemented by the RPC. The REST
+   * adapter's `$transaction` is sequential and must not be used for checkout.
+   */
+  async createAtomic(data: {
+    order: Record<string, unknown>;
+    items: Array<{ product_id: string; quantity: number }>;
+    taxRate: number;
+  }) {
+    const { data: created, error } = await supabaseAdmin.rpc("create_order_atomic", {
+      p_order: data.order,
+      p_items: data.items,
+      p_tax_rate: data.taxRate,
+    });
+
+    if (error) throw new Error(error.message);
+    if (!created || typeof created !== "object") {
+      throw new Error("Atomic order RPC returned no order");
+    }
+
+    const orderId = String((created as Record<string, unknown>).id || data.order.id);
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { items: true },
+    });
+    if (!order) throw new Error("Atomic order was created but could not be reloaded");
+    return order;
   },
 
   async update(id: string, data: Prisma.OrderUpdateInput) {

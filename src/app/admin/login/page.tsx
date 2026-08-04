@@ -63,32 +63,14 @@ export default function AdminLoginPage() {
         return;
       }
 
-      // Step 2: Verify admin role via direct Supabase query (no API route needed)
-      const { data: userData, error: userError } = await supabase
-        .from("user")
-        .select("role, name")
-        .eq("email", trimmedEmail)
-        .single();
-
-      if (userError || !userData) {
-        // If user record not found in public.user table, sign out and show error
-        await supabase.auth.signOut();
-        setError("Akun tidak ditemukan di sistem. Hubungi administrator.");
-        return;
-      }
-
-      if (userData.role !== "ADMIN") {
+      // Server routes validate the same Supabase session and role. Do not make
+      // a second password-auth request or create a second independent session.
+      const verifyResponse = await fetch("/api/admin/verify");
+      if (!verifyResponse.ok) {
         await supabase.auth.signOut();
         setError("Akses ditolak. Hanya admin yang dapat masuk.");
         return;
       }
-
-      // Step 3: Also set JWT cookie for server-side API routes (non-blocking)
-      fetch("/api/admin/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: trimmedEmail, password }),
-      }).catch(() => { /* Non-critical: cookie sync failure is acceptable */ });
 
       router.replace("/admin");
     } catch (err: any) {

@@ -17,7 +17,10 @@ export interface Invoice {
   order_id: string;
   invoice_no: string;
   status: InvoiceStatus;
+  /** Legacy signed URL; do not use as a permanent storage reference. */
   pdf_url?: string | null;
+  /** Permanent private-storage path used to create fresh signed URLs. */
+  pdf_path?: string | null;
   error_log?: Record<string, unknown> | null;
   store_id?: string | null;
   created_at: string;

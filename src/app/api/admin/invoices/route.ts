@@ -1,22 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyJWT } from "@/lib/auth";
+import { isAdminRequest } from "@/lib/admin-auth";
 import { listInvoices, resendInvoice, getInvoiceByOrder } from "@/lib/invoice";
 import { successResponse, errorResponse } from "@/lib/errors";
 
-function checkAuth(req: NextRequest): { authorized: boolean; error?: NextResponse } {
-  const token = req.cookies.get("admin_token")?.value;
-  if (!token) {
-    return { authorized: false, error: NextResponse.json(errorResponse(new (require("@/lib/errors").ValidationError)("Unauthorized")), { status: 401 }) };
-  }
-  const payload = verifyJWT(token);
-  if (!payload || payload.role !== "ADMIN") {
-    return { authorized: false, error: NextResponse.json(errorResponse(new (require("@/lib/errors").ValidationError)("Unauthorized")), { status: 401 }) };
-  }
-  return { authorized: true };
+async function checkAuth(req: NextRequest): Promise<{ authorized: boolean; error?: NextResponse }> {
+  if (await isAdminRequest(req)) return { authorized: true };
+  return {
+    authorized: false,
+    error: NextResponse.json(errorResponse(new (require("@/lib/errors").ValidationError)("Unauthorized")), { status: 401 }),
+  };
 }
 
 export async function GET(req: NextRequest) {
-  const auth = checkAuth(req);
+  const auth = await checkAuth(req);
   if (!auth.authorized) return auth.error!;
 
   const { searchParams } = req.nextUrl;
@@ -45,7 +41,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = checkAuth(req);
+  const auth = await checkAuth(req);
   if (!auth.authorized) return auth.error!;
 
   try {

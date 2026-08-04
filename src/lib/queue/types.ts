@@ -24,10 +24,14 @@ export interface Job {
   completed_at?: string | null;
   created_at: string;
   updated_at: string;
+  dedupe_key?: string | null;
+  lease_expires_at?: string | null;
 }
 
 export interface EnqueueOptions {
   priority?: number;
   maxRetries?: number;
   scheduledAt?: Date;
+  /** Prevent duplicate active jobs for the same logical work item. */
+  dedupeKey?: string;
 }

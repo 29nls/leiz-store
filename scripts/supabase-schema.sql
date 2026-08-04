@@ -134,6 +134,11 @@ CREATE TABLE public.order (
   currency TEXT NOT NULL DEFAULT 'IDR',
   payment_method TEXT,
   payment_proof TEXT,
+  buyer_discord_id TEXT,
+  payment_confirmation_token_hash TEXT,
+  expiry_at TIMESTAMPTZ,
+  confirmed_at TIMESTAMPTZ,
+  cancelled_at TIMESTAMPTZ,
   payment_ref TEXT,
   paid_at TIMESTAMPTZ,
   completed_at TIMESTAMPTZ,
@@ -398,7 +403,9 @@ ALTER TABLE public.currency_rate ENABLE ROW LEVEL SECURITY;
 
 -- ─── RLS Policies ─────────────────────────────────────────────
 CREATE POLICY "Public read" ON public.store FOR SELECT USING (true);
-CREATE POLICY "Public read" ON public.user FOR SELECT USING (true);
+-- User profiles contain private email/password fields; never expose them publicly.
+CREATE POLICY "Users read own profile" ON public.user
+  FOR SELECT USING (auth.email() IS NOT NULL AND lower(email) = lower(auth.email()));
 CREATE POLICY "Public read" ON public.category FOR SELECT USING (true);
 CREATE POLICY "Public read" ON public.product FOR SELECT USING (true);
 CREATE POLICY "Public read" ON public.product_image FOR SELECT USING (true);

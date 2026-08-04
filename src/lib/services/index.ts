@@ -3,6 +3,7 @@
  * Business logic and orchestration of repository calls
  */
 
+import crypto from "crypto";
 import {
   productRepository,
   orderRepository,
@@ -19,6 +20,8 @@ import { convertCurrency, type Currency } from "@/lib/currency";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@/lib/prisma-types";
 import { PAYMENT_EXPIRY_MS } from "@/lib/payment/constants";
+import { calculateOrderTotals, ORDER_TAX_RATE } from "@/lib/order-pricing";
+import { generatePaymentToken, hashPaymentToken } from "@/lib/payment/confirmation-token";
 import { logOrderStatusChange } from "@/lib/payment/order-logger";
 import {
   Role,
@@ -178,16 +181,15 @@ export const orderService = {
       })
     );
 
-    // Calculate totals
-    const subtotal = products.reduce(
+    // Calculate the preview totals for logging/metadata. The atomic RPC repeats
+    // this calculation from locked database prices and is the final authority.
+    const previewSubtotal = products.reduce(
       (sum, p) => sum + Number(p.price) * p.quantity, 0
     );
-    const tax = 0;
-    const total = subtotal + tax;
-
-    const subtotalUSD = convertCurrency(subtotal, "IDR", "USD");
-    const taxUSD = convertCurrency(tax, "IDR", "USD");
-    const totalUSD = convertCurrency(total, "IDR", "USD");
+    const previewTotals = calculateOrderTotals(previewSubtotal);
+    const subtotalUSD = convertCurrency(previewTotals.subtotal, "IDR", "USD");
+    const taxUSD = convertCurrency(previewTotals.tax, "IDR", "USD");
+    const totalUSD = convertCurrency(previewTotals.total, "IDR", "USD");
 
     // Generate order number
     const date = new Date();
@@ -195,94 +197,45 @@ export const orderService = {
     const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
     const orderNumber = `LZ-${datePart}-${randomPart}`;
 
-    // Create order with items in a transaction
+    // The REST adapter cannot provide a real transaction. Delegate checkout to
+    // the PostgreSQL RPC so stock reservation and all order rows commit or roll
+    // back together.
     let order: any;
+    const expiryAt = new Date(Date.now() + PAYMENT_EXPIRY_MS);
+    const paymentConfirmationToken = generatePaymentToken();
     try {
-      order = await prisma.$transaction(async (tx) => {
-        const newOrder = await tx.order.create({
-          data: {
-            orderNumber,
-            status: OrderStatus.PENDING,
-            customerName: data.customerName,
-            customerDiscord: data.customerDiscord,
-            customerIGN: data.customerIGN,
-            customerNotes: data.customerNotes,
-            subtotal,
-            subtotalUSD,
-            tax,
-            taxUSD,
-            total,
-            totalUSD,
-            currency: data.currency || "IDR",
-            paymentMethod: data.paymentMethod as PaymentMethod,
-            userId: data.userId,
-            items: {
-              create: products.map((p) => ({
-                productId: p.id,
-                name: p.name,
-                price: p.price,
-                priceUSD: p.priceUSD || convertCurrency(Number(p.price), "IDR", "USD"),
-                quantity: p.quantity,
-                total: Number(p.price) * p.quantity,
-                totalUSD: convertCurrency(Number(p.price) * p.quantity, "IDR", "USD"),
-              })),
-            },
-          },
-          include: { items: true },
-        });
-
-        // Deduct stock and create inventory logs
-        for (const p of products) {
-          const previousStock = p.stock;
-          const newStock = previousStock - p.quantity;
-
-          await tx.product.update({
-            where: { id: p.id },
-            data: { stock: newStock },
-          });
-
-          await tx.inventoryLog.create({
-            data: {
-              productId: p.id,
-              change: -p.quantity,
-              previousStock,
-              newStock,
-              reason: "ORDER",
-              reference: orderNumber,
-            },
-          });
-
-          // Check for low stock alerts
-          if (newStock <= p.minStock) {
-            await stockAlertRepository.create({
-              productId: p.id,
-              type: newStock === 0 ? StockAlertType.OUT_OF_STOCK : StockAlertType.LOW_STOCK,
-              threshold: p.minStock,
-              currentStock: newStock,
-            });
-          }
-        }
-
-        return newOrder;
+      order = await orderRepository.createAtomic({
+        order: {
+          id: crypto.randomUUID().replace(/-/g, "").slice(0, 25),
+          order_number: orderNumber,
+          status: OrderStatus.PENDING_PAYMENT,
+          customer_name: data.customerName,
+          customer_discord: data.customerDiscord || "",
+          customer_ign: data.customerIGN || "",
+          customer_notes: data.customerNotes || "",
+          currency: data.currency || "IDR",
+          payment_method: data.paymentMethod,
+          user_id: data.userId || "",
+          buyer_discord_id: data.customerDiscord || "",
+          payment_confirmation_token_hash: hashPaymentToken(paymentConfirmationToken),
+          expiry_at: expiryAt.toISOString(),
+          usd_rate: subtotalUSD > 0 ? subtotalUSD / Math.max(1, previewTotals.subtotal) : 0.000063,
+        },
+        items: products.map((p) => ({ product_id: p.id, quantity: p.quantity })),
+        taxRate: ORDER_TAX_RATE,
       });
     } catch (dbError: any) {
-      console.error("[OrderService] Database error during order creation:", dbError);
+      console.error("[OrderService] Atomic order creation failed:", dbError);
       throw new ValidationError(`Gagal membuat order: ${dbError.message || "Database error"}`);
     }
 
-    // Proceed with manual payment flow for all orders
-    const expiryAt = new Date(Date.now() + PAYMENT_EXPIRY_MS);
+    const atomicSubtotal = Number((order as any).subtotal ?? previewTotals.subtotal);
+    const atomicTotals = calculateOrderTotals(atomicSubtotal);
+    const subtotal = atomicTotals.subtotal;
+    const tax = atomicTotals.tax;
+    const total = atomicTotals.total;
 
-    try {
-      await orderRepository.update((order as any).id, {
-        status: OrderStatus.PENDING_PAYMENT,
-        buyerDiscordId: data.customerDiscord || undefined,
-        expiryAt,
-      });
-    } catch (updateError: any) {
-      console.error("[OrderService] Failed to update order status:", updateError);
-      throw new ValidationError(`Gagal mengupdate status order: ${updateError.message || "Update error"}`);
-    }
+    // Proceed with manual payment flow for all orders
     (order as any).status = OrderStatus.PENDING_PAYMENT;
     (order as any).buyerDiscordId = data.customerDiscord;
     (order as any).expiryAt = expiryAt.toISOString();
@@ -314,6 +267,9 @@ export const orderService = {
     return {
       ...order as any,
       manualPayment: true,
+      // The raw token is returned only to the checkout client and is required
+      // for the public payment-confirmation endpoint.
+      paymentConfirmationToken,
     };
   },
 

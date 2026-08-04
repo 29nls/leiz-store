@@ -65,7 +65,7 @@ jest.mock("@/lib/discord/bot", () => ({
 
 jest.mock("@/lib/payment/order-logger", () => ({ logOrderStatusChange: jest.fn().mockResolvedValue(undefined) }));
 jest.mock("@/lib/payment/constants", () => ({ isValidTransition: jest.fn().mockReturnValue(true), PAYMENT_EXPIRY_MS: 86400000, PAYMENT_ACCOUNTS: [], MANUAL_PAYMENT_METHODS: [] }));
-jest.mock("@/lib/supabase", () => ({ supabaseAdmin: { from: jest.fn().mockReturnThis(), select: jest.fn().mockReturnThis(), eq: jest.fn().mockReturnThis(), single: jest.fn().mockReturnThis(), update: jest.fn().mockReturnThis(), insert: jest.fn().mockReturnThis() } }));
+jest.mock("@/lib/supabase", () => ({ supabaseAdmin: { from: jest.fn().mockReturnThis(), select: jest.fn().mockReturnThis(), eq: jest.fn().mockReturnThis(), in: jest.fn().mockReturnThis(), limit: jest.fn().mockReturnThis(), single: jest.fn().mockReturnThis(), update: jest.fn().mockReturnThis(), insert: jest.fn().mockReturnThis() } }));
 
 // ── Imports ─────────────────────────────────────────────────────────────────
 

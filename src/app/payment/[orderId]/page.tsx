@@ -154,13 +154,15 @@ function PaymentAccountCard({ account, amount }: { account: PaymentAccount; amou
 export default function PaymentPage() {
   const params = useParams();
   const orderId = params?.orderId as string;
+  const [confirmationToken, setConfirmationToken] = useState("");
+  const [proofMimeType, setProofMimeType] = useState<string | null>(null);
 
   const [order, setOrder] = useState<OrderData | null>(null);
   const [loading, setLoading] = useState(true);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
-  const [paymentProofBase64, setPaymentProofBase64] = useState<string | null>(null);
+  const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
   const [paymentProofName, setPaymentProofName] = useState<string | null>(null);
   const [realtimeConnected, setRealtimeConnected] = useState(false);
   const [statusChanged, setStatusChanged] = useState(false);
@@ -171,18 +173,21 @@ export default function PaymentPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      setError("Image must be at most 5MB");
+    if (file.size <= 0 || file.size > 5 * 1024 * 1024) {
+      setError("Image must be between 1 byte and 5MB");
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setPaymentProofBase64(event.target?.result as string);
-      setPaymentProofName(file.name);
-      setError(null);
-    };
-    reader.readAsDataURL(file);
+    const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/avif"]);
+    if (!allowedTypes.has(file.type)) {
+      setError("Please upload a JPEG, PNG, WebP, or AVIF image");
+      return;
+    }
+
+    setPaymentProofFile(file);
+    setPaymentProofName(file.name);
+    setProofMimeType(file.type);
+    setError(null);
   };
 
   const loadOrder = useCallback(async () => {
@@ -203,6 +208,7 @@ export default function PaymentPage() {
 
   // Initial load
   useEffect(() => {
+    setConfirmationToken(new URLSearchParams(window.location.search).get("token") || "");
     loadOrder();
   }, [loadOrder]);
 
@@ -258,15 +264,16 @@ export default function PaymentPage() {
     setError(null);
 
     try {
+      const formData = new FormData();
+      formData.append("buyerName", order.customer_name);
+      formData.append("buyerDiscordId", order.buyer_discord_id || order.customer_discord || "");
+      formData.append("confirmationToken", confirmationToken);
+      formData.append("note", "");
+      if (paymentProofFile) formData.append("paymentProof", paymentProofFile);
+
       const res = await fetch(`/api/orders/${orderId}/confirm`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          buyerName: order.customer_name,
-          buyerDiscordId: order.buyer_discord_id || order.customer_discord,
-          note: "",
-          paymentProofBase64: paymentProofBase64 || undefined,
-        }),
+        body: formData,
       });
 
       const data = await res.json();
@@ -495,12 +502,12 @@ export default function PaymentPage() {
                      Upload Payment Proof
                   </h3>
                   <label className="block w-full rounded-lg border-2 border-dashed border-border bg-surface/40 p-6 text-center cursor-pointer hover:border-primary/50 transition-colors">
-                    <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
-                    {paymentProofBase64 ? (
+                    <input type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={handleFileChange} className="hidden" />
+                    {paymentProofFile ? (
                       <div className="space-y-2">
                         <CheckCircle2 className="h-8 w-8 text-success mx-auto" />
                          <p className="text-sm font-medium text-success">{paymentProofName}</p>
-                         <p className="text-xs text-text-secondary">Click to change image</p>
+                         <p className="text-xs text-text-secondary">{proofMimeType || "Image"} · Click to change</p>
                       </div>
                     ) : (
                       <div className="space-y-2">

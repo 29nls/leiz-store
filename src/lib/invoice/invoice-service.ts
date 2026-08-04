@@ -1,6 +1,8 @@
 import { supabaseAdmin } from "@/lib/supabase";
 import { generateInvoicePdf } from "./pdf-generator";
 import type { InvoiceData, InvoiceResult, Invoice } from "./types";
+import { enqueue, processAll, type Job } from "@/lib/queue";
+import { invoiceStoragePath, createInvoiceSignedUrl } from "./invoice-storage";
 
 async function generateInvoiceNo(): Promise<string> {
   const now = new Date();
@@ -51,126 +53,121 @@ async function getOrderWithItems(orderId: string): Promise<InvoiceData | null> {
 async function uploadPdfToStorage(
   pdfBuffer: Buffer,
   pdfFilename: string
-): Promise<string | null> {
+): Promise<{ path: string; url: string | null } | null> {
   try {
     const bucket = process.env.INVOICE_STORAGE_BUCKET || "invoices";
+    const storagePath = invoiceStoragePath(pdfFilename.replace(/^invoice-/, "").replace(/\.pdf$/i, ""));
     const { error: uploadError } = await supabaseAdmin.storage
       .from(bucket)
-      .upload(`invoices/${pdfFilename}`, pdfBuffer, {
+      .upload(storagePath, pdfBuffer, {
         contentType: "application/pdf",
         upsert: true,
       });
 
     if (!uploadError) {
-      const { data: urlData } = supabaseAdmin.storage
-        .from(bucket)
-        .getPublicUrl(`invoices/${pdfFilename}`);
-      return urlData?.publicUrl || null;
+      return { path: storagePath, url: await createInvoiceSignedUrl(storagePath) };
     }
-    console.warn(`[InvoiceService] PDF upload failed:`, uploadError.message);
+    console.warn("[InvoiceService] PDF upload failed:", uploadError.message);
   } catch (err) {
-    console.warn(`[InvoiceService] Storage error (non-fatal):`, err);
+    console.warn("[InvoiceService] Storage error (non-fatal):", err);
   }
   return null;
 }
 
-export async function generateAndSendInvoice(
-  orderId: string
-): Promise<InvoiceResult> {
+export async function generateAndSendInvoice(orderId: string): Promise<InvoiceResult> {
   const { data: existing } = await supabaseAdmin
     .from("invoice")
-    .select("id, status, invoice_no")
+    .select("*")
     .eq("order_id", orderId)
     .maybeSingle();
 
-  if (existing) {
-    console.log(`[InvoiceService] Invoice already exists for order ${orderId}: ${existing.invoice_no} (${existing.status})`);
-    return {
-      success: existing.status === "SENT",
-      invoiceNo: existing.invoice_no,
-      error: existing.status === "FAILED" ? "Previous attempt failed, check admin panel to retry" : undefined,
-    };
+  if (existing?.status === "SENT") {
+    return { success: true, invoiceNo: existing.invoice_no };
+  }
+  if (existing?.status === "FAILED") {
+    return { success: false, invoiceNo: existing.invoice_no, error: "Previous attempt failed, retry explicitly" };
   }
 
   const invoiceData = await getOrderWithItems(orderId);
-  if (!invoiceData) {
-    return { success: false, error: "Order not found" };
-  }
+  if (!invoiceData) return { success: false, error: "Order not found" };
 
-  const invoiceNo = await generateInvoiceNo();
+  const invoiceNo = existing?.invoice_no || await generateInvoiceNo();
   invoiceData.invoiceNo = invoiceNo;
+  const invoiceId = existing?.id || crypto.randomUUID();
 
-  const invoiceId = crypto.randomUUID();
-  const { error: insertError } = await supabaseAdmin
-    .from("invoice")
-    .insert({
+  if (!existing) {
+    const { error: insertError } = await supabaseAdmin.from("invoice").insert({
       id: invoiceId,
       order_id: orderId,
       invoice_no: invoiceNo,
       status: "PENDING",
     });
-
-  if (insertError) {
-    if (
-      insertError.code === "23505" ||
-      insertError.message.toLowerCase().includes("duplicate") ||
-      insertError.message.toLowerCase().includes("unique")
-    ) {
-      return { success: false, error: "Invoice already exists" };
+    if (insertError && insertError.code !== "23505") {
+      console.error("[InvoiceService] Insert failed:", insertError.message);
+      return { success: false, error: "Failed to create invoice" };
     }
-    console.error(`[InvoiceService] Insert failed:`, insertError.message);
-    return { success: false, error: "Failed to create invoice" };
+  } else {
+    await supabaseAdmin.from("invoice").update({
+      status: "PENDING",
+      error_log: null,
+      updated_at: new Date().toISOString(),
+    }).eq("id", invoiceId);
   }
 
   try {
     const pdfBuffer = await generateInvoicePdf(invoiceData);
-    const pdfFilename = `invoice-${invoiceNo}.pdf`;
-    const pdfUrl = await uploadPdfToStorage(pdfBuffer, pdfFilename);
-
-    await supabaseAdmin
-      .from("invoice")
-      .update({
-        pdf_url: pdfUrl,
-        status: "SENT",
-        sent_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", invoiceId);
-
-    console.log(`[InvoiceService] Invoice ${invoiceNo} generated for order ${orderId}`);
-
-    return {
-      success: true,
-      invoiceNo,
-      error: undefined,
+    const storedPdf = await uploadPdfToStorage(pdfBuffer, `invoice-${invoiceNo}.pdf`);
+    if (!storedPdf) throw new Error("Invoice PDF could not be uploaded");
+    const invoiceUpdate = {
+      pdf_path: storedPdf.path,
+      ...(storedPdf.url ? { pdf_url: storedPdf.url } : {}),
+      status: "SENT",
+      sent_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      error_log: null,
     };
+    let { error: updateError } = await supabaseAdmin.from("invoice").update(invoiceUpdate).eq("id", invoiceId);
+    if (updateError?.message.toLowerCase().includes("pdf_path")) {
+      // Compatibility with installations that have not applied migration 007.
+      const { pdf_path: _ignored, ...legacyUpdate } = invoiceUpdate;
+      ({ error: updateError } = await supabaseAdmin.from("invoice").update(legacyUpdate).eq("id", invoiceId));
+    }
+    if (updateError) throw updateError;
+    return { success: true, invoiceNo };
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
-    console.error(`[InvoiceService] Failed:`, msg);
-
-    await supabaseAdmin
-      .from("invoice")
-      .update({
-        status: "FAILED",
-        error_log: JSON.stringify([msg]),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", invoiceId);
-
-    return { success: false, error: msg };
+    await supabaseAdmin.from("invoice").update({
+      status: "FAILED",
+      error_log: JSON.stringify([msg]),
+      updated_at: new Date().toISOString(),
+    }).eq("id", invoiceId);
+    return { success: false, invoiceNo, error: msg };
   }
 }
 
-export async function processPendingJobs(_maxJobs = 10): Promise<number> {
-  return 0;
+/** Queue an invoice job; processing is performed by the cron worker. */
+export async function queueInvoice(orderId: string): Promise<boolean> {
+  return Boolean(await enqueue("GENERATE_INVOICE", { orderId }, {
+    priority: 10,
+    maxRetries: 5,
+    dedupeKey: `invoice:${orderId}`,
+  }));
+}
+
+async function handleJob(job: Job): Promise<boolean> {
+  if (job.type !== "GENERATE_INVOICE") return true;
+  const orderId = typeof job.payload.orderId === "string" ? job.payload.orderId : "";
+  if (!orderId) return false;
+  const result = await generateAndSendInvoice(orderId);
+  return result.success;
+}
+
+export async function processPendingJobs(maxJobs = 10): Promise<number> {
+  return processAll(handleJob, ["GENERATE_INVOICE"], Math.max(1, Math.min(maxJobs, 100)));
 }
 
 export async function getInvoiceByOrder(orderId: string): Promise<Invoice | null> {
-  const { data } = await supabaseAdmin
-    .from("invoice")
-    .select("*")
-    .eq("order_id", orderId)
-    .maybeSingle();
+  const { data } = await supabaseAdmin.from("invoice").select("*").eq("order_id", orderId).maybeSingle();
   return data || null;
 }
 
@@ -179,78 +176,17 @@ export async function listInvoices(options: {
 }): Promise<{ items: Invoice[]; total: number; page: number; totalPages: number }> {
   const { page = 1, limit = 20, status } = options;
   const from = (page - 1) * limit;
-
-  let query = supabaseAdmin
-    .from("invoice")
-    .select("*, order:order(order_number, customer_name, total, currency)", { count: "exact" });
-
+  let query = supabaseAdmin.from("invoice").select("*, order:order(order_number, customer_name, total, currency)", { count: "exact" });
   if (status) query = query.eq("status", status);
-
   query = query.order("created_at", { ascending: false }).range(from, from + limit - 1);
-
   const { data, error, count } = await query;
-
-  if (error) {
-    console.error("[InvoiceService] List failed:", error.message);
-    return { items: [], total: 0, page, totalPages: 0 };
-  }
-
-  return {
-    items: (data || []) as unknown as Invoice[],
-    total: count || 0,
-    page,
-    totalPages: Math.ceil((count || 0) / limit),
-  };
+  if (error) return { items: [], total: 0, page, totalPages: 0 };
+  return { items: (data || []) as unknown as Invoice[], total: count || 0, page, totalPages: Math.ceil((count || 0) / limit) };
 }
 
 export async function resendInvoice(invoiceId: string): Promise<boolean> {
-  const { data: invoice, error } = await supabaseAdmin
-    .from("invoice")
-    .select("*")
-    .eq("id", invoiceId)
-    .single();
-
-  if (error || !invoice) return false;
-
-  await supabaseAdmin
-    .from("invoice")
-    .update({
-      status: "PENDING",
-      error_log: null,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", invoiceId);
-
-  const orderId = invoice.order_id;
-  const invoiceData = await getOrderWithItems(orderId);
-  if (!invoiceData) return false;
-
-  try {
-    const pdfBuffer = await generateInvoicePdf(invoiceData);
-    const pdfFilename = `invoice-${invoice.invoice_no}.pdf`;
-    const pdfUrl = await uploadPdfToStorage(pdfBuffer, pdfFilename);
-
-    await supabaseAdmin
-      .from("invoice")
-      .update({
-        pdf_url: pdfUrl,
-        status: "SENT",
-        sent_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", invoiceId);
-
-    return true;
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Unknown error";
-    await supabaseAdmin
-      .from("invoice")
-      .update({
-        status: "FAILED",
-        error_log: JSON.stringify([msg]),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", invoiceId);
-    return false;
-  }
+  const { data: invoice } = await supabaseAdmin.from("invoice").select("*").eq("id", invoiceId).single();
+  if (!invoice) return false;
+  const result = await generateAndSendInvoice(invoice.order_id);
+  return result.success;
 }

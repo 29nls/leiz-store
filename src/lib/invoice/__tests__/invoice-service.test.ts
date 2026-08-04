@@ -17,7 +17,7 @@ mockSupabaseQuery = {
   order: jest.fn().mockReturnThis(),
   range: jest.fn().mockReturnThis(),
   upload: jest.fn().mockReturnThis(),
-  getPublicUrl: jest.fn().mockReturnThis(),
+  createSignedUrl: jest.fn().mockReturnThis(),
   then: jest.fn(function (this: any, resolve: any) {
     resolve(mockResolve);
   }),
@@ -30,6 +30,7 @@ mockStorage = {
 mockSupabaseAdmin = {
   from: jest.fn().mockReturnValue(mockSupabaseQuery),
   storage: mockStorage,
+  rpc: jest.fn().mockResolvedValue({ data: null, error: null }),
 };
 
 jest.mock("@/lib/supabase", () => ({

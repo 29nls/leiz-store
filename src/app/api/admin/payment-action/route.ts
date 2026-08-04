@@ -16,6 +16,7 @@ import {
   getOrderForPayment,
 } from "@/lib/payment/payment-service";
 import { sendBuyerNotification } from "@/lib/discord/bot";
+import { timingSafeEqual } from "crypto";
 
 function verifyAdminSecret(req: NextRequest): boolean {
   const secret = process.env.DISCORD_ADMIN_SECRET;
@@ -23,8 +24,9 @@ function verifyAdminSecret(req: NextRequest): boolean {
     console.warn("[PaymentAction] DISCORD_ADMIN_SECRET not configured");
     return false;
   }
-  const provided = req.headers.get("x-admin-secret") || req.headers.get("authorization")?.replace("Bearer ", "");
-  return provided === secret;
+  const provided = req.headers.get("x-admin-secret") || req.headers.get("authorization")?.replace(/^Bearer\\s+/i, "");
+  if (!provided || provided.length !== secret.length) return false;
+  return timingSafeEqual(Buffer.from(provided), Buffer.from(secret));
 }
 
 export async function POST(req: NextRequest) {
@@ -48,7 +50,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { orderId, action, adminId } = parsed.data;
+    const { orderId, action } = parsed.data;
+    const adminId = "discord-secret-admin";
 
     let result: { success: boolean; error?: string; order?: any };
 

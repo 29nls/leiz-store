@@ -1,20 +1,27 @@
 import { NextRequest } from "next/server";
 import { orderRepository } from "@/lib/repositories";
 import { successResponse, errorResponse } from "@/lib/errors";
-import { checkRateLimit } from "@/lib/middleware";
+import { checkRateLimit, getClientIp } from "@/lib/middleware";
 import { getOrderForPayment } from "@/lib/payment/payment-service";
 
 export async function GET(request: NextRequest) {
   try {
     // Rate limit public tracking endpoint
-    const clientIp = request.headers.get("x-forwarded-for") || "unknown";
-    const rateLimit = checkRateLimit(`track:${clientIp}`, 20, 60000);
+    const clientIp = getClientIp(request);
+    const rateLimit = checkRateLimit(`track:${clientIp}`, 10, 60000);
     if (!rateLimit.allowed) {
       return Response.json({ error: "Rate limit exceeded" }, { status: 429 });
     }
 
     const orderNumber = request.nextUrl.searchParams.get("orderNumber");
     const orderId = request.nextUrl.searchParams.get("orderId");
+
+    if (orderId && !/^[a-zA-Z0-9_-]{8,64}$/.test(orderId)) {
+      return Response.json(errorResponse(new Error("Invalid orderId") as any), { status: 400 });
+    }
+    if (orderNumber && !/^LZ-[0-9]{8}-[A-Z0-9]{6}$/i.test(orderNumber)) {
+      return Response.json(errorResponse(new Error("Invalid orderNumber") as any), { status: 400 });
+    }
 
     if (!orderNumber && !orderId) {
       return Response.json(
@@ -33,7 +40,28 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      return Response.json(successResponse(orderData));
+      // Public payment lookup uses an explicit allowlist. Never pass through
+      // private order fields (email, notes, payment references, proof paths,
+      // token hashes, or internal timestamps) by accident.
+      const raw = orderData as Record<string, any>;
+      const safeOrderData = {
+        id: raw.id,
+        order_number: raw.order_number,
+        customer_name: raw.customer_name,
+        buyer_discord_id: raw.buyer_discord_id,
+        customer_discord: raw.customer_discord,
+        total: raw.total,
+        currency: raw.currency,
+        payment_method: raw.payment_method,
+        status: raw.status,
+        expiry_at: raw.expiry_at,
+        confirmed_at: raw.confirmed_at,
+        created_at: raw.created_at,
+        order_item: raw.order_item,
+        items: raw.items,
+        orderItem: raw.orderItem,
+      };
+      return Response.json(successResponse(safeOrderData));
     }
 
     // Otherwise use orderNumber lookup
@@ -51,8 +79,9 @@ export async function GET(request: NextRequest) {
       orderNumber: order.orderNumber,
       status: order.status,
       customerName: order.customerName,
-      customerDiscord: (order as any).customerDiscord,
-      buyerDiscordId: (order as any).buyerDiscordId,
+      // Do not expose contact identifiers through a public tracking lookup.
+      customerDiscord: undefined,
+      buyerDiscordId: undefined,
       items: order.items.map((item: any) => ({
         name: item.name,
         quantity: item.quantity,

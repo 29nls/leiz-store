@@ -6,11 +6,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withErrorHandling } from "@/lib/api-helpers";
 import { successResponse, errorResponse, ValidationError } from "@/lib/errors";
-import { corsHeaders, handleCors } from "@/lib/middleware";
+import { addRateLimitHeaders, checkRateLimit, corsHeaders, getClientIp, handleCors } from "@/lib/middleware";
 import { confirmTransferSchema } from "@/lib/validators/order";
-import { confirmTransfer, getOrderForPayment } from "@/lib/payment/payment-service";
+import { confirmTransfer, getOrderForPayment, validateTransferToken } from "@/lib/payment/payment-service";
 import { orderRepository } from "@/lib/repositories";
 import { sendSellerNotification } from "@/lib/discord/bot";
+import {
+  createPaymentProofSignedUrl,
+  deletePaymentProof,
+  uploadPaymentProof,
+} from "@/lib/payment/payment-proof-storage";
 
 export const POST = withErrorHandling(async (
   req: NextRequest,
@@ -29,9 +34,45 @@ export const POST = withErrorHandling(async (
     );
   }
 
-  const body = await req.json();
-  const parsed = confirmTransferSchema.safeParse(body);
+  const rateLimit = checkRateLimit(`confirm:${getClientIp(req)}:${orderId}`, 5, 10 * 60 * 1000);
+  if (!rateLimit.allowed) {
+    const response = NextResponse.json(
+      errorResponse(new ValidationError("Too many confirmation attempts. Please try again later.")),
+      { status: 429, headers: corsHeaders(req.headers.get("origin") || undefined) }
+    );
+    return addRateLimitHeaders(response, rateLimit, 5);
+  }
 
+  const contentType = req.headers.get("content-type") || "";
+  let buyerName: unknown;
+  let buyerDiscordId: unknown;
+  let confirmationToken: unknown;
+  let note: unknown;
+  let proofFile: File | null = null;
+
+  if (contentType.toLowerCase().includes("multipart/form-data")) {
+    const formData = await req.formData();
+    buyerName = formData.get("buyerName");
+    buyerDiscordId = formData.get("buyerDiscordId");
+    confirmationToken = formData.get("confirmationToken");
+    note = formData.get("note");
+    const candidate = formData.get("paymentProof");
+    proofFile = candidate instanceof File ? candidate : null;
+  } else {
+    const body = await req.json();
+    buyerName = body?.buyerName;
+    buyerDiscordId = body?.buyerDiscordId;
+    confirmationToken = body?.confirmationToken;
+    note = body?.note;
+    if (body?.paymentProofBase64) {
+      return NextResponse.json(
+        errorResponse(new ValidationError("Payment proof must be uploaded as multipart/form-data")),
+        { status: 400, headers: corsHeaders() }
+      );
+    }
+  }
+
+  const parsed = confirmTransferSchema.safeParse({ buyerName, buyerDiscordId, confirmationToken, note });
   if (!parsed.success) {
     const message = parsed.error.issues.map((e: { message: string }) => e.message).join(", ");
     return NextResponse.json(
@@ -40,56 +81,67 @@ export const POST = withErrorHandling(async (
     );
   }
 
-  const { buyerName, buyerDiscordId, note, paymentProofBase64 } = parsed.data;
-
-  const result = await confirmTransfer(orderId, buyerName, buyerDiscordId, note);
-
-  if (!result.success) {
-    return NextResponse.json(
-      errorResponse(new ValidationError(result.error || "Confirmation failed")),
-      { status: 400, headers: corsHeaders() }
-    );
-  }
-
-  // Send Discord notification to seller channel (fire-and-forget)
+  let proofPath: string | null = null;
   try {
-    const orderData = await getOrderForPayment(orderId);
-    if (orderData) {
-      // `getOrderForPayment` doesn't reliably include order items — that's
-      // what caused the "📦 Produk" field in the Discord embed to fall back
-      // to "—". Backfill items from the repository (which does include them,
-      // with product data joined) whenever they're missing, so the
-      // notification always has real product data. This is a no-op if
-      // orderData already has items.
-      const hasItems =
-        (orderData as any).items?.length ||
-        (orderData as any).orderItem?.length ||
-        (orderData as any).order_item?.length;
-
-      if (!hasItems) {
-        const fullOrder = (await orderRepository.findById(orderId)) as any;
-        const fallbackItems =
-          fullOrder?.items || fullOrder?.orderItem || fullOrder?.order_item || [];
-
-        if (fallbackItems?.length) {
-          (orderData as any).items = fallbackItems;
-          (orderData as any).orderItem = fallbackItems;
-          (orderData as any).order_item = fallbackItems;
-        }
-      }
-
-      if (paymentProofBase64) {
-        (orderData as any).paymentProofBase64 = paymentProofBase64;
-      }
-      await sendSellerNotification(orderData);
+    if (!(await validateTransferToken(orderId, parsed.data.confirmationToken))) {
+      return NextResponse.json(
+        errorResponse(new ValidationError("Invalid payment confirmation token")),
+        { status: 401, headers: corsHeaders(req.headers.get("origin") || undefined) }
+      );
     }
-  } catch (err) {
-    console.error("[ConfirmTransfer] Discord notification failed:", err);
-    // Don't fail the request if notification fails
-  }
+    if (proofFile) proofPath = await uploadPaymentProof(proofFile, orderId);
 
-  return NextResponse.json(
-    successResponse({ message: "Transfer confirmed", orderId }),
-    { status: 200, headers: corsHeaders() }
-  );
+    const result = await confirmTransfer(
+      orderId,
+      parsed.data.buyerName,
+      parsed.data.buyerDiscordId,
+      parsed.data.note,
+      parsed.data.confirmationToken,
+      proofPath || undefined
+    );
+
+    if (!result.success) {
+      if (proofPath) await deletePaymentProof(proofPath);
+      return NextResponse.json(
+        errorResponse(new ValidationError(result.error || "Confirmation failed")),
+        { status: 400, headers: corsHeaders() }
+      );
+    }
+
+    try {
+      const orderData = await getOrderForPayment(orderId);
+      if (orderData) {
+        const hasItems =
+          (orderData as any).items?.length ||
+          (orderData as any).orderItem?.length ||
+          (orderData as any).order_item?.length;
+
+        if (!hasItems) {
+          const fullOrder = (await orderRepository.findById(orderId)) as any;
+          const fallbackItems = fullOrder?.items || fullOrder?.orderItem || fullOrder?.order_item || [];
+          if (fallbackItems?.length) {
+            (orderData as any).items = fallbackItems;
+            (orderData as any).orderItem = fallbackItems;
+            (orderData as any).order_item = fallbackItems;
+          }
+        }
+
+        if (proofPath) {
+          (orderData as any).paymentProofUrl = await createPaymentProofSignedUrl(proofPath);
+        }
+        await sendSellerNotification(orderData);
+      }
+    } catch (err) {
+      console.error("[ConfirmTransfer] Discord notification failed:", err);
+    }
+
+    const response = NextResponse.json(
+      successResponse({ message: "Transfer confirmed", orderId }),
+      { status: 200, headers: corsHeaders(req.headers.get("origin") || undefined) }
+    );
+    return addRateLimitHeaders(response, rateLimit, 5);
+  } catch (error) {
+    if (proofPath) await deletePaymentProof(proofPath);
+    throw error;
+  }
 });

@@ -11,6 +11,12 @@ import { expireOverdueOrders } from "@/lib/payment/payment-service";
 export async function POST(req: NextRequest) {
   // Verify cron secret
   const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) {
+    return NextResponse.json(
+      errorResponse(new ValidationError("Cron authentication is not configured")),
+      { status: 503 }
+    );
+  }
   if (cronSecret) {
     const provided =
       req.headers.get("x-cron-secret") ||

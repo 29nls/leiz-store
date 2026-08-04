@@ -3,8 +3,9 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { CartStore } from "@/types";
+import { calculateOrderTotals, ORDER_TAX_RATE } from "@/lib/order-pricing";
 
-const TAX_RATE = 0.11;
+export { ORDER_TAX_RATE };
 
 export const useCartStore = create<CartStore>()(
   persist(
@@ -52,9 +53,9 @@ export const useCartStore = create<CartStore>()(
       getSubtotal: () =>
         get().items.reduce((sum, item) => sum + item.price * item.quantity, 0),
 
-      getTax: () => Math.round(get().getSubtotal() * TAX_RATE),
+      getTax: () => calculateOrderTotals(get().getSubtotal()).tax,
 
-      getTotal: () => get().getSubtotal() + get().getTax(),
+      getTotal: () => calculateOrderTotals(get().getSubtotal()).total,
 
       getItemCount: () =>
         get().items.reduce((sum, item) => sum + item.quantity, 0),

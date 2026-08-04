@@ -10,7 +10,7 @@ import { getInvoiceStatusBadge } from "@/lib/status-colors";
 
 interface Invoice {
   id: string; order_id: string; invoice_no: string; status: string;
-  pdf_url: string | null; error_log: string | null;
+  pdf_url: string | null; pdf_path?: string | null; error_log: string | null;
   created_at: string; sent_at: string | null;
   order?: { order_number: string; customer_name: string; total: number; currency: string } | null;
 }
@@ -194,13 +194,20 @@ export default function AdminInvoicesPage() {
                 </div>
               )}
 
-              {selected.pdf_url && (
+              {selected.status === "SENT" && (
                 <div className="border-t border-border pt-4">
-                  <a href={selected.pdf_url} target="_blank" rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-surface-raised hover:bg-surface-raised text-text-primary rounded-lg text-sm font-medium transition-colors">
+                  <button
+                    onClick={async () => {
+                      const res = await fetch(`/api/admin/invoices/${selected.id}/download`);
+                      const data = await res.json();
+                      if (res.ok && data.url) window.open(data.url, "_blank", "noopener,noreferrer");
+                      else setError(data.error || "Gagal membuka invoice");
+                    }}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-surface-raised hover:bg-surface-raised text-text-primary rounded-lg text-sm font-medium transition-colors"
+                  >
                     <ExternalLink className="h-4 w-4" />
                     Lihat PDF
-                  </a>
+                  </button>
                 </div>
               )}
             </div>

@@ -4,16 +4,11 @@
  */
 
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { verifyJWT } from "@/lib/auth";
+import { isAdminRequest } from "@/lib/admin-auth";
 import { supabaseAdmin } from "@/lib/supabase";
 
 async function checkAuth() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("admin_token")?.value;
-  if (!token) return false;
-  const payload = verifyJWT(token);
-  return payload?.role === "ADMIN";
+  return isAdminRequest();
 }
 
 // GET /api/admin/settings

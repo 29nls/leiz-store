@@ -6,6 +6,7 @@
 // ─── Enums ────────────────────────────────────────────────────
 
 export const Role = {
+  ADMIN: "ADMIN",
   CUSTOMER: "CUSTOMER",
 } as const;
 export type Role = (typeof Role)[keyof typeof Role];
@@ -162,6 +163,7 @@ export interface Order {
   customerIGN?: string | null;
   customerNotes?: string | null;
   buyerDiscordId?: string | null;
+  paymentConfirmationTokenHash?: string | null;
   subtotal: number;
   subtotalUSD?: number | null;
   tax: number;
@@ -604,8 +606,9 @@ export namespace Prisma {
 
   export type OrderUpdateInput = {
     status?: OrderStatus;
-    buyerDiscordId?: string;
-    expiryAt?: Date;
+  buyerDiscordId?: string;
+  paymentConfirmationTokenHash?: string;
+  expiryAt?: Date;
     confirmedAt?: Date;
     paidAt?: Date;
     completedAt?: Date;

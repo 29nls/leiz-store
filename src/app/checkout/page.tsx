@@ -95,7 +95,10 @@ export default function CheckoutPage() {
 
       if (orderData.id) {
         clearCart();
-        router.push(`/payment/${orderData.id}`);
+        const token = typeof orderData.paymentConfirmationToken === "string"
+          ? `?token=${encodeURIComponent(orderData.paymentConfirmationToken)}`
+          : "";
+        router.push(`/payment/${orderData.id}${token}`);
         return;
       }
       

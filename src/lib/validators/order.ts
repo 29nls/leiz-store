@@ -4,6 +4,7 @@
  */
 
 import { z } from "zod";
+import { isValidPaymentToken } from "@/lib/payment/confirmation-token";
 
 // ─── Order Creation ─────────────────────────────────────────
 
@@ -35,8 +36,10 @@ export const confirmTransferSchema = z.object({
   buyerDiscordId: z.string().min(1, "Discord ID is required").max(100).refine(isValidDiscordId, {
     message: "Discord ID tidak valid. Masukkan User ID numerik (17-19 digit) atau username Discord.",
   }),
+  confirmationToken: z.string().refine(isValidPaymentToken, {
+    message: "Confirmation token tidak valid.",
+  }),
   note: z.string().max(500).optional(),
-  paymentProofBase64: z.string().optional(),
 });
 
 export type ConfirmTransferInput = z.infer<typeof confirmTransferSchema>;
@@ -46,7 +49,6 @@ export type ConfirmTransferInput = z.infer<typeof confirmTransferSchema>;
 export const adminPaymentActionSchema = z.object({
   orderId: z.string().min(1, "Order ID is required"),
   action: z.enum(["accept", "reject", "cancel", "force_cancel"]),
-  adminId: z.string().min(1, "Admin ID is required"),
 });
 
 export type AdminPaymentActionInput = z.infer<typeof adminPaymentActionSchema>;

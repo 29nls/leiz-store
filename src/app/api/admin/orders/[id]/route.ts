@@ -3,19 +3,14 @@
  */
 
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { verifyJWT } from "@/lib/auth";
+import { authenticateAdmin, isAdminRequest } from "@/lib/admin-auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import { isValidTransition, STATUS_TRANSITIONS } from "@/lib/payment/constants";
 import { logOrderStatusChange } from "@/lib/payment/order-logger";
 import { sendBuyerNotification } from "@/lib/discord/bot";
 
 async function checkAuth() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("admin_token")?.value;
-  if (!token) return false;
-  const payload = verifyJWT(token);
-  return payload?.role === "ADMIN";
+  return isAdminRequest();
 }
 
 export async function GET(
@@ -118,14 +113,12 @@ export async function PUT(
 
     // ── Log the status change ────────────────────────────────────────────────
     if (status !== undefined) {
-      const cookieStore = await cookies();
-      const token = cookieStore.get("admin_token")?.value;
-      const adminPayload = token ? verifyJWT(token) : null;
+      const admin = await authenticateAdmin(request);
 
       await logOrderStatusChange({
         orderId: id,
         actorType: "ADMIN",
-        actorId: adminPayload?.sub || adminPayload?.email || "admin",
+        actorId: admin?.id || admin?.email || "admin",
         action: `STATUS_UPDATE_${status.toUpperCase()}`,
         previousStatus: currentOrder.status,
         newStatus: status.toUpperCase(),

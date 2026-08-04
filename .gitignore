@@ -73,3 +73,6 @@ AGENTS.md
 leiz-store-redesign-brief.md
 docs/superpowers/specs/2026-07-10-radius-unification-design.md
 nul
+
+# Freebuff local runtime state
+.freebuff/

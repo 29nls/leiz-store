@@ -2,13 +2,9 @@
  * Discord Bot Integration
  * Server-side functions to send notifications via Discord webhook or bot API.
  * These are called from Next.js API routes (not a persistent bot process).
- *
- * For the interactive button handler, see scripts/discord-bot.ts
  */
 
 import { buildSellerEmbed, buildAdminButtons, buildBuyerEmbed } from "@/lib/discord/embeds";
-
-// ─── Config ─────────────────────────────────────────────────
 
 function getConfig() {
   return {
@@ -18,186 +14,85 @@ function getConfig() {
   };
 }
 
-// ─── Discord API Helper ────────────────────────────────────
-
-async function discordApiRequest(
-  endpoint: string,
-  body: any | FormData,
-  token: string
-): Promise<Response> {
+async function discordApiRequest(endpoint: string, body: any | FormData, token: string): Promise<Response> {
   const isFormData = body instanceof FormData;
-  const headers: Record<string, string> = {
-    Authorization: `Bot ${token}`,
-  };
-  
-  if (!isFormData) {
-    headers["Content-Type"] = "application/json";
-  }
+  const headers: Record<string, string> = { Authorization: `Bot ${token}` };
+  if (!isFormData) headers["Content-Type"] = "application/json";
 
-  const url = `https://discord.com/api/v10${endpoint}`;
-  const payload = { method: "POST", headers, body: isFormData ? body : JSON.stringify(body) };
-
-  let lastErr: Error | null = null;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    if (attempt > 0) {
-      const delay = Math.min(1000 * Math.pow(2, attempt), 5000);
-      await new Promise(r => setTimeout(r, delay));
-    }
-    try {
-      const res = await fetch(url, payload as any);
-      return res;
-    } catch (err) {
-      lastErr = err instanceof Error ? err : new Error(String(err));
-      if (attempt < 2) {
-        console.warn(`[Discord] API retry ${attempt + 1}/3 for ${endpoint}: ${lastErr.message}`);
-      }
-    }
-  }
-  throw lastErr || new Error("Discord API request failed");
+  const response = await fetch(`https://discord.com/api/v10${endpoint}`, {
+    method: "POST",
+    headers,
+    body: isFormData ? body : JSON.stringify(body),
+  });
+  return response;
 }
 
-// ─── Send Seller Notification ───────────────────────────────
-
-/**
- * Send a DM notification to the buyer via Discord bot API.
- * Creates a DM channel then sends an embed with order status update.
- */
 export async function sendBuyerNotification(
   discordId: string,
   orderNumber: string,
   message: string
 ): Promise<boolean> {
   const config = getConfig();
-
-  if (!config.botToken || !discordId) {
-    console.warn("[Discord] Cannot send buyer DM: missing bot token or Discord ID");
-    return false;
-  }
-
-  // Discord API requires numeric snowflake for creating DMs
-  if (!/^\d{17,19}$/.test(discordId)) {
-    console.warn(`[Discord] Invalid Discord ID format (not a snowflake), skipping DM: ${discordId}`);
-    return false;
-  }
+  if (!config.botToken || !discordId) return false;
+  if (!/^\d{17,19}$/.test(discordId)) return false;
 
   try {
-    // Create DM channel with the user
     const dmRes = await discordApiRequest(
-      `/users/@me/channels`,
+      "/users/@me/channels",
       { recipient_id: discordId },
       config.botToken
     );
-
-    if (!dmRes.ok) {
-      console.error("[Discord] Failed to create DM channel:", dmRes.status, await dmRes.text());
-      return false;
-    }
+    if (!dmRes.ok) return false;
 
     const dmData = await dmRes.json();
-    const channelId = dmData.id;
-
-    // Send the embed message in the DM channel
-    const embed = buildBuyerEmbed(orderNumber, message);
     const msgRes = await discordApiRequest(
-      `/channels/${channelId}/messages`,
-      embed,
+      `/channels/${dmData.id}/messages`,
+      buildBuyerEmbed(orderNumber, message),
       config.botToken
     );
-
-    if (msgRes.ok) {
-      console.log("[Discord] Buyer notification sent via DM");
-      return true;
-    }
-
-    console.error("[Discord] Failed to send DM message:", msgRes.status, await msgRes.text());
-    return false;
+    return msgRes.ok;
   } catch (err) {
     console.error("[Discord] Buyer DM error:", err);
     return false;
   }
 }
 
-/**
- * Send a payment confirmation notification to the seller's Discord channel.
- * Includes embed with order details and interactive admin buttons.
- */
 export async function sendSellerNotification(orderData: any): Promise<boolean> {
   const config = getConfig();
-
-  // Build the message payload
   const embed = buildSellerEmbed(orderData);
   const components = buildAdminButtons(orderData.id);
-
-  // Attach image if present
   const payload: any = { ...embed, components };
-  let isMultipart = false;
-  const formData = new FormData();
 
-  if (orderData.paymentProofBase64) {
-    const match = orderData.paymentProofBase64.match(/^data:(image\/.+);base64,(.+)$/);
-    if (match) {
-      const mime = match[1];
-      const ext = mime.split("/")[1] || "png";
-      const buffer = Buffer.from(match[2], "base64");
-      const blob = new Blob([buffer], { type: mime });
-      
-      payload.embeds[0].image = { url: `attachment://proof.${ext}` };
-      
-      formData.append("payload_json", JSON.stringify(payload));
-      formData.append("files[0]", blob, `proof.${ext}`);
-      isMultipart = true;
-    }
+  if (orderData.paymentProofUrl && payload.embeds?.[0]) {
+    payload.embeds[0].image = { url: orderData.paymentProofUrl };
   }
 
-  // Try bot token + channel first
   if (config.botToken && config.sellerChannelId) {
     try {
       const res = await discordApiRequest(
         `/channels/${config.sellerChannelId}/messages`,
-        isMultipart ? formData : payload,
+        payload,
         config.botToken
       );
-
-      if (res.ok) {
-        console.log("[Discord] Seller notification sent via bot API");
-        return true;
-      }
-
-      const errBody = await res.text();
-      console.error("[Discord] Bot API failed:", res.status, errBody);
+      if (res.ok) return true;
+      console.error("[Discord] Bot API failed:", res.status, await res.text());
     } catch (err) {
       console.error("[Discord] Bot API error:", err);
     }
   }
 
-  // Fallback: use webhook (no interactive buttons, just embed)
   if (config.webhookUrl) {
-    const webhookBody = JSON.stringify({
-      ...embed,
-      content: `🛒 **KONFIRMASI TRANSFER BARU**\n━━━━━━━━━━━━━━━━━\n📋 Order: \`${orderData.order_number}\`\n👤 Pembeli: ${orderData.customer_name || "—"}\n💰 Total: Rp${Number(orderData.total).toLocaleString("id-ID")}\n━━━━━━━━━━━━━━━━━\n> ⚠️ *Gunakan Discord bot untuk verifikasi & action.*`,
-    });
-    for (let attempt = 0; attempt < 3; attempt++) {
-      if (attempt > 0) await new Promise(r => setTimeout(r, 1000 * attempt));
-      try {
-        const res = await fetch(config.webhookUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: webhookBody,
-        });
-        if (res.ok) {
-          console.log("[Discord] Seller notification sent via webhook");
-          return true;
-        }
-        await res.body?.cancel();
-      } catch (err) {
-        console.warn(`[Discord] Webhook retry ${attempt + 1}/3:`, (err as Error).message);
-      }
+    try {
+      const res = await fetch(config.webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...embed, content: `🛒 **KONFIRMASI TRANSFER BARU**\nOrder: \`${orderData.order_number}\`` }),
+      });
+      if (res.ok) return true;
+    } catch (err) {
+      console.warn("[Discord] Webhook error:", err);
     }
-    console.error("[Discord] Webhook failed after 3 attempts");
   }
 
-  console.warn("[Discord] No notification method configured — skipping seller notification");
   return false;
 }
-
-

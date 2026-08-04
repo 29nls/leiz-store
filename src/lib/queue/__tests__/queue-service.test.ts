@@ -14,6 +14,7 @@ mockSupabaseQuery = {
   order: jest.fn().mockReturnThis(),
   limit: jest.fn().mockReturnThis(),
   in: jest.fn().mockReturnThis(),
+  dedupe_key: jest.fn().mockReturnThis(),
   lte: jest.fn().mockReturnThis(),
   lt: jest.fn().mockReturnThis(),
   then: jest.fn(function (this: any, resolve: any) {
@@ -23,6 +24,7 @@ mockSupabaseQuery = {
 
 mockSupabaseAdmin = {
   from: jest.fn().mockReturnValue(mockSupabaseQuery),
+  rpc: jest.fn().mockResolvedValue({ data: null, error: null }),
 };
 
 jest.mock("@/lib/supabase", () => ({
@@ -49,8 +51,11 @@ describe("queue-service", () => {
     mockSupabaseQuery.order.mockReturnThis();
     mockSupabaseQuery.limit.mockReturnThis();
     mockSupabaseQuery.in.mockReturnThis();
+    mockSupabaseQuery.dedupe_key.mockReturnThis();
     mockSupabaseQuery.lte.mockReturnThis();
     mockSupabaseQuery.lt.mockReturnThis();
+    mockSupabaseAdmin.rpc.mockReset();
+    mockSupabaseAdmin.rpc.mockResolvedValue({ data: null, error: null });
     mockSupabaseQuery.then.mockImplementation(function (this: any, resolve: any) {
       resolve(mockResolve);
     });
@@ -74,6 +79,19 @@ describe("queue-service", () => {
 
       const job = await enqueue("SEND_INVOICE_EMAIL" as any, { orderId: "ord-1" });
       expect(job).toBeNull();
+    });
+  });
+
+  describe("deduplication", () => {
+    it("returns an existing active job for the same dedupe key", async () => {
+      mockResolve = {
+        data: [{ id: "job-existing", type: "GENERATE_INVOICE", status: "PENDING" }],
+        error: null,
+      };
+
+      const job = await enqueue("GENERATE_INVOICE" as any, { orderId: "ord-1" }, { dedupeKey: "invoice:ord-1" });
+      expect(job?.id).toBe("job-existing");
+      expect(mockSupabaseQuery.insert).not.toHaveBeenCalled();
     });
   });
 

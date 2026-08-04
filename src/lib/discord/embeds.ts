@@ -36,6 +36,7 @@ interface OrderData {
   items?: OrderItem[];
   order_item?: OrderItem[];
   orderItem?: OrderItem[];
+  paymentProofUrl?: string | null;
 }
 
 /**
@@ -93,6 +94,7 @@ export function buildSellerEmbed(order: OrderData) {
 
           { name: "━━━━━━━━━━━━━━━━━", value: "**📦 PRODUK**", inline: false },
           { name: "Items", value: items, inline: false },
+          ...(order.paymentProofUrl ? [{ name: "Bukti Transfer", value: `[Lihat bukti](${order.paymentProofUrl})`, inline: false }] : []),
         ],
         footer: { text: "LEIZ STORE • Payment Verification • " + new Date().toLocaleDateString("id-ID") },
         timestamp: new Date().toISOString(),

@@ -4,6 +4,7 @@ export {
   listInvoices,
   resendInvoice,
   processPendingJobs,
+  queueInvoice,
 } from "./invoice-service";
 export type {
   Invoice,

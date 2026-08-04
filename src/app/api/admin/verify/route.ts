@@ -3,22 +3,14 @@
  */
 
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { verifyJWT } from "@/lib/auth";
+import { authenticateAdmin } from "@/lib/admin-auth";
 
-export async function GET() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("admin_token")?.value;
+export async function GET(request: Request) {
+  const admin = await authenticateAdmin(request);
+  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  if (!token) {
-    return NextResponse.json({ error: "No token" }, { status: 401 });
-  }
-
-  const payload = verifyJWT(token);
-
-  if (!payload || payload.role !== "ADMIN") {
-    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-  }
-
-  return NextResponse.json({ valid: true, user: { email: payload.email, role: payload.role } });
+  return NextResponse.json({
+    valid: true,
+    user: { id: admin.id, email: admin.email, name: admin.name, role: "ADMIN" },
+  });
 }

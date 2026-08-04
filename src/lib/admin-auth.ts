@@ -1,42 +1,111 @@
 /**
- * Admin Authentication Helper
- *
- * Verifies the caller is an authenticated admin via their Supabase session.
- * Used by API routes that require admin-only access.
+ * Shared server-side admin authentication.
+ * Supabase Auth is primary; the legacy admin_token JWT is a compatibility path.
  */
 
-import { NextRequest } from "next/server";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 import { supabaseAdmin } from "@/lib/supabase";
+import { verifyJWT, extractTokenFromHeader, type JWTPayload } from "@/lib/auth";
+import { UnauthorizedError } from "@/lib/errors";
 
-export async function requireAdmin(req: NextRequest) {
-  const authHeader = req.headers.get("authorization");
-  const cookieHeader = req.headers.get("cookie") || "";
-  let token = authHeader?.replace("Bearer ", "") || null;
+export interface AdminIdentity {
+  id: string;
+  email: string;
+  name?: string | null;
+  source: "supabase" | "legacy-jwt";
+}
 
-  if (!token) {
-    const sessionMatch = cookieHeader.match(/sb-[^-]+-auth-token=([^;]+)/);
-    if (sessionMatch) {
-      try {
-        const sessionData = JSON.parse(decodeURIComponent(sessionMatch[1]));
-        if (sessionData?.access_token) token = sessionData.access_token;
-      } catch { /* ignore */ }
-    }
+async function getCookieValue(name: string): Promise<string | null> {
+  const value = (await cookies()).get(name)?.value;
+  return value ? decodeURIComponent(value) : null;
+}
+
+async function getLegacyToken(request?: Request): Promise<string | null> {
+  const headerToken = request
+    ? extractTokenFromHeader(request.headers.get("authorization") || undefined)
+    : null;
+  if (headerToken) return headerToken;
+
+  const cookieHeader = request?.headers.get("cookie") || "";
+  const cookie = cookieHeader
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith("admin_token="));
+
+  return cookie
+    ? decodeURIComponent(cookie.slice("admin_token=".length))
+    : getCookieValue("admin_token");
+}
+
+async function getSupabaseUser(request?: Request) {
+  const authorizationToken = request
+    ? extractTokenFromHeader(request.headers.get("authorization") || undefined)
+    : null;
+
+  if (authorizationToken) {
+    const { data } = await supabaseAdmin.auth.getUser(authorizationToken);
+    return data.user || null;
   }
 
-  if (!token) throw new Error("Unauthorized");
+  try {
+    const cookieStore = await cookies();
+    const client = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+      {
+        cookies: {
+          getAll: () => cookieStore.getAll(),
+          setAll: () => {
+            // Do not mutate cookies while checking an API request.
+          },
+        },
+      }
+    );
+    const { data } = await client.auth.getUser();
+    return data.user || null;
+  } catch {
+    return null;
+  }
+}
 
-  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-  if (error || !user) throw new Error("Unauthorized");
-
-  const { data: userData } = await supabaseAdmin
+async function findAdminProfile(email: string): Promise<AdminIdentity | null> {
+  const { data, error } = await supabaseAdmin
     .from("user")
-    .select("role")
-    .eq("email", user.email)
-    .single();
+    .select("id, email, name, role, is_active")
+    .eq("email", email)
+    .maybeSingle();
 
-  if (!userData || userData.role !== "ADMIN") {
-    throw new Error("Forbidden: Admin access required");
+  if (error || !data || data.role !== "ADMIN" || data.is_active === false) {
+    return null;
   }
 
-  return user;
+  return { id: data.id, email: data.email, name: data.name, source: "supabase" };
+}
+
+/** Return an admin identity, or null when the request is not authorized. */
+export async function authenticateAdmin(request?: Request): Promise<AdminIdentity | null> {
+  const user = await getSupabaseUser(request);
+  if (user?.email) {
+    const profile = await findAdminProfile(user.email);
+    if (profile) return profile;
+  }
+
+  const legacyToken = await getLegacyToken(request);
+  if (!legacyToken) return null;
+
+  const payload: JWTPayload | null = verifyJWT(legacyToken);
+  if (!payload || payload.role !== "ADMIN" || !payload.email) return null;
+
+  return { id: payload.sub, email: payload.email, source: "legacy-jwt" };
+}
+
+export async function isAdminRequest(request?: Request): Promise<boolean> {
+  return Boolean(await authenticateAdmin(request));
+}
+
+export async function requireAdmin(request: Request): Promise<AdminIdentity> {
+  const identity = await authenticateAdmin(request);
+  if (!identity) throw new UnauthorizedError();
+  return identity;
 }
