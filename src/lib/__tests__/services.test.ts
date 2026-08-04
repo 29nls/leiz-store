@@ -1,5 +1,22 @@
 import { productService, orderService } from "@/lib/services";
 import { prisma } from "@/lib/db";
+import { orderRepository } from "@/lib/repositories";
+import { encryptPaymentToken } from "@/lib/order-idempotency";
+
+jest.mock("@/lib/repositories", () => {
+  const actual = jest.requireActual("@/lib/repositories");
+  return {
+    ...actual,
+    orderRepository: {
+      ...actual.orderRepository,
+      createAtomic: jest.fn(),
+    },
+  };
+});
+
+jest.mock("@/lib/payment/order-logger", () => ({
+  logOrderStatusChange: jest.fn().mockResolvedValue(undefined),
+}));
 
 // Mock is in jest.setup.ts - prisma is already mocked
 
@@ -37,13 +54,14 @@ describe("Product Service", () => {
     });
 
     it("should apply category filter", async () => {
+      (prisma.category.findUnique as jest.Mock).mockResolvedValue({ id: "cat-1" });
       (prisma.product.findMany as jest.Mock).mockResolvedValue([]);
       (prisma.product.count as jest.Mock).mockResolvedValue(0);
 
       await productService.list({ category: "skins" });
 
       const args = (prisma.product.findMany as jest.Mock).mock.calls[0][0];
-      expect(args.where.category.slug).toBe("skins");
+      expect(args.where.categoryId).toBe("cat-1");
     });
 
     it("should apply price filtering", async () => {
@@ -92,6 +110,7 @@ describe("Product Service", () => {
     it("should return product by slug", async () => {
       const mockProduct = {
         id: "p1",
+        publicId: "p1",
         name: "Test Product",
         slug: "test-product",
         price: 100000,
@@ -109,6 +128,7 @@ describe("Product Service", () => {
     it("should track view event", async () => {
       const mockProduct = {
         id: "p1",
+        publicId: "p1",
         name: "Test Product",
         slug: "test-product",
         price: 100000,
@@ -151,37 +171,91 @@ describe("Order Service", () => {
     isActive: true,
   };
 
+  const orderInput = {
+    customerName: "Test Customer",
+    customerDiscord: "123456789012345678",
+    items: [{ productId: "p1", quantity: 2 }],
+    paymentMethod: "bank_transfer",
+    currency: "IDR" as const,
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
+    (prisma.product.findUnique as jest.Mock).mockResolvedValue(mockProduct);
+    (prisma.analyticsEvent.create as jest.Mock).mockResolvedValue({});
+    delete process.env.PAYMENT_IDEMPOTENCY_ENCRYPTION_KEY;
   });
 
   describe("create", () => {
     it("should create an order successfully", async () => {
-      (prisma.product.findUnique as jest.Mock).mockResolvedValue(mockProduct);
-      (prisma.$transaction as jest.Mock).mockImplementation((cb) =>
-        cb({
-          order: {
-            create: jest.fn().mockResolvedValue({
-              id: "order-1",
-              orderNumber: "LZ-20240101-ABC123",
-              status: "PENDING",
-              items: [{ id: "item-1" }],
-            }),
-          },
-          product: { update: jest.fn().mockResolvedValue({}) },
-          inventoryLog: { create: jest.fn().mockResolvedValue({}) },
-        })
-      );
-      (prisma.analyticsEvent.create as jest.Mock).mockResolvedValue({});
-
-      const result = await orderService.create({
-        customerName: "Test Customer",
-        items: [{ productId: "p1", quantity: 2 }],
-        paymentMethod: "QRIS",
+      (orderRepository.createAtomic as jest.Mock).mockResolvedValue({
+        order: { id: "order-1", orderNumber: "LZ-20240101-ABC123", status: "PENDING_PAYMENT", subtotal: 200000 },
+        replayed: false,
+        encryptedPaymentToken: null,
       });
 
-      expect(result).toBeDefined();
-      expect(result.status).toBe("PENDING");
+      const result = await orderService.create(orderInput);
+
+      expect(result.order.status).toBe("PENDING_PAYMENT");
+      expect(result.paymentConfirmationToken).toEqual(expect.any(String));
+      expect(orderRepository.createAtomic).toHaveBeenCalledWith(expect.objectContaining({
+        items: [{ product_id: "p1", quantity: 2 }],
+      }));
+    });
+
+    it("does not reject keyed retries based on a stale stock preflight", async () => {
+      process.env.PAYMENT_IDEMPOTENCY_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString("base64");
+      (orderRepository.createAtomic as jest.Mock).mockResolvedValue({
+        order: { id: "order-1", status: "PENDING_PAYMENT", subtotal: 200000 },
+        replayed: false,
+        encryptedPaymentToken: "unused",
+      });
+
+      await orderService.create(orderInput, {
+        idempotencyKey: "550e8400-e29b-41d4-a716-446655440000",
+      });
+
+      expect(orderRepository.createAtomic).toHaveBeenCalledWith(expect.objectContaining({
+        idempotency: expect.objectContaining({
+          key: "550e8400-e29b-41d4-a716-446655440000",
+          fingerprint: expect.stringMatching(/^[a-f0-9]{64}$/),
+        }),
+      }));
+    });
+
+    it("returns a replay without changing status or duplicating side effects", async () => {
+      (orderRepository.createAtomic as jest.Mock).mockResolvedValue({
+        order: { id: "order-1", status: "WAITING_CONFIRMATION", subtotal: 200000 },
+        replayed: true,
+        encryptedPaymentToken: null,
+      });
+      process.env.PAYMENT_IDEMPOTENCY_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString("base64");
+      (orderRepository.createAtomic as jest.Mock).mockResolvedValue({
+        order: { id: "order-1", status: "WAITING_CONFIRMATION", subtotal: 200000 },
+        replayed: true,
+        encryptedPaymentToken: encryptPaymentToken("replayed-token"),
+      });
+
+      const result = await orderService.create(orderInput, {
+        idempotencyKey: "550e8400-e29b-41d4-a716-446655440000",
+      });
+
+      expect(result.order.status).toBe("WAITING_CONFIRMATION");
+      expect(result.paymentConfirmationToken).toBe("replayed-token");
+      expect(prisma.analyticsEvent.create).not.toHaveBeenCalled();
+    });
+
+    it("keeps a committed order successful when analytics fails", async () => {
+      (orderRepository.createAtomic as jest.Mock).mockResolvedValue({
+        order: { id: "order-1", status: "PENDING_PAYMENT", subtotal: 200000 },
+        replayed: false,
+        encryptedPaymentToken: null,
+      });
+      (prisma.analyticsEvent.create as jest.Mock).mockRejectedValue(new Error("analytics down"));
+
+      await expect(orderService.create(orderInput)).resolves.toEqual(expect.objectContaining({
+        order: expect.objectContaining({ id: "order-1" }),
+      }));
     });
 
     it("should throw NotFoundError for invalid product", async () => {
@@ -189,9 +263,8 @@ describe("Order Service", () => {
 
       await expect(
         orderService.create({
-          customerName: "Test Customer",
+          ...orderInput,
           items: [{ productId: "invalid", quantity: 1 }],
-          paymentMethod: "QRIS",
         })
       ).rejects.toThrow(/not found/i);
     });
@@ -200,13 +273,7 @@ describe("Order Service", () => {
       const lowStockProduct = { ...mockProduct, stock: 1 };
       (prisma.product.findUnique as jest.Mock).mockResolvedValue(lowStockProduct);
 
-      await expect(
-        orderService.create({
-          customerName: "Test Customer",
-          items: [{ productId: "p1", quantity: 5 }],
-          paymentMethod: "QRIS",
-        })
-      ).rejects.toThrow(/stock|insufficient/i);
+      await expect(orderService.create(orderInput)).rejects.toThrow(/stock|insufficient/i);
     });
   });
 });

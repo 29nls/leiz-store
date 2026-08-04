@@ -44,6 +44,7 @@ export default function CheckoutPage() {
   const [error, setError] = useState<string | null>(null);
   const [discordError, setDiscordError] = useState<string | null>(null);
   const discordRef = useRef<HTMLInputElement>(null);
+  const idempotencyKeyRef = useRef<string | null>(null);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
@@ -66,9 +67,14 @@ export default function CheckoutPage() {
     setError(null);
 
     try {
+      const idempotencyKey = idempotencyKeyRef.current || crypto.randomUUID();
+      idempotencyKeyRef.current = idempotencyKey;
       const res = await fetch("/api/orders", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyKey,
+        },
         body: JSON.stringify({
           customerName: formData.name,
           customerDiscord: formData.discord || undefined,
@@ -95,10 +101,7 @@ export default function CheckoutPage() {
 
       if (orderData.id) {
         clearCart();
-        const token = typeof orderData.paymentConfirmationToken === "string"
-          ? `?token=${encodeURIComponent(orderData.paymentConfirmationToken)}`
-          : "";
-        router.push(`/payment/${orderData.id}${token}`);
+        router.push(`/payment/${orderData.id}`);
         return;
       }
       

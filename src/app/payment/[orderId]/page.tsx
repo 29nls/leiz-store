@@ -154,7 +154,6 @@ function PaymentAccountCard({ account, amount }: { account: PaymentAccount; amou
 export default function PaymentPage() {
   const params = useParams();
   const orderId = params?.orderId as string;
-  const [confirmationToken, setConfirmationToken] = useState("");
   const [proofMimeType, setProofMimeType] = useState<string | null>(null);
 
   const [order, setOrder] = useState<OrderData | null>(null);
@@ -208,7 +207,6 @@ export default function PaymentPage() {
 
   // Initial load
   useEffect(() => {
-    setConfirmationToken(new URLSearchParams(window.location.search).get("token") || "");
     loadOrder();
   }, [loadOrder]);
 
@@ -267,7 +265,6 @@ export default function PaymentPage() {
       const formData = new FormData();
       formData.append("buyerName", order.customer_name);
       formData.append("buyerDiscordId", order.buyer_discord_id || order.customer_discord || "");
-      formData.append("confirmationToken", confirmationToken);
       formData.append("note", "");
       if (paymentProofFile) formData.append("paymentProof", paymentProofFile);
 

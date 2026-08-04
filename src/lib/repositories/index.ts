@@ -224,25 +224,50 @@ export const orderRepository = {
     order: Record<string, unknown>;
     items: Array<{ product_id: string; quantity: number }>;
     taxRate: number;
+    idempotency?: {
+      key: string;
+      fingerprint: string;
+      encryptedPaymentToken: string;
+    };
   }) {
-    const { data: created, error } = await supabaseAdmin.rpc("create_order_atomic", {
+    const { data: result, error } = await supabaseAdmin.rpc("create_order_atomic", {
       p_order: data.order,
       p_items: data.items,
       p_tax_rate: data.taxRate,
+      p_idempotency_key: data.idempotency?.key ?? null,
+      p_request_fingerprint: data.idempotency?.fingerprint ?? null,
+      p_encrypted_payment_token: data.idempotency?.encryptedPaymentToken ?? null,
     });
 
     if (error) throw new Error(error.message);
-    if (!created || typeof created !== "object") {
+    if (!result || typeof result !== "object") {
+      throw new Error("Atomic order RPC returned no result");
+    }
+
+    const rpcResult = result as Record<string, unknown>;
+    const rawOrder = rpcResult.order;
+    if (!rawOrder || typeof rawOrder !== "object") {
       throw new Error("Atomic order RPC returned no order");
     }
 
-    const orderId = String((created as Record<string, unknown>).id || data.order.id);
+    const orderId = String((rawOrder as Record<string, unknown>).id || data.order.id);
     const order = await prisma.order.findUnique({
       where: { id: orderId },
       include: { items: true },
     });
     if (!order) throw new Error("Atomic order was created but could not be reloaded");
-    return order;
+
+    const replayed = rpcResult.replayed === true;
+    const encryptedPaymentToken = rpcResult.encrypted_payment_token;
+    if (data.idempotency && typeof encryptedPaymentToken !== "string") {
+      throw new Error("Atomic order RPC returned no encrypted replay token");
+    }
+
+    return {
+      order,
+      replayed,
+      encryptedPaymentToken: typeof encryptedPaymentToken === "string" ? encryptedPaymentToken : null,
+    };
   },
 
   async update(id: string, data: Prisma.OrderUpdateInput) {

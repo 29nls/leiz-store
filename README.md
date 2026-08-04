@@ -37,6 +37,17 @@ Buyer checkout → Upload bukti transfer → Discord embed dengan buttons
 
 ## 🔒 Security & Compliance
 
+### Order Payment Integrity
+
+Order creation accepts an optional `Idempotency-Key` header. The checkout client reuses one UUID for retries, while requests without the header remain backward compatible without duplicate-request guarantees. Payment confirmation tokens are delivered through an order-scoped HttpOnly cookie and are never placed in payment URLs or public order JSON. A temporary body-token fallback remains for older clients; query-string tokens are not accepted.
+
+Apply `scripts/migrations/008_order_idempotency.sql` after migrations `005_security_atomic_orders.sql` and `006_payment_security.sql`, and before deploying application code that sends idempotency parameters. The migration removes the old three-argument `create_order_atomic` overload and grants the six-argument function only to `service_role`. The reset/install baseline is `scripts/supabase-schema.sql`; production deployments must apply numbered migrations after the baseline so the baseline and live database remain aligned. Do not drop `order_idempotency` while keyed checkouts may still be active.
+
+The seven-day idempotency retention window must be maintained by the scheduled maintenance process. After the window, run `DELETE FROM public.order_idempotency WHERE expires_at <= NOW()` with the service role. Until that cleanup is automated, monitor table growth and do not reuse expired keys.
+
+Production must define `PAYMENT_IDEMPOTENCY_ENCRYPTION_KEY` as a base64-encoded 32-byte secret. Store it only in the deployment secret manager; never expose it to the browser or commit it. Rotating this key requires retaining the previous key until all encrypted idempotency records have expired, or performing an explicit replay-record migration.
+
+
 Proyek ini mengikuti rekomendasi **OWASP** dan telah diaudit oleh **CodeQL**, **Microsoft Defender for DevOps (MSDO)**, dan **njsscan**.
 
 ### Password Hashing
@@ -102,6 +113,9 @@ Proyek ini menggunakan GitHub Actions untuk automated testing dan deployment ke 
 - `BREVO_SMTP_HOST` / `BREVO_SMTP_PORT` / `BREVO_SMTP_USER` / `BREVO_SMTP_PASS` — Brevo SMTP untuk invoice email
 - `BREVO_FROM_EMAIL` / `BREVO_FROM_NAME` — Email pengirim invoice
 - `INVOICE_STORAGE_BUCKET` — Supabase Storage bucket untuk PDF invoice
+- `PAYMENT_IDEMPOTENCY_ENCRYPTION_KEY` — base64-encoded 32-byte server-only key for keyed checkout replay
+
+The current Jest migration checks verify the SQL contract statically. A deployment with a Supabase/PostgreSQL test project must additionally execute migration 008 and run concurrent same-key requests, asserting one order and one stock decrement before production rollout.
 
 ---
 

@@ -96,10 +96,11 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "2mb",
     },
-    // Include pdfkit font files in serverless function bundles (Vercel)
-    outputFileTracingIncludes: {
-      "/api/**/*": ["./node_modules/pdfkit/js/data/**/*.afm"],
-    },
+  },
+
+  // Include pdfkit font files in serverless function bundles (Vercel)
+  outputFileTracingIncludes: {
+    "/api/**/*": ["./node_modules/pdfkit/js/data/**/*.afm"],
   },
 
   // Production source maps (disabled for better performance)

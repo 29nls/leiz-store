@@ -20,6 +20,11 @@ jest.mock("@/lib/db", () => {
     $disconnect: jest.fn(),
     $queryRaw: jest.fn().mockResolvedValue([]),
     $transaction: mockFn,
+    category: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      count: jest.fn(),
+    },
     product: {
       findUnique: jest.fn(),
       update: jest.fn(),

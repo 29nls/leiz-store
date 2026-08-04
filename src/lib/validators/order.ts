@@ -36,9 +36,10 @@ export const confirmTransferSchema = z.object({
   buyerDiscordId: z.string().min(1, "Discord ID is required").max(100).refine(isValidDiscordId, {
     message: "Discord ID tidak valid. Masukkan User ID numerik (17-19 digit) atau username Discord.",
   }),
-  confirmationToken: z.string().refine(isValidPaymentToken, {
-    message: "Confirmation token tidak valid.",
-  }),
+  confirmationToken: z.string().optional().refine(
+    (value) => value === undefined || isValidPaymentToken(value),
+    { message: "Confirmation token tidak valid." }
+  ),
   note: z.string().max(500).optional(),
 });
 

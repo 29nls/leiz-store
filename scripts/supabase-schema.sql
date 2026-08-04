@@ -18,6 +18,7 @@ DROP TABLE IF EXISTS public.customer_segment CASCADE;
 DROP TABLE IF EXISTS public.sales_forecast CASCADE;
 DROP TABLE IF EXISTS public.analytics_event CASCADE;
 DROP TABLE IF EXISTS public.payment CASCADE;
+DROP TABLE IF EXISTS public.order_idempotency CASCADE;
 DROP TABLE IF EXISTS public.order_item CASCADE;
 DROP TABLE IF EXISTS public.order CASCADE;
 DROP TABLE IF EXISTS public.product_image CASCADE;
@@ -159,6 +160,25 @@ CREATE TABLE public.order_item (
   quantity INTEGER NOT NULL DEFAULT 1,
   total DOUBLE PRECISION NOT NULL,
   total_usd DOUBLE PRECISION
+);
+
+CREATE TABLE public.order_idempotency (
+  id TEXT PRIMARY KEY,
+  scope TEXT NOT NULL,
+  idempotency_key TEXT NOT NULL,
+  request_fingerprint TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'COMPLETED',
+  order_id TEXT NOT NULL REFERENCES public.order(id) ON DELETE CASCADE,
+  encrypted_payment_token TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  expires_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT order_idempotency_status_check CHECK (status IN ('COMPLETED')),
+  CONSTRAINT order_idempotency_key_length CHECK (char_length(idempotency_key) BETWEEN 1 AND 128),
+  CONSTRAINT order_idempotency_key_format CHECK (idempotency_key ~* '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'),
+  CONSTRAINT order_idempotency_fingerprint_length CHECK (char_length(request_fingerprint) = 64),
+  CONSTRAINT order_idempotency_fingerprint_format CHECK (request_fingerprint ~ '^[0-9a-f]{64}$'),
+  CONSTRAINT order_idempotency_scope_key_unique UNIQUE (scope, idempotency_key)
 );
 
 CREATE TABLE public.payment (
@@ -356,6 +376,8 @@ CREATE INDEX idx_order_store ON public.order(store_id);
 CREATE INDEX idx_order_created ON public.order(created_at);
 CREATE INDEX idx_order_item_order ON public.order_item(order_id);
 CREATE INDEX idx_order_item_product ON public.order_item(product_id);
+CREATE INDEX idx_order_idempotency_expires ON public.order_idempotency(expires_at);
+CREATE INDEX idx_order_idempotency_order ON public.order_idempotency(order_id);
 CREATE INDEX idx_payment_order ON public.payment(order_id);
 CREATE INDEX idx_analytics_event_name ON public.analytics_event(event);
 CREATE INDEX idx_analytics_event_created ON public.analytics_event(created_at);
@@ -385,6 +407,7 @@ ALTER TABLE public.product ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.product_image ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.order ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.order_item ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.order_idempotency ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payment ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.analytics_event ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sales_forecast ENABLE ROW LEVEL SECURITY;
@@ -449,7 +472,11 @@ CREATE POLICY "Admin manage categories" ON public.category FOR ALL USING (public
 -- Orders & Items & Payments
 CREATE POLICY "Admin manage orders" ON public.order FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
 CREATE POLICY "Admin manage order_items" ON public.order_item FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admin manage order idempotency" ON public.order_idempotency FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
 CREATE POLICY "Admin manage payments" ON public.payment FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+REVOKE ALL ON TABLE public.order_idempotency FROM PUBLIC, anon, authenticated;
+GRANT ALL ON TABLE public.order_idempotency TO service_role;
 
 -- Settings & Content
 CREATE POLICY "Admin manage settings" ON public.setting FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());

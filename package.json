@@ -93,8 +93,7 @@
       "**/__tests__/**/*.test.ts",
       "**/__tests__/**/*.test.tsx",
       "**/*.test.ts",
-      "**/*.test.tsx",
-      "!**/__tests__/services.test.ts"
+      "**/*.test.tsx"
     ],
     "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/src/$1"

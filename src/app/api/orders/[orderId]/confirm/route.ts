@@ -10,6 +10,8 @@ import { addRateLimitHeaders, checkRateLimit, corsHeaders, getClientIp, handleCo
 import { confirmTransferSchema } from "@/lib/validators/order";
 import { confirmTransfer, getOrderForPayment, validateTransferToken } from "@/lib/payment/payment-service";
 import { orderRepository } from "@/lib/repositories";
+import { cookies } from "next/headers";
+import { paymentConfirmationCookieName } from "@/lib/order-idempotency";
 import { sendSellerNotification } from "@/lib/discord/bot";
 import {
   createPaymentProofSignedUrl,
@@ -72,7 +74,14 @@ export const POST = withErrorHandling(async (
     }
   }
 
-  const parsed = confirmTransferSchema.safeParse({ buyerName, buyerDiscordId, confirmationToken, note });
+  const cookieToken = (await cookies()).get(paymentConfirmationCookieName(orderId))?.value;
+  const resolvedConfirmationToken = cookieToken || confirmationToken;
+  const parsed = confirmTransferSchema.safeParse({
+    buyerName,
+    buyerDiscordId,
+    confirmationToken: resolvedConfirmationToken,
+    note,
+  });
   if (!parsed.success) {
     const message = parsed.error.issues.map((e: { message: string }) => e.message).join(", ");
     return NextResponse.json(
@@ -81,9 +90,17 @@ export const POST = withErrorHandling(async (
     );
   }
 
+  const token = parsed.data.confirmationToken;
+  if (!token) {
+    return NextResponse.json(
+      errorResponse(new ValidationError("Confirmation token is required.")),
+      { status: 400, headers: corsHeaders() }
+    );
+  }
+
   let proofPath: string | null = null;
   try {
-    if (!(await validateTransferToken(orderId, parsed.data.confirmationToken))) {
+    if (!(await validateTransferToken(orderId, token))) {
       return NextResponse.json(
         errorResponse(new ValidationError("Invalid payment confirmation token")),
         { status: 401, headers: corsHeaders(req.headers.get("origin") || undefined) }
@@ -96,7 +113,7 @@ export const POST = withErrorHandling(async (
       parsed.data.buyerName,
       parsed.data.buyerDiscordId,
       parsed.data.note,
-      parsed.data.confirmationToken,
+      token,
       proofPath || undefined
     );
 
@@ -139,6 +156,15 @@ export const POST = withErrorHandling(async (
       successResponse({ message: "Transfer confirmed", orderId }),
       { status: 200, headers: corsHeaders(req.headers.get("origin") || undefined) }
     );
+    response.cookies.set({
+      name: paymentConfirmationCookieName(orderId),
+      value: "",
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: `/api/orders/${orderId}/confirm`,
+      maxAge: 0,
+    });
     return addRateLimitHeaders(response, rateLimit, 5);
   } catch (error) {
     if (proofPath) await deletePaymentProof(proofPath);

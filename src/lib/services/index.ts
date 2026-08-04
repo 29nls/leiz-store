@@ -22,15 +22,20 @@ import { Prisma } from "@/lib/prisma-types";
 import { PAYMENT_EXPIRY_MS } from "@/lib/payment/constants";
 import { calculateOrderTotals, ORDER_TAX_RATE } from "@/lib/order-pricing";
 import { generatePaymentToken, hashPaymentToken } from "@/lib/payment/confirmation-token";
+import {
+  encryptPaymentToken,
+  decryptPaymentToken,
+  fingerprintCreateOrderInput,
+} from "@/lib/order-idempotency";
 import { logOrderStatusChange } from "@/lib/payment/order-logger";
 import {
   Role,
   OrderStatus,
-  PaymentMethod,
   NotificationChannel,
   StockAlertType,
 } from "@/lib/prisma-types";
 import {
+  ConflictError,
   NotFoundError,
   ValidationError,
 } from "@/lib/errors";
@@ -168,43 +173,57 @@ export const orderService = {
     paymentMethod: string;
     currency?: Currency;
     userId?: string;
-  }) {
-    // Validate and fetch products
-    const products = await Promise.all(
-      data.items.map(async (item) => {
-        const product = await productRepository.findById(item.productId);
-        if (!product) throw new NotFoundError("Product", item.productId);
-        if ((product as any).stock < item.quantity) {
-          throw new ValidationError(`Insufficient stock for ${(product as any).name}`);
-        }
-        return { ...(product as any), quantity: item.quantity };
-      })
-    );
+  }, options?: { idempotencyKey?: string }) {
+    const expiryAt = new Date(Date.now() + PAYMENT_EXPIRY_MS);
+    const paymentConfirmationToken = generatePaymentToken();
+    const idempotencyKey = options?.idempotencyKey;
 
-    // Calculate the preview totals for logging/metadata. The atomic RPC repeats
-    // this calculation from locked database prices and is the final authority.
-    const previewSubtotal = products.reduce(
-      (sum, p) => sum + Number(p.price) * p.quantity, 0
-    );
-    const previewTotals = calculateOrderTotals(previewSubtotal);
-    const subtotalUSD = convertCurrency(previewTotals.subtotal, "IDR", "USD");
-    const taxUSD = convertCurrency(previewTotals.tax, "IDR", "USD");
-    const totalUSD = convertCurrency(previewTotals.total, "IDR", "USD");
+    // The RPC is the final stock and price authority. Keyed requests skip all
+    // product preflight so a replay remains valid after catalog/stock changes.
+    let previewTotals = calculateOrderTotals(0);
+    let subtotalUSD = 0;
+    if (!idempotencyKey) {
+      const products = await Promise.all(
+        data.items.map(async (item) => {
+          const product = await productRepository.findById(item.productId);
+          if (!product) throw new NotFoundError("Product", item.productId);
+          if ((product as any).stock < item.quantity) {
+            throw new ValidationError(`Insufficient stock for ${(product as any).name}`);
+          }
+          return { ...(product as any), quantity: item.quantity };
+        })
+      );
+      const previewSubtotal = products.reduce(
+        (sum, product) => sum + Number(product.price) * product.quantity,
+        0
+      );
+      previewTotals = calculateOrderTotals(previewSubtotal);
+      subtotalUSD = convertCurrency(previewTotals.subtotal, "IDR", "USD");
+    }
+    const fingerprint = idempotencyKey
+      ? fingerprintCreateOrderInput({
+          customerName: data.customerName,
+          customerDiscord: data.customerDiscord,
+          customerIGN: data.customerIGN,
+          customerNotes: data.customerNotes,
+          items: data.items,
+          paymentMethod: data.paymentMethod,
+          currency: data.currency,
+        })
+      : undefined;
 
-    // Generate order number
     const date = new Date();
     const datePart = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`;
     const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
     const orderNumber = `LZ-${datePart}-${randomPart}`;
 
-    // The REST adapter cannot provide a real transaction. Delegate checkout to
-    // the PostgreSQL RPC so stock reservation and all order rows commit or roll
-    // back together.
-    let order: any;
-    const expiryAt = new Date(Date.now() + PAYMENT_EXPIRY_MS);
-    const paymentConfirmationToken = generatePaymentToken();
+    const encryptedPaymentToken = idempotencyKey
+      ? encryptPaymentToken(paymentConfirmationToken)
+      : undefined;
+
+    let atomicResult: Awaited<ReturnType<typeof orderRepository.createAtomic>>;
     try {
-      order = await orderRepository.createAtomic({
+      atomicResult = await orderRepository.createAtomic({
         order: {
           id: crypto.randomUUID().replace(/-/g, "").slice(0, 25),
           order_number: orderNumber,
@@ -219,57 +238,84 @@ export const orderService = {
           buyer_discord_id: data.customerDiscord || "",
           payment_confirmation_token_hash: hashPaymentToken(paymentConfirmationToken),
           expiry_at: expiryAt.toISOString(),
-          usd_rate: subtotalUSD > 0 ? subtotalUSD / Math.max(1, previewTotals.subtotal) : 0.000063,
+          usd_rate: subtotalUSD > 0
+            ? subtotalUSD / Math.max(1, previewTotals.subtotal)
+            : 0.000063,
         },
-        items: products.map((p) => ({ product_id: p.id, quantity: p.quantity })),
+        items: data.items.map((item) => ({ product_id: item.productId, quantity: item.quantity })),
         taxRate: ORDER_TAX_RATE,
+        ...(idempotencyKey && fingerprint
+          ? {
+              idempotency: {
+                key: idempotencyKey,
+                fingerprint,
+                encryptedPaymentToken: encryptedPaymentToken!,
+              },
+            }
+          : {}),
       });
     } catch (dbError: any) {
       console.error("[OrderService] Atomic order creation failed:", dbError);
-      throw new ValidationError(`Gagal membuat order: ${dbError.message || "Database error"}`);
+      if (
+        dbError instanceof ConflictError ||
+        /idempotency key (was reused|has expired)/i.test(String(dbError?.message || ""))
+      ) {
+        throw new ConflictError("This checkout retry key is no longer valid");
+      }
+      throw new ValidationError("Gagal membuat order: Database error");
     }
 
-    const atomicSubtotal = Number((order as any).subtotal ?? previewTotals.subtotal);
-    const atomicTotals = calculateOrderTotals(atomicSubtotal);
-    const subtotal = atomicTotals.subtotal;
-    const tax = atomicTotals.tax;
-    const total = atomicTotals.total;
+    const order = atomicResult.order as any;
+    const replayToken = atomicResult.replayed
+      ? decryptPaymentToken(atomicResult.encryptedPaymentToken || "")
+      : paymentConfirmationToken;
 
-    // Proceed with manual payment flow for all orders
-    (order as any).status = OrderStatus.PENDING_PAYMENT;
-    (order as any).buyerDiscordId = data.customerDiscord;
-    (order as any).expiryAt = expiryAt.toISOString();
+    if (!atomicResult.replayed) {
+      const atomicSubtotal = Number(order.subtotal ?? 0);
+      const total = calculateOrderTotals(atomicSubtotal).total;
 
-    // Log status change
-    await logOrderStatusChange({
-      orderId: (order as any).id,
-      actorType: "SYSTEM",
-      action: "ORDER_CREATED_MANUAL_PAYMENT",
-      previousStatus: OrderStatus.PENDING,
-      newStatus: OrderStatus.PENDING_PAYMENT,
-      metadata: { paymentMethod: data.paymentMethod, expiryAt: expiryAt.toISOString() },
-    });
+      order.status = OrderStatus.PENDING_PAYMENT;
+      order.buyerDiscordId = data.customerDiscord;
+      order.expiryAt = order.expiryAt || expiryAt.toISOString();
 
-    // Track analytics
-    await analyticsRepository.trackEvent({
-      event: "order_created",
-      entity: "order",
-      entityId: (order as any).id,
-      userId: data.userId,
-      metadata: {
-        orderNumber,
-        total,
-        itemCount: products.length,
-        paymentMethod: data.paymentMethod,
-      },
-    });
+      const sideEffects = await Promise.allSettled([
+        logOrderStatusChange({
+          orderId: order.id,
+          actorType: "SYSTEM",
+          action: "ORDER_CREATED_MANUAL_PAYMENT",
+          previousStatus: OrderStatus.PENDING,
+          newStatus: OrderStatus.PENDING_PAYMENT,
+          metadata: { paymentMethod: data.paymentMethod, expiryAt: order.expiryAt },
+        }),
+        analyticsRepository.trackEvent({
+          event: "order_created",
+          entity: "order",
+          entityId: order.id,
+          userId: data.userId,
+          metadata: {
+            orderNumber: order.orderNumber || order.order_number || orderNumber,
+            total,
+            itemCount: data.items.length,
+            paymentMethod: data.paymentMethod,
+          },
+        }),
+      ]);
+
+      sideEffects.forEach((result, index) => {
+        if (result.status === "rejected") {
+          console.error("[OrderService] Post-commit side effect failed", {
+            orderId: order.id,
+            operation: index === 0 ? "order-log" : "analytics",
+          });
+        }
+      });
+    }
 
     return {
-      ...order as any,
+      order,
       manualPayment: true,
-      // The raw token is returned only to the checkout client and is required
-      // for the public payment-confirmation endpoint.
-      paymentConfirmationToken,
+      replayed: atomicResult.replayed,
+      paymentConfirmationToken: replayToken,
     };
   },
 
