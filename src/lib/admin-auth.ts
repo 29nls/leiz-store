@@ -69,7 +69,10 @@ async function getSupabaseUser(request?: Request) {
   }
 }
 
-async function findAdminProfile(email: string): Promise<AdminIdentity | null> {
+async function findAdminProfile(
+  email: string,
+  source: AdminIdentity["source"] = "supabase"
+): Promise<AdminIdentity | null> {
   const { data, error } = await supabaseAdmin
     .from("user")
     .select("id, email, name, role, is_active")
@@ -80,7 +83,7 @@ async function findAdminProfile(email: string): Promise<AdminIdentity | null> {
     return null;
   }
 
-  return { id: data.id, email: data.email, name: data.name, source: "supabase" };
+  return { id: data.id, email: data.email, name: data.name, source };
 }
 
 /** Return an admin identity, or null when the request is not authorized. */
@@ -97,7 +100,15 @@ export async function authenticateAdmin(request?: Request): Promise<AdminIdentit
   const payload: JWTPayload | null = verifyJWT(legacyToken);
   if (!payload || payload.role !== "ADMIN" || !payload.email) return null;
 
-  return { id: payload.sub, email: payload.email, source: "legacy-jwt" };
+  // LOW-1: re-validate the legacy JWT against the database, mirroring the
+  // Supabase path above. A legacy token is only honored while its email still
+  // maps to an active ADMIN profile, so deactivating an admin (or demoting the
+  // role) immediately revokes any outstanding legacy tokens — the JWT payload
+  // alone is never trusted. Fails closed when the lookup errors.
+  const legacyProfile = await findAdminProfile(payload.email, "legacy-jwt");
+  if (!legacyProfile) return null;
+
+  return legacyProfile;
 }
 
 export async function isAdminRequest(request?: Request): Promise<boolean> {
