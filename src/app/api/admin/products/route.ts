@@ -8,6 +8,7 @@ import { isAdminRequest } from "@/lib/admin-auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import { createProductSchema, zodErrorMessages } from "@/lib/validators/admin";
 import { successResponse, errorResponse, AppError, UnauthorizedError, ValidationError } from "@/lib/errors";
+import { buildIlikeOrFilter } from "@/lib/supabase-search";
 
 // Auth helper
 async function checkAuth() {
@@ -35,7 +36,7 @@ export async function GET(request: Request) {
       .select("*, category:category(id,name,slug), images:product_image(*)", { count: "exact" });
 
     if (search) {
-      query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%,slug.ilike.%${search}%`);
+      query = query.or(buildIlikeOrFilter(["name", "description", "slug"], search));
     }
 
     if (category) {

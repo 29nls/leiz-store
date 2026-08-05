@@ -109,4 +109,27 @@ describe("POST /api/orders", () => {
     expect(response.status).toBe(400);
     expect(mockOrderCreate).not.toHaveBeenCalled();
   });
+
+  it("rejects an order with more than 20 line items", async () => {
+    const manyItems = Array.from({ length: 21 }, () => ({ productId: "p1", quantity: 1 }));
+    const response = await POST(request({ ...body, items: manyItems }) as never, { params: Promise.resolve({}) });
+
+    expect(response.status).toBe(400);
+    expect(mockOrderCreate).not.toHaveBeenCalled();
+  });
+
+  it("accepts an order at exactly the 20-item cap", async () => {
+    const maxItems = Array.from({ length: 20 }, (_, i) => ({ productId: `p${i}`, quantity: 1 }));
+    const response = await POST(request({ ...body, items: maxItems }) as never, { params: Promise.resolve({}) });
+
+    expect(response.status).toBe(201);
+    expect(mockOrderCreate).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects an unsupported payment method", async () => {
+    const response = await POST(request({ ...body, paymentMethod: "crypto_btc" }) as never, { params: Promise.resolve({}) });
+
+    expect(response.status).toBe(400);
+    expect(mockOrderCreate).not.toHaveBeenCalled();
+  });
 });

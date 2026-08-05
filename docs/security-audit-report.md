@@ -13,17 +13,20 @@
 
 LEIZ STORE's **payment/checkout integrity core is well engineered** — server-side pricing authority, atomic stock handling, idempotency with encrypted replay tokens, order-scoped confirmation tokens, and magic-byte-validated payment-proof uploads are all handled correctly. The real exposure is at the **edges**: Discord-button authorization, anon INSERT grants in Row-Level Security, PII leakage through the unauthenticated tracking endpoint, and missing rate limits on sensitive endpoints.
 
-**Verdict: 2 High (both remediated ✅), 4 Medium, 4 Low findings.** The two High findings were fixed on 2026-08-05 (see remediation notes below); Medium/Low items remain open.
+**Verdict: 2 High (both remediated ✅), 4 Medium (2 remediated ✅, 1 investigated 🔍, 1 open ⏳), 4 Low findings.** The two High findings and two of the Medium findings were fixed on 2026-08-05 (see remediation notes below); MED-1 received a read-only investigation; MED-2 and the Low items remain open.
 
 | Severity | Count | Status |
 |---|---|---|
 | 🔴 High | 2 | ✅ Remediated 2026-08-05 |
-| 🟠 Medium | 4 | ⏳ Open |
+| 🟠 Medium | 4 | 2 ✅ Remediated · 1 🔍 Investigated · 1 ⏳ Open |
 | 🟡 Low | 4 | ⏳ Open |
 
 > **Remediation log**
 > - **2026-08-05 — HIGH-1 remediated:** `api/discord/interactions/route.ts` now requires the clicking member to hold `DISCORD_ADMIN_ROLE_ID` and fails closed when the env var is unset. `.env.example` documents the new var; tests updated/added in `interactions.test.ts`. Signature verification unchanged.
 > - **2026-08-05 — HIGH-2 remediated:** anon INSERT policies (`"Insert order"`, `"Insert order_item"`, `"Insert payment"`) removed from `scripts/supabase-schema.sql`, with `scripts/migrations/010_revoke_anon_inserts.sql` shipping the same DROPs (plus a self-check) for existing deployments. Verified beforehand that every `order`/`order_item`/`payment` write flows through `service_role` (`create_order_atomic` RPC + `supabaseAdmin` API routes); the browser/anon client only reads those tables.
+> - **2026-08-05 — MED-3 remediated:** `createOrderSchema` now caps `items` at 20 line items (`.max(20)`) and constrains `paymentMethod` to `z.enum([...MANUAL_PAYMENT_METHODS])` = `bank_transfer | gopay | dana`. Regression tests added in `src/app/api/orders/__tests__/route.test.ts`.
+> - **2026-08-05 — MED-4 remediated:** all PostgREST `.or()` search interpolations now percent-encode the user term via the shared `buildIlikeOrFilter()` helper (`src/lib/supabase-search.ts`) — applied to `/api/admin/orders`, `/api/admin/products`, `/api/admin/users`, and the client-side admin orders table. Unit tests in `src/lib/__tests__/supabase-search.test.ts`.
+> - **2026-08-05 — MED-1 investigated (read-only, no code change):** see the investigation notes in the MED-1 section below. Fix decision still pending.
 
 ---
 
@@ -123,6 +126,14 @@ The 25-char random order ID is the *only* barrier, and it lives in the URL — l
 2. In the anonymous `orderNumber` branch, don't return `customerDiscord`/`buyerDiscordId` (currently `undefined` — good); keep `customerName` masked (e.g. first name + initial) if it must stay.
 3. Set the payment cookie with a broader `path: "/"` (or also `"/api/orders/track"`) so legitimate reads work, while keeping it httpOnly + SameSite=Lax.
 
+**🔍 Investigation notes (2026-08-05, read-only):**
+
+*How a buyer reaches tracking:* there are exactly two entry points, and **no confirmation email or Discord DM contains a tracking link**. (1) The public `/track` page (Navbar link + homepage CTA) — the buyer types their **order number** (`LZ-…`) manually → `GET /api/orders/track?orderNumber=…`. (2) Immediately after checkout the app redirects to `/payment/[orderId]`, which fetches `GET /api/orders/track?orderId=…` for payment instructions. The buyer-facing Discord DM (`buildBuyerEmbed`) carries only the order number + message; the email channel is a `console.log` placeholder — so tracking is entirely self-service by order number, or the payment URL right after checkout.
+
+*Is `orderId` guessable?* No. IDs are `crypto.randomUUID()` truncated to 25 hex chars (~100 bits of CSPRNG entropy), the route enforces `^[a-zA-Z0-9_-]{8,64}$`, and the endpoint is rate-limited (10 req/min/IP). Enumerating or guessing IDs is not practical.
+
+*What breaks if reads required the confirmation token?* The confirmation token is an **httpOnly cookie path-scoped to `/api/orders/{id}/confirm`** — it is invisible to JS and is not sent to `/api/orders/track` on a different path. Requiring it for `track?orderId=` reads would therefore **break the buyer's own post-checkout payment page** (the one legit client of the orderId branch) and would lock out buyers who re-check later by order number. A fix must ship a companion mechanism — e.g. broaden the cookie path, or issue a signed short-lived track URL/token at checkout — before the read gate can be enabled. Recommended next step: gate orderId reads while keeping `orderNumber` anonymous (it already masks `customerDiscord`/`buyerDiscordId`), then decide whether orderNumber reads should be masked further (e.g. first name + initial).
+
 ---
 
 ### 🟠 MED-2 — No brute-force protection on admin login; no rate limit on order creation
@@ -158,6 +169,8 @@ An attacker can POST hundreds/thousands of line items; `create_order_atomic` the
 
 **Fix:** `.min(1).max(20)` on `items`; `z.enum([...])` for `paymentMethod`; add a route-level body-size cap (Next.js `serverActions` cap exists but API routes need their own check).
 
+**✅ REMEDIATED (2026-08-05):** `items` now has `.min(1).max(20)` (20 chosen because it is well above any realistic cart for this ~20–40 SKU catalog while bounding the RPC's per-item row locks; no existing business limit was found in the codebase), and `paymentMethod` is `z.enum([...MANUAL_PAYMENT_METHODS])` — the exact set the checkout and payment pages support (`bank_transfer`, `gopay`, `dana`). Behavior for legitimate clients is unchanged (they only ever send those values). Regression tests added for over-limit items, the exact-20 boundary, and an unsupported method. A route-level body-size cap remains open as a Low/defense-in-depth item.
+
 ---
 
 ### 🟠 MED-4 — PostgREST filter injection via interpolated `.or()` search strings
@@ -174,6 +187,8 @@ Search values are interpolated into PostgREST's logical-filter string. Values co
 query = query.ilike("order_number", `%${search}%`).or(`customer_name.ilike.%${search}%`);
 ```
 or use the PostgREST `and()`/`or()` with properly quoted values (`"value"`).
+
+**✅ REMEDIATED (2026-08-05):** the search term is now percent-encoded before interpolation via the shared `buildIlikeOrFilter(columns, term)` helper (`src/lib/supabase-search.ts`), which emits e.g. `order_number.ilike.%x%2Cstatus.eq.PAID%,…`. Commas, parentheses, quotes and `and(`/`or(`/`not.` prefixes in user input become inert URL-encoded data (PostgREST decodes the value portion), so they can no longer alter the filter expression. Applied to all four interpolation sites found by a codebase-wide search: `/api/admin/orders`, `/api/admin/products`, `/api/admin/users`, and the client-side admin orders table. The `buildFilters` path in `src/lib/supabase-db.ts` already used this encoding and is unchanged.
 
 ---
 
@@ -253,10 +268,10 @@ Settings are readable by anonymous users and `PUT /api/admin/settings` accepts a
 |---|---|---|
 | ✅ | HIGH-1: Role-check Discord button clicks (`DISCORD_ADMIN_ROLE_ID`) | Applied 2026-08-05 |
 | ✅ | HIGH-2: Drop anon INSERT policies on `order`/`order_item`/`payment` | Applied 2026-08-05 (base schema + `migrations/010_revoke_anon_inserts.sql`) |
-| P1 | MED-1: Gate `track?orderId=` behind the confirmation token/cookie; mask PII | ~1 h |
+| ✅ | MED-3: Cap `items` array (`.max(20)`), enum `paymentMethod` | Applied 2026-08-05 (body-size guard still open as defense-in-depth) |
+| ✅ | MED-4: Parameterize `.or()` search values | Applied 2026-08-05 (`buildIlikeOrFilter` at 4 sites) |
+| 🔍 | MED-1: Gate `track?orderId=` behind the confirmation token/cookie; mask PII | Investigated 2026-08-05 — fix needs a token/cookie mechanism that doesn't break the post-checkout payment page |
 | P1 | MED-2: Rate-limit admin login + order creation (Redis-backed in prod) | ~2 h |
-| P1 | MED-3: Cap `items` array (`.max(20)`), enum `paymentMethod`, body-size guard | ~30 min |
-| P1 | MED-4: Parameterize `.or()` search values | ~30 min |
 | P2 | LOW-1…4: constant-time comparisons, legacy-JWT profile check, CORS default, upload magic bytes, settings key allowlist | ~half day |
 | P3 | Add regression tests: unauth Discord interaction → denied; anon REST INSERT → denied; track without cookie → 401 | ~half day |
 

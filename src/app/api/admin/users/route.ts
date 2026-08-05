@@ -13,6 +13,7 @@ import { hashPassword } from "@/lib/auth";
 import crypto from "crypto";
 import { createUserSchema, zodErrorMessages } from "@/lib/validators/admin";
 import { successResponse, errorResponse, AppError, ValidationError } from "@/lib/errors";
+import { buildIlikeOrFilter } from "@/lib/supabase-search";
 
 function generateId(): string {
   return crypto.randomUUID().replace(/-/g, "").slice(0, 25);
@@ -41,7 +42,7 @@ export async function GET(req: NextRequest) {
       .select("id, email, name, role, avatar, discord, phone, is_active, last_login_at, created_at, updated_at", { count: "exact" });
 
     if (search) {
-      query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
+      query = query.or(buildIlikeOrFilter(["name", "email"], search));
     }
     if (role) {
       query = query.eq("role", role);
