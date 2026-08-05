@@ -57,6 +57,21 @@ function hmacSign(data: string, secret: string): string {
   return crypto.createHmac("sha256", secret).update(data).digest("base64url");
 }
 
+/**
+ * Constant-time string comparison for signatures/secrets (LOW-1).
+ *
+ * Length is checked before crypto.timingSafeEqual because the latter throws on
+ * mismatched buffer lengths. For HMAC-SHA256 base64url signatures both sides
+ * are always 43 ASCII characters, so the length check leaks nothing an
+ * attacker does not already know.
+ */
+function safeEqualStrings(a: string, b: string): boolean {
+  const aBuf = Buffer.from(a, "utf8");
+  const bBuf = Buffer.from(b, "utf8");
+  if (aBuf.length !== bBuf.length) return false;
+  return crypto.timingSafeEqual(aBuf, bBuf);
+}
+
 export interface JWTPayload {
   sub: string;
   email: string;
@@ -88,7 +103,9 @@ export function verifyJWT(token: string): JWTPayload | null {
     const [header, body, signature] = parts;
     const expectedSig = hmacSign(`${header}.${body}`, getSecret());
 
-    if (signature !== expectedSig) return null;
+    // LOW-1: constant-time comparison. A `!==` string compare exits early on
+    // the first differing byte, leaking signature information via timing.
+    if (!safeEqualStrings(signature, expectedSig)) return null;
 
     const payload = JSON.parse(base64UrlDecode(body)) as JWTPayload;
     if (payload.exp * 1000 < Date.now()) return null;
