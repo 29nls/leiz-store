@@ -94,9 +94,15 @@ describe("POST /api/orders/[orderId]/confirm", () => {
       "a".repeat(43),
       undefined
     );
-    // The confirmation cookie is intentionally kept after confirming so the
-    // payment page's track reads keep working on refresh/poll.
-    expect(mockCookieSet).not.toHaveBeenCalled();
+    // Confirming mirrors the token into the order-scoped cookie so the payment
+    // page's track reads keep working on refresh/poll, including on devices
+    // that never checked out (no cookie was issued there).
+    expect(mockCookieSet).toHaveBeenCalledWith(expect.objectContaining({
+      name: "payment_confirmation_order-1",
+      value: "a".repeat(43),
+      httpOnly: true,
+      path: "/api/orders",
+    }));
   });
 
   it("keeps body-token compatibility when the cookie is absent", async () => {
@@ -106,6 +112,11 @@ describe("POST /api/orders/[orderId]/confirm", () => {
 
     expect(response.status).toBe(200);
     expect(mockValidateToken).toHaveBeenCalledWith("order-1", "b".repeat(43));
+    expect(mockCookieSet).toHaveBeenCalledWith(expect.objectContaining({
+      name: "payment_confirmation_order-1",
+      value: "b".repeat(43),
+      path: "/api/orders",
+    }));
   });
 
   it("does not accept a query-string token", async () => {

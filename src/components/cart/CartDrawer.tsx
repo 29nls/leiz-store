@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import type { CartItem } from "@/types";
 import { useCartStore } from "@/stores/cart-store";
 import Link from "next/link";
@@ -21,6 +22,74 @@ export default function CartDrawer() {
   const getTotal       = cartStore.getTotal;
   const getItemCount   = cartStore.getItemCount;
 
+  const panelRef = useRef<HTMLDivElement>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+
+  // Capture the opener and move focus into the dialog when it opens;
+  // restore focus to the opener when it closes (dialog pattern).
+  useEffect(() => {
+    if (isOpen) {
+      previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
+      panelRef.current?.focus();
+    } else if (previouslyFocusedRef.current) {
+      previouslyFocusedRef.current.focus();
+    }
+  }, [isOpen]);
+
+  // Lock background scroll while the drawer is open (aria-modal content).
+  useEffect(() => {
+    if (!isOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen]);
+
+  // Escape closes the drawer; Tab is trapped inside the dialog.
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setIsOpen(false);
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+
+      const panel = panelRef.current;
+      if (!panel) return;
+
+      const focusables = Array.from(
+        panel.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter((el) => el.offsetParent !== null || el === document.activeElement);
+
+      if (focusables.length === 0) {
+        event.preventDefault();
+        panel.focus();
+        return;
+      }
+
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, setIsOpen]);
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -34,6 +103,7 @@ export default function CartDrawer() {
             className="bg-black/65 backdrop-blur-[6px]"
             style={{ position: "fixed", inset: 0, zIndex: 50 }}
             onClick={() => setIsOpen(false)}
+            aria-hidden="true"
           />
 
           {/* Drawer panel */}
@@ -42,7 +112,12 @@ export default function CartDrawer() {
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", bounce: 0, duration: 0.38 }}
-            className="bg-void border-l border-border"
+            className="bg-void border-l border-border outline-none"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cart-drawer-title"
+            tabIndex={-1}
+            ref={panelRef}
             style={{
               position: "fixed", right: 0, top: 0, zIndex: 50,
               height: "100%", width: "100%", maxWidth: "420px",
@@ -55,7 +130,7 @@ export default function CartDrawer() {
                 <div className="flex items-center justify-center w-[34px] h-[34px] rounded bg-ember-dim border border-ember">
                   <ShoppingBag size={15} className="text-ember" />
                 </div>
-                <span className="text-[15px] text-text-primary">
+                <span id="cart-drawer-title" className="text-[15px] text-text-primary">
                   Shopping Cart
                 </span>
                 {getItemCount() > 0 && (

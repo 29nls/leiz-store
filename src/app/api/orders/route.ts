@@ -19,7 +19,7 @@ export const POST = withErrorHandling(async (
   // Rate limit order creation per client (generous cap; fail-open). Stops
   // scripted flooding while a legitimate buyer (even behind a shared NAT IP)
   // is unaffected. See ORDER_CREATE_RATE_LIMIT in src/lib/middleware.ts.
-  const rateLimit = safeCheckRateLimit(
+  const rateLimit = await safeCheckRateLimit(
     `order-create:${getClientIp(req)}`,
     ORDER_CREATE_RATE_LIMIT.max,
     ORDER_CREATE_RATE_LIMIT.windowMs
@@ -80,6 +80,12 @@ export const POST = withErrorHandling(async (
     ...safeOrder,
     manualPayment: result.manualPayment,
     replayed: result.replayed,
+    // Order-scoped bearer token, also mirrored in the HttpOnly cookie below.
+    // Exposing it lets the checkout page carry it on the payment URL so
+    // confirmation/tracking still work on a fresh device (cross-device,
+    // incognito, or cleared cookies). It is unguessable, expires with the
+    // order, and only authorizes this one order.
+    paymentConfirmationToken: result.paymentConfirmationToken,
   }), {
     status: 201,
     headers: corsHeaders(),

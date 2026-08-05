@@ -13,6 +13,7 @@ import { orderRepository } from "@/lib/repositories";
 import { cookies } from "next/headers";
 import { paymentConfirmationCookieName } from "@/lib/order-idempotency";
 import { sendSellerNotification } from "@/lib/discord/bot";
+import { PAYMENT_EXPIRY_MS } from "@/lib/payment/constants";
 import {
   createPaymentProofSignedUrl,
   deletePaymentProof,
@@ -36,7 +37,7 @@ export const POST = withErrorHandling(async (
     );
   }
 
-  const rateLimit = checkRateLimit(`confirm:${getClientIp(req)}:${orderId}`, 5, 10 * 60 * 1000);
+  const rateLimit = await checkRateLimit(`confirm:${getClientIp(req)}:${orderId}`, 5, 10 * 60 * 1000);
   if (!rateLimit.allowed) {
     const response = NextResponse.json(
       errorResponse(new ValidationError("Too many confirmation attempts. Please try again later.")),
@@ -156,11 +157,21 @@ export const POST = withErrorHandling(async (
       successResponse({ message: "Transfer confirmed", orderId }),
       { status: 200, headers: corsHeaders(req.headers.get("origin") || undefined) }
     );
-    // The confirmation cookie is intentionally NOT cleared here: the payment
-    // page keeps polling GET /api/orders/track?orderId=… after confirming, so
-    // a refresh must still be authorized. The token is order-scoped and expires
-    // with the order (PAYMENT_EXPIRY_MS); confirm is idempotent and guarded by
-    // status + duplicate checks, so keeping it grants read access only.
+    // Mirror the token into an order-scoped cookie when confirming from a
+    // device that never checked out (cross-device/incognito): the payment page
+    // keeps polling GET /api/orders/track?orderId=… after confirming, so those
+    // reads must stay authorized. Same shape as the cookie checkout issues;
+    // the token is order-scoped and expires with the order, and confirm is
+    // idempotent + guarded by status/duplicate checks.
+    response.cookies.set({
+      name: paymentConfirmationCookieName(orderId),
+      value: token,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/api/orders",
+      maxAge: Math.floor(PAYMENT_EXPIRY_MS / 1000),
+    });
     return addRateLimitHeaders(response, rateLimit, 5);
   } catch (error) {
     if (proofPath) await deletePaymentProof(proofPath);

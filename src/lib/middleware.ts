@@ -89,121 +89,22 @@ export function getUserAgent(request: NextRequest): string {
   return request.headers.get("user-agent") || "unknown";
 }
 
-/**
- * Rate limiting with in-memory store (production should use Redis)
- */
-const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
-
-export function checkRateLimit(
-  key: string,
-  maxRequests = 100,
-  windowMs = 60000
-): { allowed: boolean; remaining: number; resetAt: number } {
-  const now = Date.now();
-  const entry = rateLimitStore.get(key);
-
-  if (!entry || now > entry.resetAt) {
-    rateLimitStore.set(key, { count: 1, resetAt: now + windowMs });
-    return { allowed: true, remaining: maxRequests - 1, resetAt: now + windowMs };
-  }
-
-  entry.count++;
-
-  if (entry.count > maxRequests) {
-    return { allowed: false, remaining: 0, resetAt: entry.resetAt };
-  }
-
-  return {
-    allowed: true,
-    remaining: maxRequests - entry.count,
-    resetAt: entry.resetAt,
-  };
-}
-
-// ─── Login & order-create throttling ─────────────────────────
-// Generous, fail-open thresholds (see MED-2 in docs/security-audit-report.md).
-// Windows auto-expire: there is no permanent lockout, and every limiter call
-// in the routes below goes through the fail-open safe* wrappers so a limiter
-// bug can never block legitimate traffic.
-
-export const LOGIN_RATE_LIMIT = {
-  /** Failed attempts allowed per client IP per window. */
-  ipMax: 20,
-  /** Failed attempts allowed per account per window — backstop against IP rotation. */
-  accountMax: 10,
-  windowMs: 15 * 60 * 1000,
-} as const;
-
-export const ORDER_CREATE_RATE_LIMIT = {
-  /** Orders allowed per client IP per window. Generous so NAT-shared legitimate buyers are unaffected. */
-  max: 20,
-  windowMs: 60 * 1000,
-} as const;
-
-/** Read a bucket without incrementing it. */
-export function peekRateLimit(
-  key: string,
-  maxRequests = 100,
-  windowMs = 60000
-): { allowed: boolean; remaining: number; resetAt: number } {
-  const now = Date.now();
-  const entry = rateLimitStore.get(key);
-  if (!entry || now > entry.resetAt) {
-    return { allowed: true, remaining: maxRequests, resetAt: now + windowMs };
-  }
-  return {
-    allowed: entry.count < maxRequests,
-    remaining: Math.max(0, maxRequests - entry.count),
-    resetAt: entry.resetAt,
-  };
-}
-
-/** Delete a bucket (e.g. clear the failure counter after a successful login). */
-export function resetRateLimit(key: string): void {
-  rateLimitStore.delete(key);
-}
-
-/** Fail-open wrapper: a limiter bug must never block legitimate traffic. */
-export function safeCheckRateLimit(
-  key: string,
-  maxRequests = 100,
-  windowMs = 60000
-): { allowed: boolean; remaining: number; resetAt: number } {
-  try {
-    return checkRateLimit(key, maxRequests, windowMs);
-  } catch (err) {
-    console.error("[rate-limit] checkRateLimit failed open:", err);
-    return { allowed: true, remaining: maxRequests, resetAt: Date.now() + windowMs };
-  }
-}
-
-/** Fail-open peek (see safeCheckRateLimit). */
-export function safePeekRateLimit(
-  key: string,
-  maxRequests = 100,
-  windowMs = 60000
-): { allowed: boolean; remaining: number; resetAt: number } {
-  try {
-    return peekRateLimit(key, maxRequests, windowMs);
-  } catch (err) {
-    console.error("[rate-limit] peekRateLimit failed open:", err);
-    return { allowed: true, remaining: maxRequests, resetAt: Date.now() + windowMs };
-  }
-}
-
-/**
- * Add rate limit headers to response
- */
-export function addRateLimitHeaders(
-  response: NextResponse,
-  result: ReturnType<typeof checkRateLimit>,
-  limit = 100
-): NextResponse {
-  response.headers.set("X-RateLimit-Limit", String(limit));
-  response.headers.set("X-RateLimit-Remaining", String(result.remaining));
-  response.headers.set("X-RateLimit-Reset", String(Math.ceil(result.resetAt / 1000)));
-  return response;
-}
+// Rate limiting lives in ./rate-limit (Redis/KV-backed with an in-memory
+// fallback). Re-exported here so existing imports from "@/lib/middleware"
+// keep working; all limit functions are now async (await them).
+export {
+  checkRateLimit,
+  peekRateLimit,
+  resetRateLimit,
+  safeCheckRateLimit,
+  safePeekRateLimit,
+  addRateLimitHeaders,
+  LOGIN_RATE_LIMIT,
+  ORDER_CREATE_RATE_LIMIT,
+  ADMIN_RATE_LIMIT,
+  enforceAdminRateLimit,
+  redisRateLimitConfigured,
+} from "./rate-limit";
 
 /**
  * Parse pagination from URL search params

@@ -75,9 +75,9 @@ Semua endpoint publik & checkout memakai envelope standar:
 { "success": false, "error": { "code": "VALIDATION_ERROR", "message": "items: ...", "details": { "field": ["pesan"] } } }
 ```
 
-> ⚠️ Catatan: sebagian endpoint admin lama (`/api/admin/*` pra-migrasi) masih
-> mengembalikan bentuk lama `{ "orders": [...], "total": N }` / `{ "error": "..." }`.
-> Konsolidasi ke envelope standar adalah agenda teknis (lihat §9).
+> ✅ **Semua endpoint** (publik, admin, system) kini konsisten memakai envelope
+> standar ini. List endpoint menempatkan array di `data` dan paginasi di `meta`
+> (`{ "data": [...], "meta": { "page", "limit", "total", "totalPages" } }`).
 
 ### 2.2 Kode Error Standar
 
@@ -390,10 +390,19 @@ Pembeli → GET /api/orders/track?orderNumber=LZ-…
 | `confirmTransferSchema` | sama | buyerName, buyerDiscordId, token opsional (dicek `isValidPaymentToken`), note ≤500 |
 | `adminPaymentActionSchema` | sama | action enum `accept/reject/cancel/force_cancel` |
 | `isValidDiscordId` | sama | snowflake 17–19 digit \| `user#0000` \| username 2–32 char |
+| `createProductSchema` | `src/lib/validators/admin.ts` | nama ≤200, slug `[a-z0-9-]`, price ≥0 (coerce), stock int, images ≤20 |
+| `updateProductSchema` | sama | `createProductSchema.partial()` (toggle `{ isActive }` aman) |
+| `createCategorySchema` | sama | nama ≤100, slug opsional, sortOrder int ≥0 |
+| `updateCategorySchema` | sama | partial; tolak sortOrder negatif |
+| `createUserSchema` | sama | email regex non-polinomial ≤254, password ≥6, role `ADMIN`/`CUSTOMER` |
+| `updateUserSchema` | sama | partial; tolak body kosong (refine); email UI diterima & diabaikan |
+| `upsertSettingSchema` | sama | key ≤100, value di-coerce ke string (kolom `value TEXT`) |
+| `uploadFileSchema` | sama | `File`, tipe JPEG/PNG/WebP/AVIF, ≤5MB, non-kosong |
 
 Selain itu: regex ketat `orderNumber` (`LZ-\d{8}-[A-Z0-9]{6}`) dan `orderId`
-pada tracking; validasi manual pada beberapa route admin lama (belum semua
-memakai Zod — agenda konsolidasi).
+pada tracking. Semua route admin create/update kini memakai Zod
+(`zodErrorMessages` menghasilkan pesan `field: pesan` yang dibungkus
+`ValidationError` → HTTP 400).
 
 ---
 
@@ -420,8 +429,8 @@ Setelah implementasi/migrasi, jalankan verifikasi berikut (unit + integration):
 
 ## 9. Temuan & Agenda Teknis (untuk iterasi berikutnya)
 
-- [ ] **Konsolidasi envelope respons** admin lama → `{ success, data, error, meta }` seragam.
-- [ ] **Zod di semua route admin** (saat ini sebagian masih validasi manual).
+- [x] **Konsolidasi envelope respons** semua endpoint (publik + admin) → `{ success, data, error, meta }` seragam (2026-08-05).
+- [x] **Zod di semua route admin** (products, categories, users, settings, upload — create & update) + unit test `src/lib/validators/__tests__/admin.test.ts`.
 - [ ] **Rate limit di lebih banyak endpoint** publik/admin (saat ini hanya confirm & track).
 - [ ] **Migrasi storage rate-limit** dari in-memory ke Redis/KV untuk multi-instance.
 - [ ] **Idempotensi-Key** di ekspose ke dokumentasi frontend + test double-submit.

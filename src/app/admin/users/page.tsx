@@ -107,12 +107,12 @@ export default function AdminUsersPage() {
       const res = await fetch(`/api/admin/users?${params}`);
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Gagal memuat data");
+        throw new Error(data.error?.message || "Gagal memuat data");
       }
       const data = await res.json();
-      setUsers(data.users || []);
-      setTotalPages(data.totalPages || 1);
-      setTotal(data.total || 0);
+      setUsers(data.data || []);
+      setTotalPages(data.meta?.totalPages || 1);
+      setTotal(data.meta?.total || 0);
     } catch (e: any) {
       setError(e.message || "Gagal memuat data user");
     } finally {
@@ -175,7 +175,7 @@ export default function AdminUsersPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        setServerErr(data.error || "Gagal menyimpan");
+        setServerErr(data.error?.message || "Gagal menyimpan");
         return;
       }
 
@@ -198,7 +198,7 @@ export default function AdminUsersPage() {
       const res = await fetch(`/api/admin/users/${delTarget.id}`, { method: "DELETE" });
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error || "Gagal menonaktifkan");
+        setError(data.error?.message || "Gagal menonaktifkan");
         return;
       }
       setDelTarget(null);
@@ -222,7 +222,7 @@ export default function AdminUsersPage() {
       });
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error || "Gagal mengaktifkan");
+        setError(data.error?.message || "Gagal mengaktifkan");
         return;
       }
       showOk("User berhasil diaktifkan kembali");

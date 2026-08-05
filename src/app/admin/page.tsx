@@ -67,10 +67,10 @@ export default function AdminDashboard() {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => null);
-        throw new Error(errData?.error || `Gagal memuat dashboard (${res.status})`);
+        throw new Error(errData?.error?.message || `Gagal memuat dashboard (${res.status})`);
       }
 
-      const result: DashboardData = await res.json();
+      const result: DashboardData = (await res.json()).data;
 
       // Show first warning as error if stats are completely empty
       const allZero = Object.values(result.stats).every((v) => v === 0);

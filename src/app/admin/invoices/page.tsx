@@ -200,8 +200,8 @@ export default function AdminInvoicesPage() {
                     onClick={async () => {
                       const res = await fetch(`/api/admin/invoices/${selected.id}/download`);
                       const data = await res.json();
-                      if (res.ok && data.url) window.open(data.url, "_blank", "noopener,noreferrer");
-                      else setError(data.error || "Gagal membuka invoice");
+                      if (res.ok && data.data?.url) window.open(data.data.url, "_blank", "noopener,noreferrer");
+                      else setError(data.error?.message || "Gagal membuka invoice");
                     }}
                     className="inline-flex items-center gap-2 px-4 py-2.5 bg-surface-raised hover:bg-surface-raised text-text-primary rounded-lg text-sm font-medium transition-colors"
                   >

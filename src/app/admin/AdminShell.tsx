@@ -58,7 +58,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       if (res.ok) {
         const data = await res.json();
         setAuthenticated(true);
-        setAdminName(data.user?.email?.split("@")[0] || "Admin");
+        setAdminName(data.data?.user?.email?.split("@")[0] || "Admin");
         setConnectionStatus("connected");
         setLoading(false);
         return true;

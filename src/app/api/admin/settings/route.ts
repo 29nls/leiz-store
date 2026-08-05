@@ -6,16 +6,38 @@
 import { NextResponse } from "next/server";
 import { isAdminRequest } from "@/lib/admin-auth";
 import { supabaseAdmin } from "@/lib/supabase";
+import {
+  successResponse,
+  errorResponse,
+  AppError,
+  UnauthorizedError,
+  ValidationError,
+} from "@/lib/errors";
+import { upsertSettingSchema, zodErrorMessages } from "@/lib/validators/admin";
+import { enforceAdminRateLimit } from "@/lib/rate-limit";
 
 async function checkAuth() {
   return isAdminRequest();
 }
 
+function unauthorized() {
+  return NextResponse.json(errorResponse(new UnauthorizedError()), { status: 401 });
+}
+
+function internalError(error: unknown) {
+  const message = error instanceof Error ? error.message : "Unknown error";
+  return NextResponse.json(
+    errorResponse(new AppError(500, "INTERNAL_ERROR", message)),
+    { status: 500 }
+  );
+}
+
 // GET /api/admin/settings
-export async function GET() {
-  if (!(await checkAuth())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+export async function GET(request: Request) {
+  const limited = await enforceAdminRateLimit(request, "settings");
+  if (limited) return limited;
+
+  if (!(await checkAuth())) return unauthorized();
 
   try {
     const { data: settings, error } = await supabaseAdmin
@@ -26,25 +48,31 @@ export async function GET() {
 
     if (error) throw error;
 
-    return NextResponse.json({ settings: settings || [] });
+    return NextResponse.json(successResponse(settings || []));
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return internalError(error);
   }
 }
 
 // PUT /api/admin/settings
 export async function PUT(request: Request) {
-  if (!(await checkAuth())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const limited = await enforceAdminRateLimit(request, "settings");
+  if (limited) return limited;
+
+  if (!(await checkAuth())) return unauthorized();
 
   try {
     const body = await request.json();
-    const { key, value, type, group } = body;
+    const parsed = upsertSettingSchema.safeParse(body);
 
-    if (!key || value === undefined) {
-      return NextResponse.json({ error: "Key and value are required" }, { status: 400 });
+    if (!parsed.success) {
+      return NextResponse.json(
+        errorResponse(new ValidationError(zodErrorMessages(parsed.error))),
+        { status: 400 }
+      );
     }
+
+    const { key, value, type, group } = parsed.data;
 
     // Upsert the setting
     const { data: existing } = await supabaseAdmin
@@ -80,12 +108,10 @@ export async function PUT(request: Request) {
       result = data;
     }
 
-    return NextResponse.json({
-      success: true,
-      setting: result,
-      message: "Setting updated successfully",
-    });
+    return NextResponse.json(
+      successResponse({ setting: result, message: "Setting updated successfully" })
+    );
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return internalError(error);
   }
 }

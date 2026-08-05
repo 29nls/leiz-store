@@ -155,12 +155,12 @@ export default function AdminProductsPage() {
       const res = await fetch(`/api/admin/products?${params}`);
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error || "Gagal memuat produk");
+        throw new Error(err.error?.message || "Gagal memuat produk");
       }
       const data = await res.json();
-      setProducts(data.products || []);
-      setTotalPages(data.totalPages || 1);
-      setTotal(data.total || 0);
+      setProducts(data.data || []);
+      setTotalPages(data.meta?.totalPages || 1);
+      setTotal(data.meta?.total || 0);
     } catch (e: any) { setError(e.message || "Gagal memuat produk"); }
     finally { setLoading(false); }
   }, [searchDb, catFilter, page]);
@@ -170,7 +170,7 @@ export default function AdminProductsPage() {
       const res = await fetch("/api/admin/categories");
       if (res.ok) {
         const data = await res.json();
-        setCategories((data.categories || []) as any);
+        setCategories((data.data || []) as any);
       }
     } catch { /* ignore */ }
   }, []);
@@ -251,7 +251,7 @@ export default function AdminProductsPage() {
           body: JSON.stringify(apiPayload),
         });
         const data = await res.json();
-        if (!res.ok) { setServerErr(data.error || "Gagal memperbarui"); return; }
+        if (!res.ok) { setServerErr(data.error?.message || "Gagal memperbarui"); return; }
       } else {
         const res = await fetch("/api/admin/products", {
           method: "POST",
@@ -259,7 +259,7 @@ export default function AdminProductsPage() {
           body: JSON.stringify(apiPayload),
         });
         const data = await res.json();
-        if (!res.ok) { setServerErr(data.error || "Gagal membuat"); return; }
+        if (!res.ok) { setServerErr(data.error?.message || "Gagal membuat"); return; }
       }
       setShowModal(false);
       showOk(editingId ? "Produk berhasil diperbarui" : "Produk berhasil dibuat");
@@ -276,7 +276,7 @@ export default function AdminProductsPage() {
     try {
       const res = await fetch(`/api/admin/products/${delTarget.id}`, { method: "DELETE" });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || "Gagal menghapus"); return; }
+      if (!res.ok) { setError(data.error?.message || "Gagal menghapus"); return; }
       setDelTarget(null);
       showOk("Produk berhasil dihapus");
       fetchProducts();
@@ -295,7 +295,7 @@ export default function AdminProductsPage() {
       });
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error || "Gagal mengubah status");
+        setError(data.error?.message || "Gagal mengubah status");
         return;
       }
       showOk(p.is_active ? "Produk dinonaktifkan" : "Produk diaktifkan");
@@ -321,8 +321,8 @@ export default function AdminProductsPage() {
       fd.append("file", file);
       const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
       const data = await res.json();
-      if (!res.ok) { setServerErr(data.error || "Gagal upload"); return; }
-      setForm((prev) => ({ ...prev, image_url: data.url }));
+      if (!res.ok) { setServerErr(data.error?.message || "Gagal upload"); return; }
+      setForm((prev) => ({ ...prev, image_url: data.data?.url }));
     } catch (e: any) { setServerErr(e.message || "Gagal upload"); }
     finally { setUploading(false); }
   }, []);

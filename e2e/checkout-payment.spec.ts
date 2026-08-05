@@ -13,7 +13,7 @@ const cartItem = {
 };
 
 test.describe("Checkout payment token transport", () => {
-  test("submits a keyed checkout and never puts the payment token in the URL", async ({ page }) => {
+  test("submits a keyed checkout and carries the payment token on the payment URL", async ({ page }) => {
     await page.addInitScript((item) => {
       window.localStorage.setItem("leiz-cart", JSON.stringify({
         state: { items: [item], isOpen: false },
@@ -41,6 +41,7 @@ test.describe("Checkout payment token transport", () => {
             id: "order-e2e",
             orderNumber: "LZ-E2E",
             status: "PENDING_PAYMENT",
+            paymentConfirmationToken: "e2e-token-value",
           },
         }),
       });
@@ -53,8 +54,10 @@ test.describe("Checkout payment token transport", () => {
     await page.getByRole("button", { name: "Continue" }).click();
     await page.getByRole("button", { name: "Place Order & Pay" }).click();
 
-    await expect(page).toHaveURL(/\/payment\/order-e2e$/);
-    expect(new URL(page.url()).searchParams.has("token")).toBe(false);
+    await expect(page).toHaveURL(/\/payment\/order-e2e\?token=e2e-token-value$/);
+    // The order-scoped bearer token rides on the payment URL so confirmation
+    // works cross-device (no HttpOnly cookie on the new device).
+    expect(new URL(page.url()).searchParams.get("token")).toBe("e2e-token-value");
     expect(submittedKey).toBeTruthy();
   });
 });

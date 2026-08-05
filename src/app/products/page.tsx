@@ -1,12 +1,12 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Package, Loader2, Search, X, ChevronDown } from "@/components/ui/icons";
 import ProductCard from "@/components/product/ProductCard";
-import { useProducts } from "@/hooks/use-data";
+import { useProducts, type ProductListItem } from "@/hooks/use-data";
 import type { SortOption } from "@/types";
-import { cn } from "@/lib/utils";
+import { cn, debounce } from "@/lib/utils";
 
 const SORT_OPTIONS: { value: SortOption; label: string }[] = [
   { value: "newest",     label: "Newest"              },
@@ -28,14 +28,45 @@ function ProductsContent() {
   const [category, setCategory] = useState("all");
   const [sort,     setSort]     = useState<SortOption>(initialSort);
   const [sortOpen, setSortOpen] = useState(false);
+  const [page,     setPage]     = useState(1);
+  // The input value updates immediately; the API query only fires after the
+  // user pauses typing (debounced), avoiding one request per keystroke.
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const searchIntentRef = useRef("");
+
+  const debouncedSetSearch = useMemo(
+    () =>
+      debounce((value: string) => {
+        // Ignore stale fires (e.g. the input was cleared meanwhile).
+        if (searchIntentRef.current !== value) return;
+        setDebouncedSearch(value);
+        setPage(1);
+      }, 300),
+    []
+  );
 
   const { data, loading, error } = useProducts({
     category: category !== "all" ? category : undefined,
-    q:        search || undefined,
+    q:        debouncedSearch || undefined,
     sort,
+    page,
   });
 
-  const products  = data?.items ?? [];
+  const [loaded,  setLoaded]  = useState<ProductListItem[]>([]);
+  const [hasMore, setHasMore] = useState(false);
+
+  // Accumulate pages: a fresh filter / page-1 response replaces the list,
+  // while "Load More" responses append to it.
+  useEffect(() => {
+    if (!data) return;
+    setLoaded((prev) => (data.page <= 1 ? data.items : [...prev, ...data.items]));
+    setHasMore(data.page < data.totalPages);
+  }, [data]);
+
+  const initialLoading = loading && loaded.length === 0;
+  const loadingMore    = loading && loaded.length > 0;
+
+  const products  = loaded;
   const activeSort = SORT_OPTIONS.find((o) => o.value === sort);
 
   return (
@@ -72,7 +103,12 @@ function ProductsContent() {
               <input
                 type="search"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setSearch(value);
+                  searchIntentRef.current = value;
+                  debouncedSetSearch(value);
+                }}
                 placeholder="Search items…"
                 aria-label="Search items"
                 className={cn(
@@ -84,7 +120,12 @@ function ProductsContent() {
               />
               {search && (
                 <button
-                  onClick={() => setSearch("")}
+                  onClick={() => {
+                    setSearch("");
+                    setDebouncedSearch("");
+                    setPage(1);
+                    searchIntentRef.current = "";
+                  }}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary/40 hover:text-text transition-colors"
                   aria-label="Clear search"
                 >
@@ -100,7 +141,7 @@ function ProductsContent() {
               {CATEGORY_FILTERS.map((f) => (
                 <button
                   key={f.slug}
-                  onClick={() => setCategory(f.slug)}
+                  onClick={() => { setCategory(f.slug); setPage(1); }}
                   className={cn(
                     "h-9 px-4 rounded-xl text-[12px] font-medium transition-all duration-300",
                     category === f.slug
@@ -154,7 +195,7 @@ function ProductsContent() {
                         key={opt.value}
                         role="option"
                         aria-selected={sort === opt.value}
-                        onClick={() => { setSort(opt.value); setSortOpen(false); }}
+                        onClick={() => { setSort(opt.value); setSortOpen(false); setPage(1); }}
                         className={cn(
                           "w-full text-left px-4 py-2.5 text-[12px] font-medium transition-colors",
                           sort === opt.value
@@ -175,7 +216,7 @@ function ProductsContent() {
 
       {/* ── Grid ── */}
       <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-12 py-10">
-        {loading ? (
+        {initialLoading ? (
           <div
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4"
             aria-busy="true"
@@ -203,23 +244,44 @@ function ProductsContent() {
               </div>
             ))}
           </div>
-        ) : error ? (
+        ) : error && products.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-36 gap-3" role="alert">
             <p className="text-[13px] text-error/70 font-medium">Failed to load items</p>
             <p className="text-[12px] text-text-secondary/45">{error}</p>
           </div>
         ) : products.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4">
-            {products.map((product, i) => (
-              <div
-                key={product.id}
-                className="animate-fade-in"
-                style={{ animationDelay: `${i * 0.04}s` }}
-              >
-                <ProductCard product={product} />
+          <>
+            {error && (
+              <div className="mb-6 p-4 rounded-lg bg-error/10 border border-error/20 text-sm text-error" role="alert">
+                {error}
               </div>
-            ))}
-          </div>
+            )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4">
+              {products.map((product, i) => (
+                <div
+                  key={product.id}
+                  className="animate-fade-in"
+                  style={{ animationDelay: `${i * 0.04}s` }}
+                >
+                  <ProductCard product={product} />
+                </div>
+              ))}
+            </div>
+            {hasMore && (
+              <div className="flex justify-center mt-10">
+                <button
+                  onClick={() => setPage((p) => p + 1)}
+                  disabled={loadingMore}
+                  className="inline-flex items-center gap-2 h-10 px-6 rounded-xl bg-surface border border-border text-[12px] font-medium text-text-secondary hover:text-text hover:border-arcane/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loadingMore && (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                  )}
+                  {loadingMore ? "Loading…" : "Load More"}
+                </button>
+              </div>
+            )}
+          </>
         ) : (
           <div className="flex flex-col items-center justify-center py-36 gap-4">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-surface border border-border">
@@ -233,7 +295,13 @@ function ProductsContent() {
             </div>
             {(search || category !== "all") && (
               <button
-                onClick={() => { setSearch(""); setCategory("all"); }}
+                onClick={() => {
+                  setSearch("");
+                  setDebouncedSearch("");
+                  setCategory("all");
+                  setPage(1);
+                  searchIntentRef.current = "";
+                }}
                 className="text-[12px] text-primary hover:text-ember-bright transition-colors"
               >
                 Clear filters

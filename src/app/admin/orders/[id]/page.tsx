@@ -99,7 +99,7 @@ export default function OrderDetailPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || `Gagal update (${res.status})`);
+        throw new Error(data.error?.message || `Gagal update (${res.status})`);
       }
 
       setOkMsg(`Status → ${newStatus.replace("_", " ")}`);

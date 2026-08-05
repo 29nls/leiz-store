@@ -102,6 +102,28 @@ describe("GET /api/orders/track", () => {
     expect(mockValidateToken).toHaveBeenCalledWith("order-123456", "b".repeat(43));
   });
 
+  it("accepts the token as a query param when no cookie is present (cross-device)", async () => {
+    mockValidateToken.mockResolvedValue(true);
+    mockGetOrderForPayment.mockResolvedValue({ ...ORDER_ROW, items: [] });
+
+    const response = await GET(trackRequest({ orderId: "order-123456", token: "d".repeat(43) }) as never);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(mockValidateToken).toHaveBeenCalledWith("order-123456", "d".repeat(43));
+    expect(mockGetOrderForPayment).toHaveBeenCalledWith("order-123456");
+    expect(body.data.customer_name).toBe("Budi Test");
+  });
+
+  it("fails closed with 404 when the query token is invalid", async () => {
+    mockValidateToken.mockResolvedValue(false);
+
+    const response = await GET(trackRequest({ orderId: "order-123456", token: "e".repeat(43) }) as never);
+
+    expect(response.status).toBe(404);
+    expect(mockGetOrderForPayment).not.toHaveBeenCalled();
+  });
+
   it("resolves the manual order-number path without any cookie (order number is the bearer credential)", async () => {
     mockFindByOrderNumber.mockResolvedValue({
       id: "order-1",

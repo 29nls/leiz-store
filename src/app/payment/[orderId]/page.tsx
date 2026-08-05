@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { Suspense, useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
@@ -56,9 +56,12 @@ function getStatusDisplay(status: string) {
   };
 }
 
-function CountdownTimer({ expiryAt }: { expiryAt: string }) {
+function CountdownTimer({ expiryAt, onExpired }: { expiryAt: string; onExpired?: () => void }) {
   const [timeLeft, setTimeLeft] = useState("");
   const [isExpired, setIsExpired] = useState(false);
+  const firedRef = useRef(false);
+  const onExpiredRef = useRef(onExpired);
+  onExpiredRef.current = onExpired;
 
   useEffect(() => {
     const update = () => {
@@ -68,10 +71,16 @@ function CountdownTimer({ expiryAt }: { expiryAt: string }) {
 
       if (diff <= 0) {
         setTimeLeft("00:00:00");
-        setIsExpired(true);
+        if (!firedRef.current) {
+          firedRef.current = true;
+          setIsExpired(true);
+          onExpiredRef.current?.();
+        }
         return;
       }
 
+      firedRef.current = false;
+      setIsExpired(false);
       const h = Math.floor(diff / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
       const s = Math.floor((diff % 60000) / 1000);
@@ -151,22 +160,40 @@ function PaymentAccountCard({ account, amount }: { account: PaymentAccount; amou
   );
 }
 
-export default function PaymentPage() {
+function PaymentPageContent() {
   const params = useParams();
   const orderId = params?.orderId as string;
+  const searchParams = useSearchParams();
   const [proofMimeType, setProofMimeType] = useState<string | null>(null);
+  // Order-scoped bearer token delivered via the payment URL (see checkout),
+  // so confirmation + tracking work without the checkout-issued cookie
+  // (cross-device, incognito, or cleared cookies).
+  const [token, setToken] = useState<string | null>(searchParams.get("token"));
 
   const [order, setOrder] = useState<OrderData | null>(null);
   const [loading, setLoading] = useState(true);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
+  const [expired, setExpired] = useState(false);
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
   const [paymentProofName, setPaymentProofName] = useState<string | null>(null);
   const [realtimeConnected, setRealtimeConnected] = useState(false);
   const [statusChanged, setStatusChanged] = useState(false);
   const [previousStatus, setPreviousStatus] = useState<string | null>(null);
   const statusChangeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Keep the token in sync if the URL changes (e.g. history navigation).
+  useEffect(() => {
+    setToken(searchParams.get("token"));
+  }, [searchParams]);
+
+  // Reset the local expiry flag whenever we start looking at a new order/status.
+  useEffect(() => {
+    setExpired(false);
+  }, [orderId, order?.status]);
+
+  const handleTimerExpired = useCallback(() => setExpired(true), []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -192,18 +219,27 @@ export default function PaymentPage() {
   const loadOrder = useCallback(async () => {
     if (!orderId) return;
     try {
-      const res = await fetch(`/api/orders/track?orderId=${orderId}`);
-      if (res.ok) {
-        const data = await res.json();
-        setOrder(data.data);
-        setError(null);
+      const qs = new URLSearchParams({ orderId });
+      if (token) qs.set("token", token);
+      const res = await fetch(`/api/orders/track?${qs.toString()}`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        // Never leave the page blank: surface a recoverable error state.
+        const message =
+          (typeof data?.error === "string" ? data.error : data?.error?.message) ||
+          data?.message ||
+          `Failed to load order data (${res.status})`;
+        setError(message);
+        return;
       }
+      setOrder(data.data);
+      setError(null);
     } catch {
       setError("Failed to load order data");
     } finally {
       setLoading(false);
     }
-  }, [orderId]);
+  }, [orderId, token]);
 
   // Initial load
   useEffect(() => {
@@ -256,7 +292,7 @@ export default function PaymentPage() {
   }, [orderId, realtimeConnected, loadOrder]);
 
   const handleConfirmTransfer = async () => {
-    if (!order || confirming) return;
+    if (!order || confirming || expired) return;
 
     setConfirming(true);
     setError(null);
@@ -266,6 +302,9 @@ export default function PaymentPage() {
       formData.append("buyerName", order.customer_name);
       formData.append("buyerDiscordId", order.buyer_discord_id || order.customer_discord || "");
       formData.append("note", "");
+      // Order-scoped bearer token from the payment URL: confirmation works even
+      // when the checkout-issued cookie is absent (cross-device/incognito).
+      if (token) formData.append("confirmationToken", token);
       if (paymentProofFile) formData.append("paymentProof", paymentProofFile);
 
       const res = await fetch(`/api/orders/${orderId}/confirm`, {
@@ -455,7 +494,7 @@ export default function PaymentPage() {
                 <p className="text-sm text-text-secondary mb-2">
                   Payment Deadline
                 </p>
-                <CountdownTimer expiryAt={order.expiry_at} />
+                <CountdownTimer expiryAt={order.expiry_at} onExpired={handleTimerExpired} />
                 <p className="text-xs text-text-secondary/60 mt-2">
                    Complete your payment before time runs out
                 </p>
@@ -490,8 +529,25 @@ export default function PaymentPage() {
               </div>
             )}
 
+            {/* Payment window closed (countdown hit zero locally) */}
+            {isPayable && expired && (
+              <div className="text-center p-6 rounded-lg bg-error/10 border border-error/20 space-y-3" role="alert">
+                <XCircle className="h-10 w-10 text-error mx-auto" />
+                <h3 className="font-semibold text-text">Payment Window Closed</h3>
+                <p className="text-sm text-text-secondary">
+                  Your payment window has expired. Please place a new order to continue.
+                </p>
+                <Link
+                  href="/products"
+                  className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-white"
+                >
+                  Shop Again
+                </Link>
+              </div>
+            )}
+
             {/* Confirm Button */}
-            {isPayable && !confirmed && (
+            {isPayable && !confirmed && !expired && (
               <>
                 <div className="space-y-3">
                   <h3 className="text-sm font-semibold text-text flex items-center gap-2">
@@ -524,7 +580,7 @@ export default function PaymentPage() {
 
                 <button
                   onClick={handleConfirmTransfer}
-                  disabled={confirming}
+                  disabled={confirming || expired}
                   className={cn(
                     "w-full flex items-center justify-center gap-2 rounded-lg px-8 py-4 text-sm font-semibold transition-all duration-300 active:scale-[0.98]",
                     "bg-success text-white shadow-lg shadow-success/20 hover:bg-success/80",
@@ -588,5 +644,21 @@ export default function PaymentPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function PaymentPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary/30 border-t-primary mx-auto" />
+          </div>
+        </main>
+      }
+    >
+      <PaymentPageContent />
+    </Suspense>
   );
 }

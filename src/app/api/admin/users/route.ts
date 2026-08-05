@@ -14,6 +14,7 @@ import crypto from "crypto";
 import { createUserSchema, zodErrorMessages } from "@/lib/validators/admin";
 import { successResponse, errorResponse, AppError, ValidationError } from "@/lib/errors";
 import { buildIlikeOrFilter } from "@/lib/supabase-search";
+import { enforceAdminRateLimit } from "@/lib/rate-limit";
 
 function generateId(): string {
   return crypto.randomUUID().replace(/-/g, "").slice(0, 25);
@@ -29,6 +30,9 @@ function toEnvelopeError(e: unknown, fallback: string) {
 // ─── GET: List all users ──────────────────────────────────────
 export async function GET(req: NextRequest) {
   try {
+    const limited = await enforceAdminRateLimit(req, "users");
+    if (limited) return limited;
+
     await requireAdmin(req);
     const { searchParams } = new URL(req.url);
     const page = Math.max(1, Number(searchParams.get("page") || "1"));
@@ -91,6 +95,9 @@ export async function GET(req: NextRequest) {
 // ─── POST: Create a new admin user ────────────────────────────
 export async function POST(req: NextRequest) {
   try {
+    const limited = await enforceAdminRateLimit(req, "users");
+    if (limited) return limited;
+
     await requireAdmin(req);
     const body = await req.json();
     const parsed = createUserSchema.safeParse(body);

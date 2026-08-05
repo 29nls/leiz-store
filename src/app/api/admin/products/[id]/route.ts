@@ -8,6 +8,7 @@ import { isAdminRequest } from "@/lib/admin-auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import { updateProductSchema, zodErrorMessages } from "@/lib/validators/admin";
 import { successResponse, errorResponse, AppError, NotFoundError, UnauthorizedError, ValidationError } from "@/lib/errors";
+import { enforceAdminRateLimit } from "@/lib/rate-limit";
 
 async function checkAuth() {
   return isAdminRequest();
@@ -18,6 +19,9 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const limited = await enforceAdminRateLimit(request, "products");
+  if (limited) return limited;
+
   if (!(await checkAuth())) {
     return NextResponse.json(errorResponse(new UnauthorizedError()), { status: 401 });
   }
@@ -123,6 +127,9 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const limited = await enforceAdminRateLimit(request, "products");
+  if (limited) return limited;
+
   if (!(await checkAuth())) {
     return NextResponse.json(errorResponse(new UnauthorizedError()), { status: 401 });
   }
