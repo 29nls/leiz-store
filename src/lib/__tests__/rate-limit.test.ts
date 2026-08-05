@@ -21,8 +21,15 @@ function uniqueKey(prefix: string): string {
   return `${prefix}:${Date.now()}-${Math.random()}`;
 }
 
-function requestWithIp(ip: string, url = "http://localhost/api/admin/products"): Request {
-  return new Request(url, { headers: { "x-forwarded-for": ip } });
+// jsdom does not provide the global Request — use a plain object exposing the
+// header accessor enforceAdminRateLimit needs (mirrors how route tests build
+// request-like objects).
+function requestWithIp(ip: string): Request {
+  return {
+    headers: {
+      get: (name: string) => (name === "x-forwarded-for" ? ip : null),
+    },
+  } as unknown as Request;
 }
 
 function kvResponse(result: unknown): { ok: boolean; json: () => Promise<{ result: unknown }> } {

@@ -1,219 +1,247 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="jest tests" tests="328" failures="1" errors="0" time="32.276">
-  <testsuite name="buildIlikeOrFilter" errors="0" failures="1" skipped="0" timestamp="2026-08-05T04:42:20" time="5.387" tests="6">
-    <testcase classname="buildIlikeOrFilter keeps a plain alphanumeric term readable" name="buildIlikeOrFilter keeps a plain alphanumeric term readable" time="0.018">
+<testsuites name="jest tests" tests="476" failures="0" errors="0" time="28.973">
+  <testsuite name="PUT /api/admin/products/[id]" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:29" time="3.146" tests="10">
+    <testcase classname="PUT /api/admin/products/[id] returns 200 and maps camelCase fields to snake_case" name="PUT /api/admin/products/[id] returns 200 and maps camelCase fields to snake_case" time="0.042">
     </testcase>
-    <testcase classname="buildIlikeOrFilter joins multiple columns with commas" name="buildIlikeOrFilter joins multiple columns with commas" time="0.002">
+    <testcase classname="PUT /api/admin/products/[id] replaces product images when provided" name="PUT /api/admin/products/[id] replaces product images when provided" time="0.017">
     </testcase>
-    <testcase classname="buildIlikeOrFilter encodes commas inside the term so they can never start a new or() condition" name="buildIlikeOrFilter encodes commas inside the term so they can never start a new or() condition" time="0.002">
+    <testcase classname="PUT /api/admin/products/[id] returns 400 with VALIDATION_ERROR for an invalid body" name="PUT /api/admin/products/[id] returns 400 with VALIDATION_ERROR for an invalid body" time="0.008">
     </testcase>
-    <testcase classname="buildIlikeOrFilter neutralizes logical-operator prefixes even when combined with commas" name="buildIlikeOrFilter neutralizes logical-operator prefixes even when combined with commas" time="0.002">
+    <testcase classname="PUT /api/admin/products/[id] returns 401 when the request is not from an admin" name="PUT /api/admin/products/[id] returns 401 when the request is not from an admin" time="0.003">
     </testcase>
-    <testcase classname="buildIlikeOrFilter encodes quotes and percent signs in the term" name="buildIlikeOrFilter encodes quotes and percent signs in the term" time="0.018">
-      <failure>Error: expect(received).toBe(expected) // Object.is equality
-
-Expected: &quot;name.ilike.%a%22b%27c%25d%&quot;
-Received: &quot;name.ilike.%a%22b&apos;c%25d%&quot;
-    at Object.&lt;anonymous&gt; (C:\Users\Admin\Documents\Coding\leiz-store\src\lib\__tests__\supabase-search.test.ts:31:53)
-    at Promise.finally.completed (C:\Users\Admin\Documents\Coding\leiz-store\node_modules\jest-circus\build\jestAdapterInit.js:1561:28)
-    at new Promise (&lt;anonymous&gt;)
-    at callAsyncCircusFn (C:\Users\Admin\Documents\Coding\leiz-store\node_modules\jest-circus\build\jestAdapterInit.js:1501:10)
-    at _callCircusTest (C:\Users\Admin\Documents\Coding\leiz-store\node_modules\jest-circus\build\jestAdapterInit.js:1011:40)
-    at processTicksAndRejections (node:internal/process/task_queues:104:5)
-    at _runTest (C:\Users\Admin\Documents\Coding\leiz-store\node_modules\jest-circus\build\jestAdapterInit.js:951:3)
-    at C:\Users\Admin\Documents\Coding\leiz-store\node_modules\jest-circus\build\jestAdapterInit.js:853:7
-    at _runTestsForDescribeBlock (C:\Users\Admin\Documents\Coding\leiz-store\node_modules\jest-circus\build\jestAdapterInit.js:866:11)
-    at _runTestsForDescribeBlock (C:\Users\Admin\Documents\Coding\leiz-store\node_modules\jest-circus\build\jestAdapterInit.js:861:11)
-    at run (C:\Users\Admin\Documents\Coding\leiz-store\node_modules\jest-circus\build\jestAdapterInit.js:765:3)
-    at runAndTransformResultsToJestFormat (C:\Users\Admin\Documents\Coding\leiz-store\node_modules\jest-circus\build\jestAdapterInit.js:1993:21)
-    at jestAdapter (C:\Users\Admin\Documents\Coding\leiz-store\node_modules\jest-circus\build\runner.js:111:19)
-    at runTestInternal (C:\Users\Admin\Documents\Coding\leiz-store\node_modules\jest-runner\build\testWorker.js:276:16)
-    at runTest (C:\Users\Admin\Documents\Coding\leiz-store\node_modules\jest-runner\build\testWorker.js:344:7)
-    at Object.worker (C:\Users\Admin\Documents\Coding\leiz-store\node_modules\jest-runner\build\testWorker.js:498:12)</failure>
+    <testcase classname="PUT /api/admin/products/[id] returns 404 when the product does not exist" name="PUT /api/admin/products/[id] returns 404 when the product does not exist" time="0.008">
     </testcase>
-    <testcase classname="buildIlikeOrFilter keeps in-list style syntax inside the value position" name="buildIlikeOrFilter keeps in-list style syntax inside the value position" time="0.001">
+    <testcase classname="PUT /api/admin/products/[id] returns 409 when the new slug is already used by another product" name="PUT /api/admin/products/[id] returns 409 when the new slug is already used by another product" time="0.004">
+    </testcase>
+    <testcase classname="PUT /api/admin/products/[id] returns 500 when the product update fails" name="PUT /api/admin/products/[id] returns 500 when the product update fails" time="0.004">
+    </testcase>
+    <testcase classname="DELETE /api/admin/products/[id] returns 200 and soft-deletes by setting is_active=false" name="DELETE /api/admin/products/[id] returns 200 and soft-deletes by setting is_active=false" time="0.004">
+    </testcase>
+    <testcase classname="DELETE /api/admin/products/[id] returns 401 when the request is not from an admin" name="DELETE /api/admin/products/[id] returns 401 when the request is not from an admin" time="0.018">
+    </testcase>
+    <testcase classname="DELETE /api/admin/products/[id] returns 500 when the update fails" name="DELETE /api/admin/products/[id] returns 500 when the update fails" time="0.003">
     </testcase>
   </testsuite>
-  <testsuite name="pdf-generator" errors="0" failures="0" skipped="0" timestamp="2026-08-05T04:42:21" time="7.118" tests="5">
-    <testcase classname="pdf-generator generates a PDF buffer" name="pdf-generator generates a PDF buffer" time="0.378">
+  <testsuite name="GET /api/admin/users" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:29" time="3.204" tests="11">
+    <testcase classname="GET /api/admin/users returns 200 with a paginated list merged with auth last_sign_in_at" name="GET /api/admin/users returns 200 with a paginated list merged with auth last_sign_in_at" time="0.034">
     </testcase>
-    <testcase classname="pdf-generator generates PDF with USD currency" name="pdf-generator generates PDF with USD currency" time="0.072">
+    <testcase classname="GET /api/admin/users applies search and role filters" name="GET /api/admin/users applies search and role filters" time="0.009">
     </testcase>
-    <testcase classname="pdf-generator generates PDF with discount and tax" name="pdf-generator generates PDF with discount and tax" time="0.059">
+    <testcase classname="GET /api/admin/users skips the auth listUsers call when there are more than 50 users" name="GET /api/admin/users skips the auth listUsers call when there are more than 50 users" time="0.004">
     </testcase>
-    <testcase classname="pdf-generator handles single item" name="pdf-generator handles single item" time="0.07">
+    <testcase classname="GET /api/admin/users returns 401 when the request is not authenticated" name="GET /api/admin/users returns 401 when the request is not authenticated" time="0.006">
     </testcase>
-    <testcase classname="pdf-generator handles many items without breaking" name="pdf-generator handles many items without breaking" time="0.129">
+    <testcase classname="GET /api/admin/users returns 500 when the database query fails" name="GET /api/admin/users returns 500 when the database query fails" time="0.005">
     </testcase>
-  </testsuite>
-  <testsuite name="POST /api/orders/[orderId]/confirm" errors="0" failures="0" skipped="0" timestamp="2026-08-05T04:42:20" time="8.191" tests="3">
-    <testcase classname="POST /api/orders/[orderId]/confirm uses the scoped cookie token" name="POST /api/orders/[orderId]/confirm uses the scoped cookie token" time="0.058">
+    <testcase classname="POST /api/admin/users returns 201 with the created user and a 25-char id" name="POST /api/admin/users returns 201 with the created user and a 25-char id" time="0.017">
     </testcase>
-    <testcase classname="POST /api/orders/[orderId]/confirm keeps body-token compatibility when the cookie is absent" name="POST /api/orders/[orderId]/confirm keeps body-token compatibility when the cookie is absent" time="0.01">
+    <testcase classname="POST /api/admin/users returns 400 with VALIDATION_ERROR for an invalid body" name="POST /api/admin/users returns 400 with VALIDATION_ERROR for an invalid body" time="0.021">
     </testcase>
-    <testcase classname="POST /api/orders/[orderId]/confirm does not accept a query-string token" name="POST /api/orders/[orderId]/confirm does not accept a query-string token" time="0.018">
+    <testcase classname="POST /api/admin/users returns 401 when the request is not authenticated" name="POST /api/admin/users returns 401 when the request is not authenticated" time="0.002">
     </testcase>
-  </testsuite>
-  <testsuite name="Product Service" errors="0" failures="0" skipped="0" timestamp="2026-08-05T04:42:20" time="8.697" tests="16">
-    <testcase classname="Product Service list should return paginated products with defaults" name="Product Service list should return paginated products with defaults" time="0.182">
+    <testcase classname="POST /api/admin/users returns 409 when the email already exists in public.user" name="POST /api/admin/users returns 409 when the email already exists in public.user" time="0.003">
     </testcase>
-    <testcase classname="Product Service list should apply search filter" name="Product Service list should apply search filter" time="0.005">
+    <testcase classname="POST /api/admin/users returns 409 when Supabase Auth reports the user already exists" name="POST /api/admin/users returns 409 when Supabase Auth reports the user already exists" time="0.007">
     </testcase>
-    <testcase classname="Product Service list should apply category filter" name="Product Service list should apply category filter" time="0.003">
-    </testcase>
-    <testcase classname="Product Service list should apply price filtering" name="Product Service list should apply price filtering" time="0.021">
-    </testcase>
-    <testcase classname="Product Service list should sort by newest by default" name="Product Service list should sort by newest by default" time="0.002">
-    </testcase>
-    <testcase classname="Product Service list should sort by price ascending" name="Product Service list should sort by price ascending" time="0.002">
-    </testcase>
-    <testcase classname="Product Service list should filter by badge" name="Product Service list should filter by badge" time="0.002">
-    </testcase>
-    <testcase classname="Product Service getBySlug should return product by slug" name="Product Service getBySlug should return product by slug" time="0.005">
-    </testcase>
-    <testcase classname="Product Service getBySlug should track view event" name="Product Service getBySlug should track view event" time="0.007">
-    </testcase>
-    <testcase classname="Product Service getBySlug should throw NotFoundError for missing product" name="Product Service getBySlug should throw NotFoundError for missing product" time="0.105">
-    </testcase>
-    <testcase classname="Order Service create should create an order successfully" name="Order Service create should create an order successfully" time="0.015">
-    </testcase>
-    <testcase classname="Order Service create does not reject keyed retries based on a stale stock preflight" name="Order Service create does not reject keyed retries based on a stale stock preflight" time="0.008">
-    </testcase>
-    <testcase classname="Order Service create returns a replay without changing status or duplicating side effects" name="Order Service create returns a replay without changing status or duplicating side effects" time="0.006">
-    </testcase>
-    <testcase classname="Order Service create keeps a committed order successful when analytics fails" name="Order Service create keeps a committed order successful when analytics fails" time="0.014">
-    </testcase>
-    <testcase classname="Order Service create should throw NotFoundError for invalid product" name="Order Service create should throw NotFoundError for invalid product" time="0.005">
-    </testcase>
-    <testcase classname="Order Service create should throw ValidationError for insufficient stock" name="Order Service create should throw ValidationError for insufficient stock" time="0.005">
+    <testcase classname="POST /api/admin/users returns 500 and rolls back the auth user when the public.user insert fails" name="POST /api/admin/users returns 500 and rolls back the auth user when the public.user insert fails" time="0.003">
     </testcase>
   </testsuite>
-  <testsuite name="undefined" errors="0" failures="0" skipped="0" timestamp="2026-08-05T04:42:20" time="8.722" tests="29">
-    <testcase classname=" mock verifyKey works" name=" mock verifyKey works" time="0.023">
+  <testsuite name="GET /api/admin/products" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:29" time="3.182" tests="10">
+    <testcase classname="GET /api/admin/products returns 200 with a paginated list and envelope meta" name="GET /api/admin/products returns 200 with a paginated list and envelope meta" time="0.039">
     </testcase>
-    <testcase classname="PING responds with PONG" name="PING responds with PONG" time="0.008">
+    <testcase classname="GET /api/admin/products applies search, category, sort and pagination filters" name="GET /api/admin/products applies search, category, sort and pagination filters" time="0.01">
     </testcase>
-    <testcase classname="Signature 401 if missing ed25519 header" name="Signature 401 if missing ed25519 header" time="0.005">
+    <testcase classname="GET /api/admin/products returns 401 when the request is not from an admin" name="GET /api/admin/products returns 401 when the request is not from an admin" time="0.005">
     </testcase>
-    <testcase classname="Signature 401 if missing timestamp header" name="Signature 401 if missing timestamp header" time="0.004">
+    <testcase classname="GET /api/admin/products returns 500 when the database query fails" name="GET /api/admin/products returns 500 when the database query fails" time="0.013">
     </testcase>
-    <testcase classname="Signature 401 if signature invalid" name="Signature 401 if signature invalid" time="0.004">
+    <testcase classname="POST /api/admin/products returns 201 and maps camelCase input to snake_case columns" name="POST /api/admin/products returns 201 and maps camelCase input to snake_case columns" time="0.04">
     </testcase>
-    <testcase classname="Signature 500 if DISCORD_PUBLIC_KEY not set" name="Signature 500 if DISCORD_PUBLIC_KEY not set" time="0.036">
+    <testcase classname="POST /api/admin/products inserts product images when provided" name="POST /api/admin/products inserts product images when provided" time="0.01">
     </testcase>
-    <testcase classname="Signature 401 if verifyKey throws" name="Signature 401 if verifyKey throws" time="0.01">
+    <testcase classname="POST /api/admin/products returns 400 with VALIDATION_ERROR for an invalid body" name="POST /api/admin/products returns 400 with VALIDATION_ERROR for an invalid body" time="0.007">
     </testcase>
-    <testcase classname="Body 400 if not valid JSON" name="Body 400 if not valid JSON" time="0.003">
+    <testcase classname="POST /api/admin/products returns 401 when the request is not from an admin" name="POST /api/admin/products returns 401 when the request is not from an admin" time="0.004">
     </testcase>
-    <testcase classname="Body 400 if text() throws" name="Body 400 if text() throws" time="0.003">
+    <testcase classname="POST /api/admin/products returns 409 when the slug already exists" name="POST /api/admin/products returns 409 when the slug already exists" time="0.022">
     </testcase>
-    <testcase classname="Custom ID ephemeral error if missing" name="Custom ID ephemeral error if missing" time="0.005">
+    <testcase classname="POST /api/admin/products returns 500 when the product insert fails" name="POST /api/admin/products returns 500 when the product insert fails" time="0.004">
     </testcase>
-    <testcase classname="Custom ID ephemeral error if unknown format" name="Custom ID ephemeral error if unknown format" time="0.004">
+  </testsuite>
+  <testsuite name="GET /api/admin/users/[id]" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:29" time="3.222" tests="16">
+    <testcase classname="GET /api/admin/users/[id] returns 200 with the user" name="GET /api/admin/users/[id] returns 200 with the user" time="0.027">
     </testcase>
-    <testcase classname="Custom ID denies when member is absent (DM context) even with interaction.user" name="Custom ID denies when member is absent (DM context) even with interaction.user" time="0.009">
+    <testcase classname="GET /api/admin/users/[id] returns 401 when the request is not authenticated" name="GET /api/admin/users/[id] returns 401 when the request is not authenticated" time="0.016">
     </testcase>
-    <testcase classname="Admin authorization denies (fail closed) when DISCORD_ADMIN_ROLE_ID is not configured" name="Admin authorization denies (fail closed) when DISCORD_ADMIN_ROLE_ID is not configured" time="0.009">
+    <testcase classname="GET /api/admin/users/[id] returns 404 when the user does not exist" name="GET /api/admin/users/[id] returns 404 when the user does not exist" time="0.004">
     </testcase>
-    <testcase classname="Admin authorization denies when the clicking member does not hold the admin role" name="Admin authorization denies when the clicking member does not hold the admin role" time="0.007">
+    <testcase classname="PATCH /api/admin/users/[id] returns 200 and updates the user" name="PATCH /api/admin/users/[id] returns 200 and updates the user" time="0.015">
     </testcase>
-    <testcase classname="Admin authorization allows when the member holds the admin role" name="Admin authorization allows when the member holds the admin role" time="0.146">
+    <testcase classname="PATCH /api/admin/users/[id] updates the Auth password when a new one is provided" name="PATCH /api/admin/users/[id] updates the Auth password when a new one is provided" time="0.004">
     </testcase>
-    <testcase classname="Actions accept" name="Actions accept" time="0.014">
+    <testcase classname="PATCH /api/admin/users/[id] unbans the Auth user when reactivating" name="PATCH /api/admin/users/[id] unbans the Auth user when reactivating" time="0.007">
+    </testcase>
+    <testcase classname="PATCH /api/admin/users/[id] returns 400 with VALIDATION_ERROR for an empty body" name="PATCH /api/admin/users/[id] returns 400 with VALIDATION_ERROR for an empty body" time="0.006">
+    </testcase>
+    <testcase classname="PATCH /api/admin/users/[id] returns 401 when the request is not authenticated" name="PATCH /api/admin/users/[id] returns 401 when the request is not authenticated" time="0.02">
+    </testcase>
+    <testcase classname="PATCH /api/admin/users/[id] returns 404 when the user does not exist" name="PATCH /api/admin/users/[id] returns 404 when the user does not exist" time="0.006">
+    </testcase>
+    <testcase classname="PATCH /api/admin/users/[id] returns 500 when the update fails" name="PATCH /api/admin/users/[id] returns 500 when the update fails" time="0.004">
+    </testcase>
+    <testcase classname="DELETE /api/admin/users/[id] returns 200 and soft-deletes a customer" name="DELETE /api/admin/users/[id] returns 200 and soft-deletes a customer" time="0.005">
+    </testcase>
+    <testcase classname="DELETE /api/admin/users/[id] allows deactivating an admin when another active admin exists" name="DELETE /api/admin/users/[id] allows deactivating an admin when another active admin exists" time="0.002">
+    </testcase>
+    <testcase classname="DELETE /api/admin/users/[id] returns 400 when trying to deactivate the last active admin" name="DELETE /api/admin/users/[id] returns 400 when trying to deactivate the last active admin" time="0.006">
+    </testcase>
+    <testcase classname="DELETE /api/admin/users/[id] returns 401 when the request is not authenticated" name="DELETE /api/admin/users/[id] returns 401 when the request is not authenticated" time="0.003">
+    </testcase>
+    <testcase classname="DELETE /api/admin/users/[id] returns 404 when the user does not exist" name="DELETE /api/admin/users/[id] returns 404 when the user does not exist" time="0.002">
+    </testcase>
+    <testcase classname="DELETE /api/admin/users/[id] returns 500 when the soft delete fails" name="DELETE /api/admin/users/[id] returns 500 when the soft delete fails" time="0.003">
+    </testcase>
+  </testsuite>
+  <testsuite name="undefined" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:29" time="3.457" tests="29">
+    <testcase classname=" mock verifyKey works" name=" mock verifyKey works" time="0.015">
+    </testcase>
+    <testcase classname="PING responds with PONG" name="PING responds with PONG" time="0.006">
+    </testcase>
+    <testcase classname="Signature 401 if missing ed25519 header" name="Signature 401 if missing ed25519 header" time="0.002">
+    </testcase>
+    <testcase classname="Signature 401 if missing timestamp header" name="Signature 401 if missing timestamp header" time="0.002">
+    </testcase>
+    <testcase classname="Signature 401 if signature invalid" name="Signature 401 if signature invalid" time="0.003">
+    </testcase>
+    <testcase classname="Signature 500 if DISCORD_PUBLIC_KEY not set" name="Signature 500 if DISCORD_PUBLIC_KEY not set" time="0.055">
+    </testcase>
+    <testcase classname="Signature 401 if verifyKey throws" name="Signature 401 if verifyKey throws" time="0.007">
+    </testcase>
+    <testcase classname="Body 400 if not valid JSON" name="Body 400 if not valid JSON" time="0.002">
+    </testcase>
+    <testcase classname="Body 400 if text() throws" name="Body 400 if text() throws" time="0.002">
+    </testcase>
+    <testcase classname="Custom ID ephemeral error if missing" name="Custom ID ephemeral error if missing" time="0.003">
+    </testcase>
+    <testcase classname="Custom ID ephemeral error if unknown format" name="Custom ID ephemeral error if unknown format" time="0.003">
+    </testcase>
+    <testcase classname="Custom ID denies when member is absent (DM context) even with interaction.user" name="Custom ID denies when member is absent (DM context) even with interaction.user" time="0.006">
+    </testcase>
+    <testcase classname="Admin authorization denies (fail closed) when DISCORD_ADMIN_ROLE_ID is not configured" name="Admin authorization denies (fail closed) when DISCORD_ADMIN_ROLE_ID is not configured" time="0.005">
+    </testcase>
+    <testcase classname="Admin authorization denies when the clicking member does not hold the admin role" name="Admin authorization denies when the clicking member does not hold the admin role" time="0.022">
+    </testcase>
+    <testcase classname="Admin authorization allows when the member holds the admin role" name="Admin authorization allows when the member holds the admin role" time="0.109">
+    </testcase>
+    <testcase classname="Actions accept" name="Actions accept" time="0.01">
     </testcase>
     <testcase classname="Actions reject" name="Actions reject" time="0.008">
     </testcase>
-    <testcase classname="Actions cancel" name="Actions cancel" time="0.009">
+    <testcase classname="Actions cancel" name="Actions cancel" time="0.007">
     </testcase>
-    <testcase classname="Actions force_cancel" name="Actions force_cancel" time="0.016">
+    <testcase classname="Actions force_cancel" name="Actions force_cancel" time="0.007">
     </testcase>
-    <testcase classname="Actions handles DB failure" name="Actions handles DB failure" time="0.007">
+    <testcase classname="Actions handles DB failure" name="Actions handles DB failure" time="0.006">
     </testcase>
-    <testcase classname="Actions handles DB throw" name="Actions handles DB throw" time="0.065">
+    <testcase classname="Actions handles DB throw" name="Actions handles DB throw" time="0.039">
     </testcase>
-    <testcase classname="Buyer DM sends when buyer has discord_id" name="Buyer DM sends when buyer has discord_id" time="0.013">
+    <testcase classname="Buyer DM sends when buyer has discord_id" name="Buyer DM sends when buyer has discord_id" time="0.008">
     </testcase>
-    <testcase classname="Buyer DM skips if discord_id null" name="Buyer DM skips if discord_id null" time="0.009">
+    <testcase classname="Buyer DM skips if discord_id null" name="Buyer DM skips if discord_id null" time="0.006">
     </testcase>
-    <testcase classname="Buyer DM skips if action failed" name="Buyer DM skips if action failed" time="0.005">
+    <testcase classname="Buyer DM skips if action failed" name="Buyer DM skips if action failed" time="0.003">
     </testcase>
-    <testcase classname="Embed preserves original fields" name="Embed preserves original fields" time="0.009">
+    <testcase classname="Embed preserves original fields" name="Embed preserves original fields" time="0.006">
     </testcase>
-    <testcase classname="Embed handles missing embed gracefully" name="Embed handles missing embed gracefully" time="0.008">
+    <testcase classname="Embed handles missing embed gracefully" name="Embed handles missing embed gracefully" time="0.006">
     </testcase>
-    <testcase classname="Embed handles missing message entirely" name="Embed handles missing message entirely" time="0.008">
+    <testcase classname="Embed handles missing message entirely" name="Embed handles missing message entirely" time="0.006">
     </testcase>
-    <testcase classname="Unhandled type returns ephemeral for APPLICATION_COMMAND (type 2)" name="Unhandled type returns ephemeral for APPLICATION_COMMAND (type 2)" time="0.004">
+    <testcase classname="Unhandled type returns ephemeral for APPLICATION_COMMAND (type 2)" name="Unhandled type returns ephemeral for APPLICATION_COMMAND (type 2)" time="0.002">
     </testcase>
-    <testcase classname="Unhandled type returns ephemeral for MODAL_SUBMIT (type 5)" name="Unhandled type returns ephemeral for MODAL_SUBMIT (type 5)" time="0.004">
-    </testcase>
-  </testsuite>
-  <testsuite name="payment proof storage" errors="0" failures="0" skipped="0" timestamp="2026-08-05T04:42:28" time="1.542" tests="2">
-    <testcase classname="payment proof storage uses a private bucket and bounded image policy" name="payment proof storage uses a private bucket and bounded image policy" time="0.018">
-    </testcase>
-    <testcase classname="payment proof storage requires a matching image signature" name="payment proof storage requires a matching image signature" time="0.009">
+    <testcase classname="Unhandled type returns ephemeral for MODAL_SUBMIT (type 5)" name="Unhandled type returns ephemeral for MODAL_SUBMIT (type 5)" time="0.002">
     </testcase>
   </testsuite>
-  <testsuite name="invoice storage" errors="0" failures="0" skipped="0" timestamp="2026-08-05T04:42:29" time="0.758" tests="3">
-    <testcase classname="invoice storage keeps invoice files in the invoices prefix with a safe filename" name="invoice storage keeps invoice files in the invoices prefix with a safe filename" time="0.004">
+  <testsuite name="POST /api/orders" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:32" time="1.163" tests="7">
+    <testcase classname="POST /api/orders accepts an optional valid idempotency key and sets a scoped HttpOnly cookie" name="POST /api/orders accepts an optional valid idempotency key and sets a scoped HttpOnly cookie" time="0.047">
     </testcase>
-    <testcase classname="invoice storage uses a bounded signed URL lifetime" name="invoice storage uses a bounded signed URL lifetime" time="0.002">
+    <testcase classname="POST /api/orders supports requests without an idempotency key" name="POST /api/orders supports requests without an idempotency key" time="0.004">
     </testcase>
-    <testcase classname="invoice storage creates signed URLs from a private storage path" name="invoice storage creates signed URLs from a private storage path" time="0.002">
+    <testcase classname="POST /api/orders rejects a present but malformed idempotency key" name="POST /api/orders rejects a present but malformed idempotency key" time="0.003">
+    </testcase>
+    <testcase classname="POST /api/orders rejects an order with more than 20 line items" name="POST /api/orders rejects an order with more than 20 line items" time="0.058">
+    </testcase>
+    <testcase classname="POST /api/orders accepts an order at exactly the 20-item cap" name="POST /api/orders accepts an order at exactly the 20-item cap" time="0.005">
+    </testcase>
+    <testcase classname="POST /api/orders rejects an unsupported payment method" name="POST /api/orders rejects an unsupported payment method" time="0.005">
+    </testcase>
+    <testcase classname="POST /api/orders returns 429 when the order creation rate limit is exceeded" name="POST /api/orders returns 429 when the order creation rate limit is exceeded" time="0.002">
     </testcase>
   </testsuite>
-  <testsuite name="toSnake / toCamel conversion" errors="0" failures="0" skipped="0" timestamp="2026-08-05T04:42:26" time="4.662" tests="84">
-    <testcase classname="toSnake / toCamel conversion toSnake converts camelCase keys to snake_case" name="toSnake / toCamel conversion toSnake converts camelCase keys to snake_case" time="0.01">
+  <testsuite name="pdf-generator" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:32" time="1.466" tests="5">
+    <testcase classname="pdf-generator generates a PDF buffer" name="pdf-generator generates a PDF buffer" time="0.256">
     </testcase>
-    <testcase classname="toSnake / toCamel conversion toSnake passes through unknown keys unchanged" name="toSnake / toCamel conversion toSnake passes through unknown keys unchanged" time="0.003">
+    <testcase classname="pdf-generator generates PDF with USD currency" name="pdf-generator generates PDF with USD currency" time="0.051">
     </testcase>
-    <testcase classname="toSnake / toCamel conversion toSnake skips undefined values" name="toSnake / toCamel conversion toSnake skips undefined values" time="0.003">
+    <testcase classname="pdf-generator generates PDF with discount and tax" name="pdf-generator generates PDF with discount and tax" time="0.078">
     </testcase>
-    <testcase classname="toSnake / toCamel conversion toCamel converts snake_case keys to camelCase" name="toSnake / toCamel conversion toCamel converts snake_case keys to camelCase" time="0.004">
+    <testcase classname="pdf-generator handles single item" name="pdf-generator handles single item" time="0.041">
     </testcase>
-    <testcase classname="toSnake / toCamel conversion toCamel converts unknown snake_case keys generically" name="toSnake / toCamel conversion toCamel converts unknown snake_case keys generically" time="0.006">
+    <testcase classname="pdf-generator handles many items without breaking" name="pdf-generator handles many items without breaking" time="0.071">
     </testcase>
-    <testcase classname="toSnake / toCamel conversion toCamel converts nested objects recursively" name="toSnake / toCamel conversion toCamel converts nested objects recursively" time="0.003">
+  </testsuite>
+  <testsuite name="toSnake / toCamel conversion" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:32" time="1.52" tests="84">
+    <testcase classname="toSnake / toCamel conversion toSnake converts camelCase keys to snake_case" name="toSnake / toCamel conversion toSnake converts camelCase keys to snake_case" time="0.006">
     </testcase>
-    <testcase classname="toSnake / toCamel conversion toCamel handles arrays" name="toSnake / toCamel conversion toCamel handles arrays" time="0.004">
+    <testcase classname="toSnake / toCamel conversion toSnake passes through unknown keys unchanged" name="toSnake / toCamel conversion toSnake passes through unknown keys unchanged" time="0.004">
     </testcase>
-    <testcase classname="toSnake / toCamel conversion CAMEL_TO_SNAKE has symmetric reverse mapping" name="toSnake / toCamel conversion CAMEL_TO_SNAKE has symmetric reverse mapping" time="0.029">
+    <testcase classname="toSnake / toCamel conversion toSnake skips undefined values" name="toSnake / toCamel conversion toSnake skips undefined values" time="0.002">
     </testcase>
-    <testcase classname="buildFilters returns query unchanged when where is undefined" name="buildFilters returns query unchanged when where is undefined" time="0.004">
+    <testcase classname="toSnake / toCamel conversion toCamel converts snake_case keys to camelCase" name="toSnake / toCamel conversion toCamel converts snake_case keys to camelCase" time="0.012">
     </testcase>
-    <testcase classname="buildFilters applies simple equality filter" name="buildFilters applies simple equality filter" time="0.008">
+    <testcase classname="toSnake / toCamel conversion toCamel converts unknown snake_case keys generically" name="toSnake / toCamel conversion toCamel converts unknown snake_case keys generically" time="0.003">
     </testcase>
-    <testcase classname="buildFilters applies null filter with .is" name="buildFilters applies null filter with .is" time="0.005">
+    <testcase classname="toSnake / toCamel conversion toCamel converts nested objects recursively" name="toSnake / toCamel conversion toCamel converts nested objects recursively" time="0.005">
     </testcase>
-    <testcase classname="buildFilters applies nested operator filters (gt, lt, gte, lte)" name="buildFilters applies nested operator filters (gt, lt, gte, lte)" time="0.003">
+    <testcase classname="toSnake / toCamel conversion toCamel handles arrays" name="toSnake / toCamel conversion toCamel handles arrays" time="0.003">
+    </testcase>
+    <testcase classname="toSnake / toCamel conversion CAMEL_TO_SNAKE has symmetric reverse mapping" name="toSnake / toCamel conversion CAMEL_TO_SNAKE has symmetric reverse mapping" time="0.048">
+    </testcase>
+    <testcase classname="buildFilters returns query unchanged when where is undefined" name="buildFilters returns query unchanged when where is undefined" time="0.003">
+    </testcase>
+    <testcase classname="buildFilters applies simple equality filter" name="buildFilters applies simple equality filter" time="0.003">
+    </testcase>
+    <testcase classname="buildFilters applies null filter with .is" name="buildFilters applies null filter with .is" time="0.003">
+    </testcase>
+    <testcase classname="buildFilters applies nested operator filters (gt, lt, gte, lte)" name="buildFilters applies nested operator filters (gt, lt, gte, lte)" time="0.002">
     </testcase>
     <testcase classname="buildFilters applies contains filter with ilike" name="buildFilters applies contains filter with ilike" time="0.004">
     </testcase>
-    <testcase classname="buildFilters applies startsWith filter with ilike" name="buildFilters applies startsWith filter with ilike" time="0.004">
+    <testcase classname="buildFilters applies startsWith filter with ilike" name="buildFilters applies startsWith filter with ilike" time="0.003">
     </testcase>
-    <testcase classname="buildFilters applies endsWith filter with ilike" name="buildFilters applies endsWith filter with ilike" time="0.004">
+    <testcase classname="buildFilters applies endsWith filter with ilike" name="buildFilters applies endsWith filter with ilike" time="0.003">
     </testcase>
-    <testcase classname="buildFilters applies in filter with array value" name="buildFilters applies in filter with array value" time="0.004">
+    <testcase classname="buildFilters applies in filter with array value" name="buildFilters applies in filter with array value" time="0.005">
     </testcase>
-    <testcase classname="buildFilters applies notIn filter" name="buildFilters applies notIn filter" time="0.004">
+    <testcase classname="buildFilters applies notIn filter" name="buildFilters applies notIn filter" time="0.003">
     </testcase>
-    <testcase classname="buildFilters applies equals filter" name="buildFilters applies equals filter" time="0.004">
+    <testcase classname="buildFilters applies equals filter" name="buildFilters applies equals filter" time="0.002">
     </testcase>
     <testcase classname="buildFilters applies not (neq) filter" name="buildFilters applies not (neq) filter" time="0.003">
     </testcase>
-    <testcase classname="buildFilters skips reserved keys OR, AND, NOT" name="buildFilters skips reserved keys OR, AND, NOT" time="0.005">
+    <testcase classname="buildFilters skips reserved keys OR, AND, NOT" name="buildFilters skips reserved keys OR, AND, NOT" time="0.003">
     </testcase>
-    <testcase classname="buildFilters handles OR conditions" name="buildFilters handles OR conditions" time="0.005">
+    <testcase classname="buildFilters handles OR conditions" name="buildFilters handles OR conditions" time="0.004">
     </testcase>
-    <testcase classname="buildFilters handles OR with contains operator" name="buildFilters handles OR with contains operator" time="0.003">
+    <testcase classname="buildFilters handles OR with contains operator" name="buildFilters handles OR with contains operator" time="0.004">
     </testcase>
     <testcase classname="buildFilters handles multiple where keys" name="buildFilters handles multiple where keys" time="0.003">
     </testcase>
     <testcase classname="buildFilters skips OR when array is empty" name="buildFilters skips OR when array is empty" time="0.003">
     </testcase>
-    <testcase classname="applySimpleFilter calls .is for null values" name="applySimpleFilter calls .is for null values" time="0.003">
+    <testcase classname="applySimpleFilter calls .is for null values" name="applySimpleFilter calls .is for null values" time="0.002">
     </testcase>
-    <testcase classname="applySimpleFilter calls .is for undefined values" name="applySimpleFilter calls .is for undefined values" time="0.003">
+    <testcase classname="applySimpleFilter calls .is for undefined values" name="applySimpleFilter calls .is for undefined values" time="0.002">
     </testcase>
     <testcase classname="applySimpleFilter calls .in for array values" name="applySimpleFilter calls .in for array values" time="0.003">
     </testcase>
@@ -233,9 +261,9 @@ Received: &quot;name.ilike.%a%22b&apos;c%25d%&quot;
     </testcase>
     <testcase classname="buildSelectString handles empty select" name="buildSelectString handles empty select" time="0.002">
     </testcase>
-    <testcase classname="findRelation finds relation for known model and key" name="findRelation finds relation for known model and key" time="0.004">
+    <testcase classname="findRelation finds relation for known model and key" name="findRelation finds relation for known model and key" time="0.003">
     </testcase>
-    <testcase classname="findRelation finds many relation" name="findRelation finds many relation" time="0.003">
+    <testcase classname="findRelation finds many relation" name="findRelation finds many relation" time="0.002">
     </testcase>
     <testcase classname="findRelation returns null for unknown model" name="findRelation returns null for unknown model" time="0.002">
     </testcase>
@@ -243,13 +271,13 @@ Received: &quot;name.ilike.%a%22b&apos;c%25d%&quot;
     </testcase>
     <testcase classname="findRelation returns null for model without relations" name="findRelation returns null for model without relations" time="0.002">
     </testcase>
-    <testcase classname="findModelName maps table name to model name" name="findModelName maps table name to model name" time="0.004">
+    <testcase classname="findModelName maps table name to model name" name="findModelName maps table name to model name" time="0.003">
     </testcase>
-    <testcase classname="findModelName returns null for unknown table" name="findModelName returns null for unknown table" time="0.003">
+    <testcase classname="findModelName returns null for unknown table" name="findModelName returns null for unknown table" time="0.002">
     </testcase>
-    <testcase classname="findModelName MODEL_TO_TABLE has all 25 models" name="findModelName MODEL_TO_TABLE has all 25 models" time="0.003">
+    <testcase classname="findModelName MODEL_TO_TABLE has all 25 models" name="findModelName MODEL_TO_TABLE has all 25 models" time="0.001">
     </testcase>
-    <testcase classname="SupabaseModel findMany basic query with no options" name="SupabaseModel findMany basic query with no options" time="0.007">
+    <testcase classname="SupabaseModel findMany basic query with no options" name="SupabaseModel findMany basic query with no options" time="0.005">
     </testcase>
     <testcase classname="SupabaseModel findMany applies where filters" name="SupabaseModel findMany applies where filters" time="0.003">
     </testcase>
@@ -257,31 +285,31 @@ Received: &quot;name.ilike.%a%22b&apos;c%25d%&quot;
     </testcase>
     <testcase classname="SupabaseModel findMany applies skip and take" name="SupabaseModel findMany applies skip and take" time="0.003">
     </testcase>
-    <testcase classname="SupabaseModel findMany throws on error" name="SupabaseModel findMany throws on error" time="0.063">
+    <testcase classname="SupabaseModel findMany throws on error" name="SupabaseModel findMany throws on error" time="0.088">
     </testcase>
-    <testcase classname="SupabaseModel findMany handles contains filter" name="SupabaseModel findMany handles contains filter" time="0.004">
+    <testcase classname="SupabaseModel findMany handles contains filter" name="SupabaseModel findMany handles contains filter" time="0.003">
     </testcase>
-    <testcase classname="SupabaseModel findMany handles _count in include" name="SupabaseModel findMany handles _count in include" time="0.01">
+    <testcase classname="SupabaseModel findMany handles _count in include" name="SupabaseModel findMany handles _count in include" time="0.008">
     </testcase>
-    <testcase classname="SupabaseModel findUnique returns null for empty where" name="SupabaseModel findUnique returns null for empty where" time="0.004">
+    <testcase classname="SupabaseModel findUnique returns null for empty where" name="SupabaseModel findUnique returns null for empty where" time="0.003">
     </testcase>
     <testcase classname="SupabaseModel findUnique finds by slug" name="SupabaseModel findUnique finds by slug" time="0.004">
     </testcase>
     <testcase classname="SupabaseModel findUnique returns null when not found" name="SupabaseModel findUnique returns null when not found" time="0.003">
     </testcase>
-    <testcase classname="SupabaseModel findFirst returns first result" name="SupabaseModel findFirst returns first result" time="0.003">
+    <testcase classname="SupabaseModel findFirst returns first result" name="SupabaseModel findFirst returns first result" time="0.004">
     </testcase>
-    <testcase classname="SupabaseModel findFirst returns null when empty" name="SupabaseModel findFirst returns null when empty" time="0.003">
+    <testcase classname="SupabaseModel findFirst returns null when empty" name="SupabaseModel findFirst returns null when empty" time="0.002">
     </testcase>
-    <testcase classname="SupabaseModel createMany creates multiple records" name="SupabaseModel createMany creates multiple records" time="0.006">
+    <testcase classname="SupabaseModel createMany creates multiple records" name="SupabaseModel createMany creates multiple records" time="0.004">
     </testcase>
-    <testcase classname="SupabaseModel createMany auto-generates IDs when not provided" name="SupabaseModel createMany auto-generates IDs when not provided" time="0.003">
+    <testcase classname="SupabaseModel createMany auto-generates IDs when not provided" name="SupabaseModel createMany auto-generates IDs when not provided" time="0.004">
     </testcase>
-    <testcase classname="SupabaseModel createMany throws on error" name="SupabaseModel createMany throws on error" time="0.005">
+    <testcase classname="SupabaseModel createMany throws on error" name="SupabaseModel createMany throws on error" time="0.004">
     </testcase>
-    <testcase classname="SupabaseModel updateMany updates multiple records" name="SupabaseModel updateMany updates multiple records" time="0.004">
+    <testcase classname="SupabaseModel updateMany updates multiple records" name="SupabaseModel updateMany updates multiple records" time="0.005">
     </testcase>
-    <testcase classname="SupabaseModel updateMany returns 0 when data is empty/null" name="SupabaseModel updateMany returns 0 when data is empty/null" time="0.002">
+    <testcase classname="SupabaseModel updateMany returns 0 when data is empty/null" name="SupabaseModel updateMany returns 0 when data is empty/null" time="0.003">
     </testcase>
     <testcase classname="SupabaseModel updateMany throws on error" name="SupabaseModel updateMany throws on error" time="0.004">
     </testcase>
@@ -289,149 +317,213 @@ Received: &quot;name.ilike.%a%22b&apos;c%25d%&quot;
     </testcase>
     <testcase classname="SupabaseModel deleteMany deletes all when no where clause" name="SupabaseModel deleteMany deletes all when no where clause" time="0.003">
     </testcase>
-    <testcase classname="SupabaseModel deleteMany throws on error" name="SupabaseModel deleteMany throws on error" time="0.005">
+    <testcase classname="SupabaseModel deleteMany throws on error" name="SupabaseModel deleteMany throws on error" time="0.004">
     </testcase>
-    <testcase classname="SupabaseModel create creates a record with timestamps" name="SupabaseModel create creates a record with timestamps" time="0.02">
+    <testcase classname="SupabaseModel create creates a record with timestamps" name="SupabaseModel create creates a record with timestamps" time="0.014">
     </testcase>
-    <testcase classname="SupabaseModel create throws on error" name="SupabaseModel create throws on error" time="0.004">
+    <testcase classname="SupabaseModel create throws on error" name="SupabaseModel create throws on error" time="0.005">
     </testcase>
-    <testcase classname="SupabaseModel update updates and returns the record" name="SupabaseModel update updates and returns the record" time="0.003">
+    <testcase classname="SupabaseModel update updates and returns the record" name="SupabaseModel update updates and returns the record" time="0.004">
     </testcase>
-    <testcase classname="SupabaseModel update throws without where" name="SupabaseModel update throws without where" time="0.3">
+    <testcase classname="SupabaseModel update throws without where" name="SupabaseModel update throws without where" time="0.301">
     </testcase>
-    <testcase classname="SupabaseModel upsert updates when record exists" name="SupabaseModel upsert updates when record exists" time="0.009">
+    <testcase classname="SupabaseModel upsert updates when record exists" name="SupabaseModel upsert updates when record exists" time="0.005">
     </testcase>
-    <testcase classname="SupabaseModel upsert creates when record does not exist" name="SupabaseModel upsert creates when record does not exist" time="0.008">
+    <testcase classname="SupabaseModel upsert creates when record does not exist" name="SupabaseModel upsert creates when record does not exist" time="0.004">
     </testcase>
     <testcase classname="SupabaseModel delete deletes record" name="SupabaseModel delete deletes record" time="0.003">
     </testcase>
-    <testcase classname="SupabaseModel delete throws without where" name="SupabaseModel delete throws without where" time="0.005">
+    <testcase classname="SupabaseModel delete throws without where" name="SupabaseModel delete throws without where" time="0.01">
     </testcase>
-    <testcase classname="SupabaseModel count returns count" name="SupabaseModel count returns count" time="0.003">
+    <testcase classname="SupabaseModel count returns count" name="SupabaseModel count returns count" time="0.004">
     </testcase>
-    <testcase classname="SupabaseModel count returns 0 on null count" name="SupabaseModel count returns 0 on null count" time="0.003">
+    <testcase classname="SupabaseModel count returns 0 on null count" name="SupabaseModel count returns 0 on null count" time="0.006">
     </testcase>
-    <testcase classname="SupabaseModel aggregate returns _count and _sum" name="SupabaseModel aggregate returns _count and _sum" time="0.008">
+    <testcase classname="SupabaseModel aggregate returns _count and _sum" name="SupabaseModel aggregate returns _count and _sum" time="0.01">
     </testcase>
-    <testcase classname="SupabaseModel aggregate returns _avg, _min, _max" name="SupabaseModel aggregate returns _avg, _min, _max" time="0.004">
+    <testcase classname="SupabaseModel aggregate returns _avg, _min, _max" name="SupabaseModel aggregate returns _avg, _min, _max" time="0.006">
     </testcase>
-    <testcase classname="SupabaseModel groupBy groups by field with _count and _sum" name="SupabaseModel groupBy groups by field with _count and _sum" time="0.01">
+    <testcase classname="SupabaseModel groupBy groups by field with _count and _sum" name="SupabaseModel groupBy groups by field with _count and _sum" time="0.009">
     </testcase>
-    <testcase classname="prisma instance has all 23 model accessors" name="prisma instance has all 23 model accessors" time="0.072">
+    <testcase classname="prisma instance has all 23 model accessors" name="prisma instance has all 23 model accessors" time="0.018">
     </testcase>
-    <testcase classname="prisma instance has $transaction, $queryRaw, $disconnect methods" name="prisma instance has $transaction, $queryRaw, $disconnect methods" time="0.005">
+    <testcase classname="prisma instance has $transaction, $queryRaw, $disconnect methods" name="prisma instance has $transaction, $queryRaw, $disconnect methods" time="0.003">
     </testcase>
     <testcase classname="$transaction executes callback with prisma" name="$transaction executes callback with prisma" time="0.004">
     </testcase>
-    <testcase classname="$transaction executes array of operations sequentially" name="$transaction executes array of operations sequentially" time="0.002">
+    <testcase classname="$transaction executes array of operations sequentially" name="$transaction executes array of operations sequentially" time="0.004">
     </testcase>
     <testcase classname="$queryRaw handles SELECT 1 for health check" name="$queryRaw handles SELECT 1 for health check" time="0.005">
     </testcase>
     <testcase classname="$queryRaw handles string argument for SELECT 1" name="$queryRaw handles string argument for SELECT 1" time="0.002">
     </testcase>
-    <testcase classname="$queryRaw falls back to empty array on error" name="$queryRaw falls back to empty array on error" time="0.008">
+    <testcase classname="$queryRaw falls back to empty array on error" name="$queryRaw falls back to empty array on error" time="0.003">
     </testcase>
   </testsuite>
-  <testsuite name="order idempotency helpers" errors="0" failures="0" skipped="0" timestamp="2026-08-05T04:42:30" time="0.893" tests="6">
-    <testcase classname="order idempotency helpers accepts a UUID v4 idempotency key and rejects malformed or oversized values" name="order idempotency helpers accepts a UUID v4 idempotency key and rejects malformed or oversized values" time="0.009">
+  <testsuite name="Product Service" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:32" time="1.629" tests="16">
+    <testcase classname="Product Service list should return paginated products with defaults" name="Product Service list should return paginated products with defaults" time="0.14">
     </testcase>
-    <testcase classname="order idempotency helpers fingerprints semantically equivalent item ordering identically" name="order idempotency helpers fingerprints semantically equivalent item ordering identically" time="0.004">
+    <testcase classname="Product Service list should apply search filter" name="Product Service list should apply search filter" time="0.003">
     </testcase>
-    <testcase classname="order idempotency helpers produces a stable SHA-256 fingerprint for the same input" name="order idempotency helpers produces a stable SHA-256 fingerprint for the same input" time="0.005">
+    <testcase classname="Product Service list should apply category filter" name="Product Service list should apply category filter" time="0.002">
     </testcase>
-    <testcase classname="order idempotency helpers round-trips the encrypted token and rejects tampering" name="order idempotency helpers round-trips the encrypted token and rejects tampering" time="0.064">
+    <testcase classname="Product Service list should apply price filtering" name="Product Service list should apply price filtering" time="0.002">
     </testcase>
-    <testcase classname="order idempotency helpers uses a fresh IV for each encrypted payload" name="order idempotency helpers uses a fresh IV for each encrypted payload" time="0.007">
+    <testcase classname="Product Service list should sort by newest by default" name="Product Service list should sort by newest by default" time="0.002">
     </testcase>
-    <testcase classname="order idempotency helpers fails closed when the encryption key is absent or malformed" name="order idempotency helpers fails closed when the encryption key is absent or malformed" time="0.022">
+    <testcase classname="Product Service list should sort by price ascending" name="Product Service list should sort by price ascending" time="0.002">
     </testcase>
-  </testsuite>
-  <testsuite name="Payment Service" errors="0" failures="0" skipped="0" timestamp="2026-08-05T04:42:29" time="1.701" tests="2">
-    <testcase classname="Payment Service fetches order items with product join when available" name="Payment Service fetches order items with product join when available" time="0.009">
+    <testcase classname="Product Service list should filter by badge" name="Product Service list should filter by badge" time="0.002">
     </testcase>
-    <testcase classname="Payment Service falls back to plain order_item when product join fails" name="Payment Service falls back to plain order_item when product join fails" time="0.099">
+    <testcase classname="Product Service getBySlug should return product by slug" name="Product Service getBySlug should return product by slug" time="0.004">
     </testcase>
-  </testsuite>
-  <testsuite name="Utility Functions" errors="0" failures="0" skipped="0" timestamp="2026-08-05T04:42:30" time="1.241" tests="20">
-    <testcase classname="Utility Functions formatPrice should format IDR price" name="Utility Functions formatPrice should format IDR price" time="0.111">
+    <testcase classname="Product Service getBySlug should track view event" name="Product Service getBySlug should track view event" time="0.002">
     </testcase>
-    <testcase classname="Utility Functions formatPrice should handle zero" name="Utility Functions formatPrice should handle zero" time="0.002">
+    <testcase classname="Product Service getBySlug should throw NotFoundError for missing product" name="Product Service getBySlug should throw NotFoundError for missing product" time="0.14">
     </testcase>
-    <testcase classname="Utility Functions formatDate should format a date string" name="Utility Functions formatDate should format a date string" time="0.027">
+    <testcase classname="Order Service create should create an order successfully" name="Order Service create should create an order successfully" time="0.009">
     </testcase>
-    <testcase classname="Utility Functions formatDate should format a Date object" name="Utility Functions formatDate should format a Date object" time="0.002">
+    <testcase classname="Order Service create does not reject keyed retries based on a stale stock preflight" name="Order Service create does not reject keyed retries based on a stale stock preflight" time="0.008">
     </testcase>
-    <testcase classname="Utility Functions formatRelativeTime should return &apos;just now&apos; for recent dates" name="Utility Functions formatRelativeTime should return &apos;just now&apos; for recent dates" time="0.002">
+    <testcase classname="Order Service create returns a replay without changing status or duplicating side effects" name="Order Service create returns a replay without changing status or duplicating side effects" time="0.006">
     </testcase>
-    <testcase classname="Utility Functions formatRelativeTime should return minutes ago" name="Utility Functions formatRelativeTime should return minutes ago" time="0.001">
+    <testcase classname="Order Service create keeps a committed order successful when analytics fails" name="Order Service create keeps a committed order successful when analytics fails" time="0.087">
     </testcase>
-    <testcase classname="Utility Functions formatRelativeTime should return hours ago" name="Utility Functions formatRelativeTime should return hours ago" time="0.002">
+    <testcase classname="Order Service create should throw NotFoundError for invalid product" name="Order Service create should throw NotFoundError for invalid product" time="0.003">
     </testcase>
-    <testcase classname="Utility Functions formatRelativeTime should return days ago" name="Utility Functions formatRelativeTime should return days ago" time="0.001">
-    </testcase>
-    <testcase classname="Utility Functions slugify should convert text to slug" name="Utility Functions slugify should convert text to slug" time="0.001">
-    </testcase>
-    <testcase classname="Utility Functions slugify should handle special characters" name="Utility Functions slugify should handle special characters" time="0.001">
-    </testcase>
-    <testcase classname="Utility Functions slugify should handle multiple spaces" name="Utility Functions slugify should handle multiple spaces" time="0.001">
-    </testcase>
-    <testcase classname="Utility Functions generateOrderNumber should generate order number with LZ prefix" name="Utility Functions generateOrderNumber should generate order number with LZ prefix" time="0.002">
-    </testcase>
-    <testcase classname="Utility Functions generateOrderNumber should generate unique order numbers" name="Utility Functions generateOrderNumber should generate unique order numbers" time="0.005">
-    </testcase>
-    <testcase classname="Utility Functions truncate should truncate long strings" name="Utility Functions truncate should truncate long strings" time="0.003">
-    </testcase>
-    <testcase classname="Utility Functions truncate should not truncate short strings" name="Utility Functions truncate should not truncate short strings" time="0.001">
-    </testcase>
-    <testcase classname="Utility Functions truncate should handle exact length" name="Utility Functions truncate should handle exact length" time="0.002">
-    </testcase>
-    <testcase classname="Utility Functions getInitials should return initials from name" name="Utility Functions getInitials should return initials from name" time="0.001">
-    </testcase>
-    <testcase classname="Utility Functions getInitials should handle single name" name="Utility Functions getInitials should handle single name" time="0.001">
-    </testcase>
-    <testcase classname="Utility Functions getInitials should limit to 2 characters" name="Utility Functions getInitials should limit to 2 characters" time="0.001">
-    </testcase>
-    <testcase classname="Utility Functions debounce should debounce function calls" name="Utility Functions debounce should debounce function calls" time="0.01">
+    <testcase classname="Order Service create should throw ValidationError for insufficient stock" name="Order Service create should throw ValidationError for insufficient stock" time="0.004">
     </testcase>
   </testsuite>
-  <testsuite name="invoice-service" errors="0" failures="0" skipped="0" timestamp="2026-08-05T04:42:30" time="0.893" tests="4">
-    <testcase classname="invoice-service returns error if order not found" name="invoice-service returns error if order not found" time="0.025">
+  <testsuite name="POST /api/orders/[orderId]/confirm" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:33" time="1.373" tests="3">
+    <testcase classname="POST /api/orders/[orderId]/confirm uses the scoped cookie token" name="POST /api/orders/[orderId]/confirm uses the scoped cookie token" time="0.026">
     </testcase>
-    <testcase classname="invoice-service returns existing invoice info if already created" name="invoice-service returns existing invoice info if already created" time="0.001">
+    <testcase classname="POST /api/orders/[orderId]/confirm keeps body-token compatibility when the cookie is absent" name="POST /api/orders/[orderId]/confirm keeps body-token compatibility when the cookie is absent" time="0.005">
     </testcase>
-    <testcase classname="invoice-service handles existing invoice with FAILED status" name="invoice-service handles existing invoice with FAILED status" time="0.001">
-    </testcase>
-    <testcase classname="invoice-service getInvoiceByOrder returns null when not found" name="invoice-service getInvoiceByOrder returns null when not found" time="0.002">
+    <testcase classname="POST /api/orders/[orderId]/confirm does not accept a query-string token" name="POST /api/orders/[orderId]/confirm does not accept a query-string token" time="0.014">
     </testcase>
   </testsuite>
-  <testsuite name="queue-service" errors="0" failures="0" skipped="0" timestamp="2026-08-05T04:42:31" time="0.854" tests="8">
-    <testcase classname="queue-service enqueue enqueues a job successfully" name="queue-service enqueue enqueues a job successfully" time="0.028">
+  <testsuite name="GET /api/admin/orders/[id]" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:34" time="0.828" tests="12">
+    <testcase classname="GET /api/admin/orders/[id] returns 200 with the order" name="GET /api/admin/orders/[id] returns 200 with the order" time="0.005">
     </testcase>
-    <testcase classname="queue-service enqueue returns null on error" name="queue-service enqueue returns null on error" time="0.003">
+    <testcase classname="GET /api/admin/orders/[id] returns 401 when the request is not from an admin" name="GET /api/admin/orders/[id] returns 401 when the request is not from an admin" time="0.002">
     </testcase>
-    <testcase classname="queue-service deduplication returns an existing active job for the same dedupe key" name="queue-service deduplication returns an existing active job for the same dedupe key" time="0.002">
+    <testcase classname="GET /api/admin/orders/[id] returns 404 when the order does not exist" name="GET /api/admin/orders/[id] returns 404 when the order does not exist" time="0.002">
     </testcase>
-    <testcase classname="queue-service complete marks job as completed" name="queue-service complete marks job as completed" time="0.003">
+    <testcase classname="GET /api/admin/orders/[id] returns 500 when the database query fails" name="GET /api/admin/orders/[id] returns 500 when the database query fails" time="0.002">
     </testcase>
-    <testcase classname="queue-service fail marks job as failed with retry when retry count &lt; max" name="queue-service fail marks job as failed with retry when retry count &lt; max" time="0.004">
+    <testcase classname="PUT /api/admin/orders/[id] returns 200 for a valid transition and notifies the buyer" name="PUT /api/admin/orders/[id] returns 200 for a valid transition and notifies the buyer" time="0.007">
     </testcase>
-    <testcase classname="queue-service fail marks job as permanently failed when max retries reached" name="queue-service fail marks job as permanently failed when max retries reached" time="0.003">
+    <testcase classname="PUT /api/admin/orders/[id] returns 400 with VALIDATION_ERROR for an invalid status transition" name="PUT /api/admin/orders/[id] returns 400 with VALIDATION_ERROR for an invalid status transition" time="0.003">
     </testcase>
-    <testcase classname="queue-service retryFailed resets failed jobs for retry" name="queue-service retryFailed resets failed jobs for retry" time="0.003">
+    <testcase classname="PUT /api/admin/orders/[id] returns 401 when the request is not from an admin" name="PUT /api/admin/orders/[id] returns 401 when the request is not from an admin" time="0.003">
     </testcase>
-    <testcase classname="queue-service getQueueStats returns queue statistics" name="queue-service getQueueStats returns queue statistics" time="0.006">
+    <testcase classname="PUT /api/admin/orders/[id] returns 404 when the order does not exist" name="PUT /api/admin/orders/[id] returns 404 when the order does not exist" time="0.002">
+    </testcase>
+    <testcase classname="PUT /api/admin/orders/[id] returns 500 when the order update fails" name="PUT /api/admin/orders/[id] returns 500 when the order update fails" time="0.004">
+    </testcase>
+    <testcase classname="DELETE /api/admin/orders/[id] returns 200 and deletes items, payment and order in order" name="DELETE /api/admin/orders/[id] returns 200 and deletes items, payment and order in order" time="0.005">
+    </testcase>
+    <testcase classname="DELETE /api/admin/orders/[id] returns 401 when the request is not from an admin" name="DELETE /api/admin/orders/[id] returns 401 when the request is not from an admin" time="0.002">
+    </testcase>
+    <testcase classname="DELETE /api/admin/orders/[id] returns 500 when the order delete fails" name="DELETE /api/admin/orders/[id] returns 500 when the order delete fails" time="0.002">
     </testcase>
   </testsuite>
-  <testsuite name="Currency Utilities" errors="0" failures="0" skipped="0" timestamp="2026-08-05T04:42:31" time="0.95" tests="18">
-    <testcase classname="Currency Utilities formatPrice should format IDR price without decimals" name="Currency Utilities formatPrice should format IDR price without decimals" time="0.115">
+  <testsuite name="payment proof storage" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:34" time="0.592" tests="2">
+    <testcase classname="payment proof storage uses a private bucket and bounded image policy" name="payment proof storage uses a private bucket and bounded image policy" time="0.004">
     </testcase>
-    <testcase classname="Currency Utilities formatPrice should format USD price with decimals" name="Currency Utilities formatPrice should format USD price with decimals" time="0.003">
+    <testcase classname="payment proof storage requires a matching image signature" name="payment proof storage requires a matching image signature" time="0.002">
     </testcase>
-    <testcase classname="Currency Utilities formatPrice should default to IDR" name="Currency Utilities formatPrice should default to IDR" time="0.002">
+  </testsuite>
+  <testsuite name="createProductSchema" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:34" time="0.731" tests="36">
+    <testcase classname="createProductSchema accepts a valid product" name="createProductSchema accepts a valid product" time="0.006">
+    </testcase>
+    <testcase classname="createProductSchema rejects when name is missing" name="createProductSchema rejects when name is missing" time="0.002">
+    </testcase>
+    <testcase classname="createProductSchema rejects an invalid slug format" name="createProductSchema rejects an invalid slug format" time="0.002">
+    </testcase>
+    <testcase classname="createProductSchema rejects a negative price" name="createProductSchema rejects a negative price" time="0.001">
+    </testcase>
+    <testcase classname="createProductSchema coerces numeric strings into numbers" name="createProductSchema coerces numeric strings into numbers" time="0.002">
+    </testcase>
+    <testcase classname="createProductSchema coerces boolean strings into booleans" name="createProductSchema coerces boolean strings into booleans" time="0.003">
+    </testcase>
+    <testcase classname="createProductSchema rejects non-integer stock" name="createProductSchema rejects non-integer stock" time="0.002">
+    </testcase>
+    <testcase classname="createProductSchema accepts nested image objects" name="createProductSchema accepts nested image objects" time="0.003">
+    </testcase>
+    <testcase classname="updateProductSchema accepts a partial update (toggle isActive)" name="updateProductSchema accepts a partial update (toggle isActive)" time="0.006">
+    </testcase>
+    <testcase classname="updateProductSchema accepts an empty object (partial schema)" name="updateProductSchema accepts an empty object (partial schema)" time="0.003">
+    </testcase>
+    <testcase classname="updateProductSchema validates fields when provided" name="updateProductSchema validates fields when provided" time="0.002">
+    </testcase>
+    <testcase classname="createCategorySchema accepts a valid category with auto-generated slug" name="createCategorySchema accepts a valid category with auto-generated slug" time="0.003">
+    </testcase>
+    <testcase classname="createCategorySchema accepts an explicit valid slug" name="createCategorySchema accepts an explicit valid slug" time="0.001">
+    </testcase>
+    <testcase classname="createCategorySchema rejects an invalid slug" name="createCategorySchema rejects an invalid slug" time="0.001">
+    </testcase>
+    <testcase classname="createCategorySchema rejects when name is missing" name="createCategorySchema rejects when name is missing" time="0.001">
+    </testcase>
+    <testcase classname="updateCategorySchema accepts a partial update" name="updateCategorySchema accepts a partial update" time="0.003">
+    </testcase>
+    <testcase classname="updateCategorySchema rejects invalid fields" name="updateCategorySchema rejects invalid fields" time="0.002">
+    </testcase>
+    <testcase classname="createUserSchema accepts a valid user and defaults role to ADMIN" name="createUserSchema accepts a valid user and defaults role to ADMIN" time="0.004">
+    </testcase>
+    <testcase classname="createUserSchema rejects an invalid email" name="createUserSchema rejects an invalid email" time="0.002">
+    </testcase>
+    <testcase classname="createUserSchema rejects a short password" name="createUserSchema rejects a short password" time="0.002">
+    </testcase>
+    <testcase classname="createUserSchema rejects an unknown role" name="createUserSchema rejects an unknown role" time="0.002">
+    </testcase>
+    <testcase classname="updateUserSchema accepts a partial update" name="updateUserSchema accepts a partial update" time="0.004">
+    </testcase>
+    <testcase classname="updateUserSchema rejects an empty body (nothing to update)" name="updateUserSchema rejects an empty body (nothing to update)" time="0.002">
+    </testcase>
+    <testcase classname="updateUserSchema rejects an invalid role" name="updateUserSchema rejects an invalid role" time="0.002">
+    </testcase>
+    <testcase classname="updateUserSchema tolerates the email field sent by the UI during edit" name="updateUserSchema tolerates the email field sent by the UI during edit" time="0.001">
+    </testcase>
+    <testcase classname="upsertSettingSchema accepts a string value" name="upsertSettingSchema accepts a string value" time="0.003">
+    </testcase>
+    <testcase classname="upsertSettingSchema coerces non-string values to string (DB column is TEXT)" name="upsertSettingSchema coerces non-string values to string (DB column is TEXT)" time="0.003">
+    </testcase>
+    <testcase classname="upsertSettingSchema rejects when key is missing" name="upsertSettingSchema rejects when key is missing" time="0.001">
+    </testcase>
+    <testcase classname="upsertSettingSchema rejects when value is missing" name="upsertSettingSchema rejects when value is missing" time="0.002">
+    </testcase>
+    <testcase classname="uploadFileSchema accepts a valid image file" name="uploadFileSchema accepts a valid image file" time="0.005">
+    </testcase>
+    <testcase classname="uploadFileSchema rejects a null file" name="uploadFileSchema rejects a null file" time="0.002">
+    </testcase>
+    <testcase classname="uploadFileSchema rejects an unsupported file type" name="uploadFileSchema rejects an unsupported file type" time="0.002">
+    </testcase>
+    <testcase classname="uploadFileSchema rejects an empty file" name="uploadFileSchema rejects an empty file" time="0.002">
+    </testcase>
+    <testcase classname="uploadFileSchema rejects a file larger than 5MB" name="uploadFileSchema rejects a file larger than 5MB" time="0.007">
+    </testcase>
+    <testcase classname="zodErrorMessages joins issues into readable field: message pairs" name="zodErrorMessages joins issues into readable field: message pairs" time="0.003">
+    </testcase>
+    <testcase classname="zodErrorMessages uses &apos;body&apos; as the path for root-level issues" name="zodErrorMessages uses &apos;body&apos; as the path for root-level issues" time="0.002">
+    </testcase>
+  </testsuite>
+  <testsuite name="Payment Service" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:34" time="0.99" tests="2">
+    <testcase classname="Payment Service fetches order items with product join when available" name="Payment Service fetches order items with product join when available" time="0.007">
+    </testcase>
+    <testcase classname="Payment Service falls back to plain order_item when product join fails" name="Payment Service falls back to plain order_item when product join fails" time="0.097">
+    </testcase>
+  </testsuite>
+  <testsuite name="Currency Utilities" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:34" time="0.663" tests="18">
+    <testcase classname="Currency Utilities formatPrice should format IDR price without decimals" name="Currency Utilities formatPrice should format IDR price without decimals" time="0.116">
+    </testcase>
+    <testcase classname="Currency Utilities formatPrice should format USD price with decimals" name="Currency Utilities formatPrice should format USD price with decimals" time="0.002">
+    </testcase>
+    <testcase classname="Currency Utilities formatPrice should default to IDR" name="Currency Utilities formatPrice should default to IDR" time="0.001">
     </testcase>
     <testcase classname="Currency Utilities formatPrice should handle zero" name="Currency Utilities formatPrice should handle zero" time="0.003">
     </testcase>
-    <testcase classname="Currency Utilities formatPrice should handle large numbers" name="Currency Utilities formatPrice should handle large numbers" time="0.003">
+    <testcase classname="Currency Utilities formatPrice should handle large numbers" name="Currency Utilities formatPrice should handle large numbers" time="0.002">
     </testcase>
     <testcase classname="Currency Utilities convertCurrency should return same amount for same currency" name="Currency Utilities convertCurrency should return same amount for same currency" time="0.002">
     </testcase>
@@ -445,7 +537,7 @@ Received: &quot;name.ilike.%a%22b&apos;c%25d%&quot;
     </testcase>
     <testcase classname="Currency Utilities getDualPrice should return primary USD and secondary IDR" name="Currency Utilities getDualPrice should return primary USD and secondary IDR" time="0.003">
     </testcase>
-    <testcase classname="Currency Utilities parseCurrency should parse formatted IDR string" name="Currency Utilities parseCurrency should parse formatted IDR string" time="0.002">
+    <testcase classname="Currency Utilities parseCurrency should parse formatted IDR string" name="Currency Utilities parseCurrency should parse formatted IDR string" time="0.001">
     </testcase>
     <testcase classname="Currency Utilities parseCurrency should parse USD string" name="Currency Utilities parseCurrency should parse USD string" time="0.001">
     </testcase>
@@ -455,161 +547,325 @@ Received: &quot;name.ilike.%a%22b&apos;c%25d%&quot;
     </testcase>
     <testcase classname="Currency Utilities parseCurrency should handle empty string" name="Currency Utilities parseCurrency should handle empty string" time="0.001">
     </testcase>
-    <testcase classname="Currency Utilities CURRENCIES should have IDR config" name="Currency Utilities CURRENCIES should have IDR config" time="0.003">
+    <testcase classname="Currency Utilities CURRENCIES should have IDR config" name="Currency Utilities CURRENCIES should have IDR config" time="0.002">
     </testcase>
-    <testcase classname="Currency Utilities CURRENCIES should have USD config" name="Currency Utilities CURRENCIES should have USD config" time="0.003">
-    </testcase>
-  </testsuite>
-  <testsuite name="Storage Service" errors="0" failures="0" skipped="0" timestamp="2026-08-05T04:42:31" time="1.267" tests="7">
-    <testcase classname="Storage Service isConfigured should return false when env vars are missing" name="Storage Service isConfigured should return false when env vars are missing" time="0.004">
-    </testcase>
-    <testcase classname="Storage Service isConfigured should return true when all env vars are set" name="Storage Service isConfigured should return true when all env vars are set" time="0.003">
-    </testcase>
-    <testcase classname="Storage Service generateProductImageKey should generate a product image key" name="Storage Service generateProductImageKey should generate a product image key" time="0.004">
-    </testcase>
-    <testcase classname="Storage Service generateProductImageKey should handle special characters in filename" name="Storage Service generateProductImageKey should handle special characters in filename" time="0.003">
-    </testcase>
-    <testcase classname="Storage Service generateProductImageKey should default to jpg extension" name="Storage Service generateProductImageKey should default to jpg extension" time="0.002">
-    </testcase>
-    <testcase classname="Storage Service uploadFile should throw when not configured" name="Storage Service uploadFile should throw when not configured" time="0.07">
-    </testcase>
-    <testcase classname="Storage Service deleteFile should throw when not configured" name="Storage Service deleteFile should throw when not configured" time="0.004">
+    <testcase classname="Currency Utilities CURRENCIES should have USD config" name="Currency Utilities CURRENCIES should have USD config" time="0.002">
     </testcase>
   </testsuite>
-  <testsuite name="Cart Store" errors="0" failures="0" skipped="0" timestamp="2026-08-05T04:42:31" time="1.087" tests="18">
-    <testcase classname="Cart Store addItem should add a new item to the cart" name="Cart Store addItem should add a new item to the cart" time="0.008">
+  <testsuite name="Utility Functions" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:34" time="0.711" tests="18">
+    <testcase classname="Utility Functions formatPrice should format IDR price" name="Utility Functions formatPrice should format IDR price" time="0.09">
     </testcase>
-    <testcase classname="Cart Store addItem should increment quantity for existing item" name="Cart Store addItem should increment quantity for existing item" time="0.003">
+    <testcase classname="Utility Functions formatPrice should handle zero" name="Utility Functions formatPrice should handle zero" time="0.002">
     </testcase>
-    <testcase classname="Cart Store addItem should not exceed stock limit" name="Cart Store addItem should not exceed stock limit" time="0.002">
+    <testcase classname="Utility Functions formatDate should format a date string" name="Utility Functions formatDate should format a date string" time="0.022">
+    </testcase>
+    <testcase classname="Utility Functions formatDate should format a Date object" name="Utility Functions formatDate should format a Date object" time="0.001">
+    </testcase>
+    <testcase classname="Utility Functions formatRelativeTime should return &apos;just now&apos; for recent dates" name="Utility Functions formatRelativeTime should return &apos;just now&apos; for recent dates" time="0.001">
+    </testcase>
+    <testcase classname="Utility Functions formatRelativeTime should return minutes ago" name="Utility Functions formatRelativeTime should return minutes ago" time="0.002">
+    </testcase>
+    <testcase classname="Utility Functions formatRelativeTime should return hours ago" name="Utility Functions formatRelativeTime should return hours ago" time="0.002">
+    </testcase>
+    <testcase classname="Utility Functions formatRelativeTime should return days ago" name="Utility Functions formatRelativeTime should return days ago" time="0.001">
+    </testcase>
+    <testcase classname="Utility Functions slugify should convert text to slug" name="Utility Functions slugify should convert text to slug" time="0.001">
+    </testcase>
+    <testcase classname="Utility Functions slugify should handle special characters" name="Utility Functions slugify should handle special characters" time="0.002">
+    </testcase>
+    <testcase classname="Utility Functions slugify should handle multiple spaces" name="Utility Functions slugify should handle multiple spaces" time="0.001">
+    </testcase>
+    <testcase classname="Utility Functions truncate should truncate long strings" name="Utility Functions truncate should truncate long strings" time="0.001">
+    </testcase>
+    <testcase classname="Utility Functions truncate should not truncate short strings" name="Utility Functions truncate should not truncate short strings" time="0.001">
+    </testcase>
+    <testcase classname="Utility Functions truncate should handle exact length" name="Utility Functions truncate should handle exact length" time="0.001">
+    </testcase>
+    <testcase classname="Utility Functions getInitials should return initials from name" name="Utility Functions getInitials should return initials from name" time="0.001">
+    </testcase>
+    <testcase classname="Utility Functions getInitials should handle single name" name="Utility Functions getInitials should handle single name" time="0.001">
+    </testcase>
+    <testcase classname="Utility Functions getInitials should limit to 2 characters" name="Utility Functions getInitials should limit to 2 characters" time="0.001">
+    </testcase>
+    <testcase classname="Utility Functions debounce should debounce function calls" name="Utility Functions debounce should debounce function calls" time="0.008">
+    </testcase>
+  </testsuite>
+  <testsuite name="generateOrderNumber" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:35" time="0.581" tests="3">
+    <testcase classname="generateOrderNumber produces an LZ-{date}-{6 alphanumeric} order number" name="generateOrderNumber produces an LZ-{date}-{6 alphanumeric} order number" time="0.004">
+    </testcase>
+    <testcase classname="generateOrderNumber always emits a full 6-character suffix" name="generateOrderNumber always emits a full 6-character suffix" time="0.095">
+    </testcase>
+    <testcase classname="generateOrderNumber generates distinct suffixes" name="generateOrderNumber generates distinct suffixes" time="0.009">
+    </testcase>
+  </testsuite>
+  <testsuite name="rate limiting" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:35" time="0.572" tests="7">
+    <testcase classname="rate limiting allows five attempts and blocks the sixth within a window" name="rate limiting allows five attempts and blocks the sixth within a window" time="0.007">
+    </testcase>
+    <testcase classname="login &amp; order throttling peek does not increment the bucket" name="login &amp; order throttling peek does not increment the bucket" time="0.006">
+    </testcase>
+    <testcase classname="login &amp; order throttling records failures and blocks once the account limit is reached" name="login &amp; order throttling records failures and blocks once the account limit is reached" time="0.012">
+    </testcase>
+    <testcase classname="login &amp; order throttling lockout expires and restores access" name="login &amp; order throttling lockout expires and restores access" time="0.058">
+    </testcase>
+    <testcase classname="login &amp; order throttling resetRateLimit clears a bucket (successful login)" name="login &amp; order throttling resetRateLimit clears a bucket (successful login)" time="0.002">
+    </testcase>
+    <testcase classname="login &amp; order throttling safe wrappers always return a usable result (fail-open)" name="login &amp; order throttling safe wrappers always return a usable result (fail-open)" time="0.004">
+    </testcase>
+    <testcase classname="login &amp; order throttling order creation cap allows legitimate volume and blocks flooding" name="login &amp; order throttling order creation cap allows legitimate volume and blocks flooding" time="0.006">
+    </testcase>
+  </testsuite>
+  <testsuite name="invoice-service" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:35" time="0.524" tests="4">
+    <testcase classname="invoice-service returns error if order not found" name="invoice-service returns error if order not found" time="0.03">
+    </testcase>
+    <testcase classname="invoice-service returns existing invoice info if already created" name="invoice-service returns existing invoice info if already created" time="0.002">
+    </testcase>
+    <testcase classname="invoice-service handles existing invoice with FAILED status" name="invoice-service handles existing invoice with FAILED status" time="0.002">
+    </testcase>
+    <testcase classname="invoice-service getInvoiceByOrder returns null when not found" name="invoice-service getInvoiceByOrder returns null when not found" time="0.002">
+    </testcase>
+  </testsuite>
+  <testsuite name="POST /api/admin/login brute-force protection" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:35" time="0.594" tests="5">
+    <testcase classname="POST /api/admin/login brute-force protection returns 401 for a failed login and 429 once the per-account limit is hit" name="POST /api/admin/login brute-force protection returns 401 for a failed login and 429 once the per-account limit is hit" time="0.033">
+    </testcase>
+    <testcase classname="POST /api/admin/login brute-force protection blocks by IP even when the attacker rotates accounts" name="POST /api/admin/login brute-force protection blocks by IP even when the attacker rotates accounts" time="0.021">
+    </testcase>
+    <testcase classname="POST /api/admin/login brute-force protection restores access after the lockout window expires" name="POST /api/admin/login brute-force protection restores access after the lockout window expires" time="0.017">
+    </testcase>
+    <testcase classname="POST /api/admin/login brute-force protection a successful login clears the failure counters" name="POST /api/admin/login brute-force protection a successful login clears the failure counters" time="0.01">
+    </testcase>
+    <testcase classname="POST /api/admin/login brute-force protection rejects a request without credentials before any rate limiting" name="POST /api/admin/login brute-force protection rejects a request without credentials before any rate limiting" time="0.002">
+    </testcase>
+  </testsuite>
+  <testsuite name="order idempotency helpers" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:35" time="0.535" tests="6">
+    <testcase classname="order idempotency helpers accepts a UUID v4 idempotency key and rejects malformed or oversized values" name="order idempotency helpers accepts a UUID v4 idempotency key and rejects malformed or oversized values" time="0.006">
+    </testcase>
+    <testcase classname="order idempotency helpers fingerprints semantically equivalent item ordering identically" name="order idempotency helpers fingerprints semantically equivalent item ordering identically" time="0.002">
+    </testcase>
+    <testcase classname="order idempotency helpers produces a stable SHA-256 fingerprint for the same input" name="order idempotency helpers produces a stable SHA-256 fingerprint for the same input" time="0.003">
+    </testcase>
+    <testcase classname="order idempotency helpers round-trips the encrypted token and rejects tampering" name="order idempotency helpers round-trips the encrypted token and rejects tampering" time="0.037">
+    </testcase>
+    <testcase classname="order idempotency helpers uses a fresh IV for each encrypted payload" name="order idempotency helpers uses a fresh IV for each encrypted payload" time="0.005">
+    </testcase>
+    <testcase classname="order idempotency helpers fails closed when the encryption key is absent or malformed" name="order idempotency helpers fails closed when the encryption key is absent or malformed" time="0.01">
+    </testcase>
+  </testsuite>
+  <testsuite name="Error Utilities" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:35" time="0.521" tests="17">
+    <testcase classname="Error Utilities AppError should create an error with status code and code" name="Error Utilities AppError should create an error with status code and code" time="0.004">
+    </testcase>
+    <testcase classname="Error Utilities AppError should be an instance of Error" name="Error Utilities AppError should be an instance of Error" time="0.002">
+    </testcase>
+    <testcase classname="Error Utilities NotFoundError should create a 404 error with resource name" name="Error Utilities NotFoundError should create a 404 error with resource name" time="0.003">
+    </testcase>
+    <testcase classname="Error Utilities NotFoundError should include resource ID in message" name="Error Utilities NotFoundError should include resource ID in message" time="0.001">
+    </testcase>
+    <testcase classname="Error Utilities ValidationError should create a 400 error with field errors" name="Error Utilities ValidationError should create a 400 error with field errors" time="0.003">
+    </testcase>
+    <testcase classname="Error Utilities ValidationError should create a 400 error with string message" name="Error Utilities ValidationError should create a 400 error with string message" time="0.002">
+    </testcase>
+    <testcase classname="Error Utilities UnauthorizedError should create a 401 error with default message" name="Error Utilities UnauthorizedError should create a 401 error with default message" time="0.002">
+    </testcase>
+    <testcase classname="Error Utilities UnauthorizedError should accept custom message" name="Error Utilities UnauthorizedError should accept custom message" time="0.001">
+    </testcase>
+    <testcase classname="Error Utilities ForbiddenError should create a 403 error" name="Error Utilities ForbiddenError should create a 403 error" time="0.002">
+    </testcase>
+    <testcase classname="Error Utilities ConflictError should create a 409 error" name="Error Utilities ConflictError should create a 409 error" time="0.002">
+    </testcase>
+    <testcase classname="Error Utilities RateLimitError should create a 429 error" name="Error Utilities RateLimitError should create a 429 error" time="0.002">
+    </testcase>
+    <testcase classname="Error Utilities successResponse should create a success response" name="Error Utilities successResponse should create a success response" time="0.002">
+    </testcase>
+    <testcase classname="Error Utilities successResponse should include meta when provided" name="Error Utilities successResponse should include meta when provided" time="0.001">
+    </testcase>
+    <testcase classname="Error Utilities errorResponse should create an error response" name="Error Utilities errorResponse should create an error response" time="0.002">
+    </testcase>
+    <testcase classname="Error Utilities errorResponse should include field errors for ValidationError" name="Error Utilities errorResponse should include field errors for ValidationError" time="0.001">
+    </testcase>
+    <testcase classname="Error Utilities buildMeta should build pagination meta" name="Error Utilities buildMeta should build pagination meta" time="0.001">
+    </testcase>
+    <testcase classname="Error Utilities buildMeta should handle zero total" name="Error Utilities buildMeta should handle zero total" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="queue-service" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:36" time="0.526" tests="8">
+    <testcase classname="queue-service enqueue enqueues a job successfully" name="queue-service enqueue enqueues a job successfully" time="0.021">
+    </testcase>
+    <testcase classname="queue-service enqueue returns null on error" name="queue-service enqueue returns null on error" time="0.002">
+    </testcase>
+    <testcase classname="queue-service deduplication returns an existing active job for the same dedupe key" name="queue-service deduplication returns an existing active job for the same dedupe key" time="0.002">
+    </testcase>
+    <testcase classname="queue-service complete marks job as completed" name="queue-service complete marks job as completed" time="0.003">
+    </testcase>
+    <testcase classname="queue-service fail marks job as failed with retry when retry count &lt; max" name="queue-service fail marks job as failed with retry when retry count &lt; max" time="0.003">
+    </testcase>
+    <testcase classname="queue-service fail marks job as permanently failed when max retries reached" name="queue-service fail marks job as permanently failed when max retries reached" time="0.003">
+    </testcase>
+    <testcase classname="queue-service retryFailed resets failed jobs for retry" name="queue-service retryFailed resets failed jobs for retry" time="0.003">
+    </testcase>
+    <testcase classname="queue-service getQueueStats returns queue statistics" name="queue-service getQueueStats returns queue statistics" time="0.005">
+    </testcase>
+  </testsuite>
+  <testsuite name="Cart Store" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:35" time="0.592" tests="18">
+    <testcase classname="Cart Store addItem should add a new item to the cart" name="Cart Store addItem should add a new item to the cart" time="0.007">
+    </testcase>
+    <testcase classname="Cart Store addItem should increment quantity for existing item" name="Cart Store addItem should increment quantity for existing item" time="0.004">
+    </testcase>
+    <testcase classname="Cart Store addItem should not exceed stock limit" name="Cart Store addItem should not exceed stock limit" time="0.003">
     </testcase>
     <testcase classname="Cart Store addItem should add multiple different items" name="Cart Store addItem should add multiple different items" time="0.002">
     </testcase>
     <testcase classname="Cart Store removeItem should remove an item from the cart" name="Cart Store removeItem should remove an item from the cart" time="0.002">
     </testcase>
-    <testcase classname="Cart Store removeItem should not affect other items when removing" name="Cart Store removeItem should not affect other items when removing" time="0.003">
+    <testcase classname="Cart Store removeItem should not affect other items when removing" name="Cart Store removeItem should not affect other items when removing" time="0.019">
     </testcase>
     <testcase classname="Cart Store updateQuantity should update quantity of an item" name="Cart Store updateQuantity should update quantity of an item" time="0.002">
     </testcase>
-    <testcase classname="Cart Store updateQuantity should remove item when quantity is 0" name="Cart Store updateQuantity should remove item when quantity is 0" time="0.001">
+    <testcase classname="Cart Store updateQuantity should remove item when quantity is 0" name="Cart Store updateQuantity should remove item when quantity is 0" time="0.002">
     </testcase>
     <testcase classname="Cart Store updateQuantity should remove item when quantity is negative" name="Cart Store updateQuantity should remove item when quantity is negative" time="0.002">
     </testcase>
-    <testcase classname="Cart Store updateQuantity should cap quantity at stock limit" name="Cart Store updateQuantity should cap quantity at stock limit" time="0.002">
+    <testcase classname="Cart Store updateQuantity should cap quantity at stock limit" name="Cart Store updateQuantity should cap quantity at stock limit" time="0.001">
     </testcase>
-    <testcase classname="Cart Store clearCart should clear all items" name="Cart Store clearCart should clear all items" time="0.002">
+    <testcase classname="Cart Store clearCart should clear all items" name="Cart Store clearCart should clear all items" time="0.001">
     </testcase>
-    <testcase classname="Cart Store Calculations should calculate subtotal correctly" name="Cart Store Calculations should calculate subtotal correctly" time="0.002">
+    <testcase classname="Cart Store Calculations should calculate subtotal correctly" name="Cart Store Calculations should calculate subtotal correctly" time="0.001">
     </testcase>
     <testcase classname="Cart Store Calculations should calculate tax (11%) correctly" name="Cart Store Calculations should calculate tax (11%) correctly" time="0.002">
     </testcase>
-    <testcase classname="Cart Store Calculations should calculate total correctly" name="Cart Store Calculations should calculate total correctly" time="0.001">
+    <testcase classname="Cart Store Calculations should calculate total correctly" name="Cart Store Calculations should calculate total correctly" time="0.002">
     </testcase>
-    <testcase classname="Cart Store Calculations should return 0 for empty cart" name="Cart Store Calculations should return 0 for empty cart" time="0.017">
+    <testcase classname="Cart Store Calculations should return 0 for empty cart" name="Cart Store Calculations should return 0 for empty cart" time="0.002">
     </testcase>
-    <testcase classname="Cart Store getItemCount should count total items correctly" name="Cart Store getItemCount should count total items correctly" time="0.002">
+    <testcase classname="Cart Store getItemCount should count total items correctly" name="Cart Store getItemCount should count total items correctly" time="0.001">
     </testcase>
     <testcase classname="Cart Store getItemCount should count quantities correctly" name="Cart Store getItemCount should count quantities correctly" time="0.001">
     </testcase>
-    <testcase classname="Cart Store setIsOpen should open and close the cart drawer" name="Cart Store setIsOpen should open and close the cart drawer" time="0.001">
+    <testcase classname="Cart Store setIsOpen should open and close the cart drawer" name="Cart Store setIsOpen should open and close the cart drawer" time="0.002">
     </testcase>
   </testsuite>
-  <testsuite name="payment confirmation tokens" errors="0" failures="0" skipped="0" timestamp="2026-08-05T04:42:32" time="0.728" tests="3">
-    <testcase classname="payment confirmation tokens generates a cryptographically strong token accepted by the validator" name="payment confirmation tokens generates a cryptographically strong token accepted by the validator" time="0.004">
+  <testsuite name="store selection" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:35" time="1.147" tests="18">
+    <testcase classname="store selection reports not configured without KV/Upstash env vars" name="store selection reports not configured without KV/Upstash env vars" time="0.005">
     </testcase>
-    <testcase classname="payment confirmation tokens generates different tokens for separate orders" name="payment confirmation tokens generates different tokens for separate orders" time="0.002">
+    <testcase classname="store selection is configured when Vercel KV vars are present" name="store selection is configured when Vercel KV vars are present" time="0.002">
     </testcase>
-    <testcase classname="payment confirmation tokens hashes deterministically without returning the raw token" name="payment confirmation tokens hashes deterministically without returning the raw token" time="0.003">
+    <testcase classname="store selection is configured when Upstash vars are present" name="store selection is configured when Upstash vars are present" time="0.002">
     </testcase>
-  </testsuite>
-  <testsuite name="rate limiting" errors="0" failures="0" skipped="0" timestamp="2026-08-05T04:42:32" time="0.831" tests="1">
-    <testcase classname="rate limiting allows five attempts and blocks the sixth within a window" name="rate limiting allows five attempts and blocks the sixth within a window" time="0.013">
+    <testcase classname="rate limiting (in-memory fallback) allows five attempts and blocks the sixth within a window" name="rate limiting (in-memory fallback) allows five attempts and blocks the sixth within a window" time="0.005">
     </testcase>
-  </testsuite>
-  <testsuite name="i18n Utilities" errors="0" failures="0" skipped="0" timestamp="2026-08-05T04:42:31" time="1.156" tests="16">
-    <testcase classname="i18n Utilities t() - Translation should translate a simple key in English" name="i18n Utilities t() - Translation should translate a simple key in English" time="0.004">
+    <testcase classname="rate limiting (in-memory fallback) peek does not increment the bucket" name="rate limiting (in-memory fallback) peek does not increment the bucket" time="0.005">
     </testcase>
-    <testcase classname="i18n Utilities t() - Translation should translate a simple key in Indonesian" name="i18n Utilities t() - Translation should translate a simple key in Indonesian" time="0.002">
+    <testcase classname="rate limiting (in-memory fallback) lockout expires and restores access" name="rate limiting (in-memory fallback) lockout expires and restores access" time="0.059">
     </testcase>
-    <testcase classname="i18n Utilities t() - Translation should translate nested keys" name="i18n Utilities t() - Translation should translate nested keys" time="0.002">
+    <testcase classname="rate limiting (in-memory fallback) resetRateLimit clears a bucket (successful login)" name="rate limiting (in-memory fallback) resetRateLimit clears a bucket (successful login)" time="0.002">
     </testcase>
-    <testcase classname="i18n Utilities t() - Translation should fallback to English for missing Indonesian key" name="i18n Utilities t() - Translation should fallback to English for missing Indonesian key" time="0.001">
+    <testcase classname="rate limiting (in-memory fallback) safe wrappers always return a usable result (fail-open)" name="rate limiting (in-memory fallback) safe wrappers always return a usable result (fail-open)" time="0.004">
     </testcase>
-    <testcase classname="i18n Utilities t() - Translation should return key path if not found" name="i18n Utilities t() - Translation should return key path if not found" time="0.002">
+    <testcase classname="rate limiting (in-memory fallback) does not hit the network when no Redis is configured" name="rate limiting (in-memory fallback) does not hit the network when no Redis is configured" time="0.002">
     </testcase>
-    <testcase classname="i18n Utilities t() - Translation should use current locale if not specified" name="i18n Utilities t() - Translation should use current locale if not specified" time="0.002">
+    <testcase classname="Redis/KV REST store anchors the window with INCR + EXPIRE and reports PTTL-based reset" name="Redis/KV REST store anchors the window with INCR + EXPIRE and reports PTTL-based reset" time="0.007">
     </testcase>
-    <testcase classname="i18n Utilities setLocale / getLocale should set and get locale" name="i18n Utilities setLocale / getLocale should set and get locale" time="0.002">
+    <testcase classname="Redis/KV REST store blocks once the count exceeds the cap without re-EXPIREing" name="Redis/KV REST store blocks once the count exceeds the cap without re-EXPIREing" time="0.003">
     </testcase>
-    <testcase classname="i18n Utilities getTranslations should return all translations for a namespace" name="i18n Utilities getTranslations should return all translations for a namespace" time="0.003">
+    <testcase classname="Redis/KV REST store peek reads GET/PTTL without incrementing" name="Redis/KV REST store peek reads GET/PTTL without incrementing" time="0.003">
     </testcase>
-    <testcase classname="i18n Utilities getTranslations should return Indonesian translations" name="i18n Utilities getTranslations should return Indonesian translations" time="0.003">
+    <testcase classname="Redis/KV REST store fails open when the Redis call throws" name="Redis/KV REST store fails open when the Redis call throws" time="0.003">
     </testcase>
-    <testcase classname="i18n Utilities getTranslations should return empty object for invalid namespace" name="i18n Utilities getTranslations should return empty object for invalid namespace" time="0.002">
+    <testcase classname="Redis/KV REST store fails open when Redis returns a command error" name="Redis/KV REST store fails open when Redis returns a command error" time="0.002">
     </testcase>
-    <testcase classname="i18n Utilities detectLocale should detect Indonesian from Accept-Language" name="i18n Utilities detectLocale should detect Indonesian from Accept-Language" time="0.002">
+    <testcase classname="enforceAdminRateLimit returns null while under the cap (request passes)" name="enforceAdminRateLimit returns null while under the cap (request passes)" time="0.002">
     </testcase>
-    <testcase classname="i18n Utilities detectLocale should detect English as default" name="i18n Utilities detectLocale should detect English as default" time="0.002">
+    <testcase classname="enforceAdminRateLimit returns a 429 envelope with rate-limit headers once the cap is hit" name="enforceAdminRateLimit returns a 429 envelope with rate-limit headers once the cap is hit" time="0.009">
     </testcase>
-    <testcase classname="i18n Utilities detectLocale should default to English for no header" name="i18n Utilities detectLocale should default to English for no header" time="0.001">
+    <testcase classname="enforceAdminRateLimit keys by route so one route&apos;s cap does not exhaust another" name="enforceAdminRateLimit keys by route so one route&apos;s cap does not exhaust another" time="0.006">
     </testcase>
-    <testcase classname="i18n Utilities detectLocale should default to English for empty string" name="i18n Utilities detectLocale should default to English for empty string" time="0.001">
-    </testcase>
-    <testcase classname="i18n Utilities LOCALE_NAMES should have English name" name="i18n Utilities LOCALE_NAMES should have English name" time="0.002">
-    </testcase>
-    <testcase classname="i18n Utilities LOCALE_NAMES should have Indonesian name" name="i18n Utilities LOCALE_NAMES should have Indonesian name" time="0.002">
+    <testcase classname="enforceAdminRateLimit fails open when IP extraction throws" name="enforceAdminRateLimit fails open when IP extraction throws" time="0.002">
     </testcase>
   </testsuite>
-  <testsuite name="Auth Utilities" errors="0" failures="0" skipped="0" timestamp="2026-08-05T04:42:20" time="12.065" tests="32">
-    <testcase classname="Auth Utilities JWT Signing and Verification should sign and verify a valid JWT" name="Auth Utilities JWT Signing and Verification should sign and verify a valid JWT" time="0.055">
+  <testsuite name="buildIlikeOrFilter" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:36" time="0.514" tests="7">
+    <testcase classname="buildIlikeOrFilter keeps a plain alphanumeric term readable" name="buildIlikeOrFilter keeps a plain alphanumeric term readable" time="0.003">
     </testcase>
-    <testcase classname="Auth Utilities JWT Signing and Verification should include storeId when provided" name="Auth Utilities JWT Signing and Verification should include storeId when provided" time="0.002">
+    <testcase classname="buildIlikeOrFilter joins multiple columns with commas" name="buildIlikeOrFilter joins multiple columns with commas" time="0.002">
+    </testcase>
+    <testcase classname="buildIlikeOrFilter encodes commas inside the term so they can never start a new or() condition" name="buildIlikeOrFilter encodes commas inside the term so they can never start a new or() condition" time="0.001">
+    </testcase>
+    <testcase classname="buildIlikeOrFilter neutralizes logical-operator prefixes even when combined with commas" name="buildIlikeOrFilter neutralizes logical-operator prefixes even when combined with commas" time="0.001">
+    </testcase>
+    <testcase classname="buildIlikeOrFilter encodes double quotes and percent signs in the term" name="buildIlikeOrFilter encodes double quotes and percent signs in the term" time="0.001">
+    </testcase>
+    <testcase classname="buildIlikeOrFilter encodes in-list style syntax so it can never start a nested expression" name="buildIlikeOrFilter encodes in-list style syntax so it can never start a nested expression" time="0.001">
+    </testcase>
+    <testcase classname="buildIlikeOrFilter encodes parens anywhere in the term" name="buildIlikeOrFilter encodes parens anywhere in the term" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="GET /api/orders/track" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:36" time="0.54" tests="9">
+    <testcase classname="GET /api/orders/track returns order data for orderId when the confirmation cookie is valid" name="GET /api/orders/track returns order data for orderId when the confirmation cookie is valid" time="0.009">
+    </testcase>
+    <testcase classname="GET /api/orders/track fails closed with 404 and no PII when the cookie is missing" name="GET /api/orders/track fails closed with 404 and no PII when the cookie is missing" time="0.003">
+    </testcase>
+    <testcase classname="GET /api/orders/track fails closed with 404 when the cookie is present but invalid" name="GET /api/orders/track fails closed with 404 when the cookie is present but invalid" time="0.003">
+    </testcase>
+    <testcase classname="GET /api/orders/track accepts the token as a query param when no cookie is present (cross-device)" name="GET /api/orders/track accepts the token as a query param when no cookie is present (cross-device)" time="0.004">
+    </testcase>
+    <testcase classname="GET /api/orders/track fails closed with 404 when the query token is invalid" name="GET /api/orders/track fails closed with 404 when the query token is invalid" time="0.002">
+    </testcase>
+    <testcase classname="GET /api/orders/track resolves the manual order-number path without any cookie (order number is the bearer credential)" name="GET /api/orders/track resolves the manual order-number path without any cookie (order number is the bearer credential)" time="0.004">
+    </testcase>
+    <testcase classname="GET /api/orders/track fails closed with 404 when the cookie is valid but the order does not exist" name="GET /api/orders/track fails closed with 404 when the cookie is valid but the order does not exist" time="0.002">
+    </testcase>
+    <testcase classname="GET /api/orders/track rejects a malformed orderId" name="GET /api/orders/track rejects a malformed orderId" time="0.002">
+    </testcase>
+    <testcase classname="GET /api/orders/track rejects a malformed orderNumber" name="GET /api/orders/track rejects a malformed orderNumber" time="0.002">
+    </testcase>
+  </testsuite>
+  <testsuite name="Auth Utilities" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:29" time="7.668" tests="32">
+    <testcase classname="Auth Utilities JWT Signing and Verification should sign and verify a valid JWT" name="Auth Utilities JWT Signing and Verification should sign and verify a valid JWT" time="0.089">
+    </testcase>
+    <testcase classname="Auth Utilities JWT Signing and Verification should include storeId when provided" name="Auth Utilities JWT Signing and Verification should include storeId when provided" time="0.003">
     </testcase>
     <testcase classname="Auth Utilities JWT Signing and Verification should return null for invalid token" name="Auth Utilities JWT Signing and Verification should return null for invalid token" time="0.002">
     </testcase>
     <testcase classname="Auth Utilities JWT Signing and Verification should return null for tampered token" name="Auth Utilities JWT Signing and Verification should return null for tampered token" time="0.002">
     </testcase>
-    <testcase classname="Auth Utilities JWT Signing and Verification should return null for empty string" name="Auth Utilities JWT Signing and Verification should return null for empty string" time="0.002">
+    <testcase classname="Auth Utilities JWT Signing and Verification should return null for empty string" name="Auth Utilities JWT Signing and Verification should return null for empty string" time="0.003">
     </testcase>
-    <testcase classname="Auth Utilities JWT Signing and Verification should return null for malformed token (2 parts)" name="Auth Utilities JWT Signing and Verification should return null for malformed token (2 parts)" time="0.002">
+    <testcase classname="Auth Utilities JWT Signing and Verification should return null for malformed token (2 parts)" name="Auth Utilities JWT Signing and Verification should return null for malformed token (2 parts)" time="0.001">
     </testcase>
     <testcase classname="Auth Utilities JWT Signing and Verification should return null for malformed token (4+ parts)" name="Auth Utilities JWT Signing and Verification should return null for malformed token (4+ parts)" time="0.002">
     </testcase>
-    <testcase classname="Auth Utilities JWT Signing and Verification should return null for tokens with invalid JSON in body" name="Auth Utilities JWT Signing and Verification should return null for tokens with invalid JSON in body" time="0.002">
+    <testcase classname="Auth Utilities JWT Signing and Verification should return null for tokens with invalid JSON in body" name="Auth Utilities JWT Signing and Verification should return null for tokens with invalid JSON in body" time="0.003">
     </testcase>
-    <testcase classname="Auth Utilities JWT Signing and Verification should return null for expired token" name="Auth Utilities JWT Signing and Verification should return null for expired token" time="0.012">
+    <testcase classname="Auth Utilities JWT Signing and Verification should return null for expired token" name="Auth Utilities JWT Signing and Verification should return null for expired token" time="0.02">
     </testcase>
     <testcase classname="Auth Utilities JWT Signing and Verification should produce different tokens for different payloads" name="Auth Utilities JWT Signing and Verification should produce different tokens for different payloads" time="0.002">
     </testcase>
     <testcase classname="Auth Utilities JWT Signing and Verification should produce different tokens for same payload (different iat)" name="Auth Utilities JWT Signing and Verification should produce different tokens for same payload (different iat)" time="0.004">
     </testcase>
-    <testcase classname="Auth Utilities JWT Signing and Verification should handle special characters in payload" name="Auth Utilities JWT Signing and Verification should handle special characters in payload" time="0.001">
+    <testcase classname="Auth Utilities JWT Signing and Verification should handle special characters in payload" name="Auth Utilities JWT Signing and Verification should handle special characters in payload" time="0.002">
     </testcase>
-    <testcase classname="Auth Utilities Password Hashing should hash a password" name="Auth Utilities Password Hashing should hash a password" time="0.405">
+    <testcase classname="Auth Utilities Password Hashing should hash a password" name="Auth Utilities Password Hashing should hash a password" time="0.331">
     </testcase>
-    <testcase classname="Auth Utilities Password Hashing should verify a correct password" name="Auth Utilities Password Hashing should verify a correct password" time="0.903">
+    <testcase classname="Auth Utilities Password Hashing should verify a correct password" name="Auth Utilities Password Hashing should verify a correct password" time="0.686">
     </testcase>
-    <testcase classname="Auth Utilities Password Hashing should reject an incorrect password" name="Auth Utilities Password Hashing should reject an incorrect password" time="0.957">
+    <testcase classname="Auth Utilities Password Hashing should reject an incorrect password" name="Auth Utilities Password Hashing should reject an incorrect password" time="0.679">
     </testcase>
-    <testcase classname="Auth Utilities Password Hashing should produce different hashes for same password (different salts)" name="Auth Utilities Password Hashing should produce different hashes for same password (different salts)" time="1.653">
+    <testcase classname="Auth Utilities Password Hashing should produce different hashes for same password (different salts)" name="Auth Utilities Password Hashing should produce different hashes for same password (different salts)" time="1.416">
     </testcase>
-    <testcase classname="Auth Utilities Password Hashing should handle empty password" name="Auth Utilities Password Hashing should handle empty password" time="0.77">
+    <testcase classname="Auth Utilities Password Hashing should handle empty password" name="Auth Utilities Password Hashing should handle empty password" time="0.585">
     </testcase>
-    <testcase classname="Auth Utilities Password Hashing should handle very long passwords" name="Auth Utilities Password Hashing should handle very long passwords" time="0.803">
+    <testcase classname="Auth Utilities Password Hashing should handle very long passwords" name="Auth Utilities Password Hashing should handle very long passwords" time="0.582">
     </testcase>
-    <testcase classname="Auth Utilities Password Hashing should handle unicode passwords" name="Auth Utilities Password Hashing should handle unicode passwords" time="0.756">
+    <testcase classname="Auth Utilities Password Hashing should handle unicode passwords" name="Auth Utilities Password Hashing should handle unicode passwords" time="0.568">
     </testcase>
     <testcase classname="Auth Utilities Refresh Token should generate a random refresh token" name="Auth Utilities Refresh Token should generate a random refresh token" time="0.003">
     </testcase>
-    <testcase classname="Auth Utilities Refresh Token should always generate unique tokens" name="Auth Utilities Refresh Token should always generate unique tokens" time="0.004">
+    <testcase classname="Auth Utilities Refresh Token should always generate unique tokens" name="Auth Utilities Refresh Token should always generate unique tokens" time="0.003">
     </testcase>
     <testcase classname="Auth Utilities Refresh Token should only contain hex characters" name="Auth Utilities Refresh Token should only contain hex characters" time="0.002">
     </testcase>
-    <testcase classname="Auth Utilities extractTokenFromHeader should extract token from Bearer header" name="Auth Utilities extractTokenFromHeader should extract token from Bearer header" time="0.002">
+    <testcase classname="Auth Utilities extractTokenFromHeader should extract token from Bearer header" name="Auth Utilities extractTokenFromHeader should extract token from Bearer header" time="0.019">
     </testcase>
-    <testcase classname="Auth Utilities extractTokenFromHeader should return null for missing header" name="Auth Utilities extractTokenFromHeader should return null for missing header" time="0.001">
+    <testcase classname="Auth Utilities extractTokenFromHeader should return null for missing header" name="Auth Utilities extractTokenFromHeader should return null for missing header" time="0.002">
     </testcase>
-    <testcase classname="Auth Utilities extractTokenFromHeader should return null for non-Bearer header" name="Auth Utilities extractTokenFromHeader should return null for non-Bearer header" time="0.001">
+    <testcase classname="Auth Utilities extractTokenFromHeader should return null for non-Bearer header" name="Auth Utilities extractTokenFromHeader should return null for non-Bearer header" time="0.002">
     </testcase>
     <testcase classname="Auth Utilities extractTokenFromHeader should return null for malformed header (no token)" name="Auth Utilities extractTokenFromHeader should return null for malformed header (no token)" time="0.002">
     </testcase>
@@ -621,97 +877,141 @@ Received: &quot;name.ilike.%a%22b&apos;c%25d%&quot;
     </testcase>
     <testcase classname="Auth Utilities extractTokenFromHeader should handle lowercase bearer" name="Auth Utilities extractTokenFromHeader should handle lowercase bearer" time="0.001">
     </testcase>
-    <testcase classname="Auth Utilities Security Edge Cases should not accept tokens with null algorithm" name="Auth Utilities Security Edge Cases should not accept tokens with null algorithm" time="0.002">
+    <testcase classname="Auth Utilities Security Edge Cases should not accept tokens with null algorithm" name="Auth Utilities Security Edge Cases should not accept tokens with null algorithm" time="0.001">
     </testcase>
     <testcase classname="Auth Utilities Security Edge Cases should detect signature tampering in payload section" name="Auth Utilities Security Edge Cases should detect signature tampering in payload section" time="0.002">
     </testcase>
   </testsuite>
-  <testsuite name="order idempotency migration contract" errors="0" failures="0" skipped="0" timestamp="2026-08-05T04:42:32" time="0.645" tests="3">
-    <testcase classname="order idempotency migration contract defines the protected idempotency table and uniqueness boundary" name="order idempotency migration contract defines the protected idempotency table and uniqueness boundary" time="0.005">
+  <testsuite name="payment confirmation tokens" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:36" time="0.535" tests="3">
+    <testcase classname="payment confirmation tokens generates a cryptographically strong token accepted by the validator" name="payment confirmation tokens generates a cryptographically strong token accepted by the validator" time="0.006">
     </testcase>
-    <testcase classname="order idempotency migration contract replaces the old RPC and serializes keyed requests" name="order idempotency migration contract replaces the old RPC and serializes keyed requests" time="0.005">
+    <testcase classname="payment confirmation tokens generates different tokens for separate orders" name="payment confirmation tokens generates different tokens for separate orders" time="0.002">
     </testcase>
-    <testcase classname="order idempotency migration contract documents the live PostgreSQL concurrency requirement" name="order idempotency migration contract documents the live PostgreSQL concurrency requirement" time="0.002">
-    </testcase>
-  </testsuite>
-  <testsuite name="Error Utilities" errors="0" failures="0" skipped="0" timestamp="2026-08-05T04:42:32" time="0.776" tests="17">
-    <testcase classname="Error Utilities AppError should create an error with status code and code" name="Error Utilities AppError should create an error with status code and code" time="0.003">
-    </testcase>
-    <testcase classname="Error Utilities AppError should be an instance of Error" name="Error Utilities AppError should be an instance of Error" time="0.002">
-    </testcase>
-    <testcase classname="Error Utilities NotFoundError should create a 404 error with resource name" name="Error Utilities NotFoundError should create a 404 error with resource name" time="0.002">
-    </testcase>
-    <testcase classname="Error Utilities NotFoundError should include resource ID in message" name="Error Utilities NotFoundError should include resource ID in message" time="0.001">
-    </testcase>
-    <testcase classname="Error Utilities ValidationError should create a 400 error with field errors" name="Error Utilities ValidationError should create a 400 error with field errors" time="0.005">
-    </testcase>
-    <testcase classname="Error Utilities ValidationError should create a 400 error with string message" name="Error Utilities ValidationError should create a 400 error with string message" time="0.001">
-    </testcase>
-    <testcase classname="Error Utilities UnauthorizedError should create a 401 error with default message" name="Error Utilities UnauthorizedError should create a 401 error with default message" time="0.001">
-    </testcase>
-    <testcase classname="Error Utilities UnauthorizedError should accept custom message" name="Error Utilities UnauthorizedError should accept custom message" time="0.001">
-    </testcase>
-    <testcase classname="Error Utilities ForbiddenError should create a 403 error" name="Error Utilities ForbiddenError should create a 403 error" time="0.001">
-    </testcase>
-    <testcase classname="Error Utilities ConflictError should create a 409 error" name="Error Utilities ConflictError should create a 409 error" time="0.001">
-    </testcase>
-    <testcase classname="Error Utilities RateLimitError should create a 429 error" name="Error Utilities RateLimitError should create a 429 error" time="0.001">
-    </testcase>
-    <testcase classname="Error Utilities successResponse should create a success response" name="Error Utilities successResponse should create a success response" time="0.001">
-    </testcase>
-    <testcase classname="Error Utilities successResponse should include meta when provided" name="Error Utilities successResponse should include meta when provided" time="0.001">
-    </testcase>
-    <testcase classname="Error Utilities errorResponse should create an error response" name="Error Utilities errorResponse should create an error response" time="0.002">
-    </testcase>
-    <testcase classname="Error Utilities errorResponse should include field errors for ValidationError" name="Error Utilities errorResponse should include field errors for ValidationError" time="0.001">
-    </testcase>
-    <testcase classname="Error Utilities buildMeta should build pagination meta" name="Error Utilities buildMeta should build pagination meta" time="0.001">
-    </testcase>
-    <testcase classname="Error Utilities buildMeta should handle zero total" name="Error Utilities buildMeta should handle zero total" time="0">
+    <testcase classname="payment confirmation tokens hashes deterministically without returning the raw token" name="payment confirmation tokens hashes deterministically without returning the raw token" time="0.003">
     </testcase>
   </testsuite>
-  <testsuite name="POST /api/orders" errors="0" failures="0" skipped="0" timestamp="2026-08-05T04:42:32" time="0.632" tests="6">
-    <testcase classname="POST /api/orders accepts an optional valid idempotency key and sets a scoped HttpOnly cookie" name="POST /api/orders accepts an optional valid idempotency key and sets a scoped HttpOnly cookie" time="0.009">
+  <testsuite name="GET /api/admin/orders" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:36" time="0.569" tests="4">
+    <testcase classname="GET /api/admin/orders returns 200 with a paginated list and envelope meta" name="GET /api/admin/orders returns 200 with a paginated list and envelope meta" time="0.011">
     </testcase>
-    <testcase classname="POST /api/orders supports requests without an idempotency key" name="POST /api/orders supports requests without an idempotency key" time="0.002">
+    <testcase classname="GET /api/admin/orders applies search and status filters (status uppercased)" name="GET /api/admin/orders applies search and status filters (status uppercased)" time="0.007">
     </testcase>
-    <testcase classname="POST /api/orders rejects a present but malformed idempotency key" name="POST /api/orders rejects a present but malformed idempotency key" time="0.002">
+    <testcase classname="GET /api/admin/orders returns 401 when the request is not from an admin" name="GET /api/admin/orders returns 401 when the request is not from an admin" time="0.004">
     </testcase>
-    <testcase classname="POST /api/orders rejects an order with more than 20 line items" name="POST /api/orders rejects an order with more than 20 line items" time="0.006">
-    </testcase>
-    <testcase classname="POST /api/orders accepts an order at exactly the 20-item cap" name="POST /api/orders accepts an order at exactly the 20-item cap" time="0.003">
-    </testcase>
-    <testcase classname="POST /api/orders rejects an unsupported payment method" name="POST /api/orders rejects an unsupported payment method" time="0.002">
+    <testcase classname="GET /api/admin/orders returns 500 when the database query fails" name="GET /api/admin/orders returns 500 when the database query fails" time="0.004">
     </testcase>
   </testsuite>
-  <testsuite name="Notification Service" errors="0" failures="0" skipped="0" timestamp="2026-08-05T04:42:20" time="27.099" tests="19">
-    <testcase classname="Notification Service sendNotification should send a Telegram notification successfully" name="Notification Service sendNotification should send a Telegram notification successfully" time="0.049">
+  <testsuite name="i18n Utilities" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:36" time="0.517" tests="16">
+    <testcase classname="i18n Utilities t() - Translation should translate a simple key in English" name="i18n Utilities t() - Translation should translate a simple key in English" time="0.003">
     </testcase>
-    <testcase classname="Notification Service sendNotification should send a Discord notification successfully" name="Notification Service sendNotification should send a Discord notification successfully" time="0.007">
+    <testcase classname="i18n Utilities t() - Translation should translate a simple key in Indonesian" name="i18n Utilities t() - Translation should translate a simple key in Indonesian" time="0">
     </testcase>
-    <testcase classname="Notification Service sendNotification should send a WhatsApp notification successfully" name="Notification Service sendNotification should send a WhatsApp notification successfully" time="0.006">
+    <testcase classname="i18n Utilities t() - Translation should translate nested keys" name="i18n Utilities t() - Translation should translate nested keys" time="0.001">
     </testcase>
-    <testcase classname="Notification Service sendNotification should send an email notification successfully (mock)" name="Notification Service sendNotification should send an email notification successfully (mock)" time="0.061">
+    <testcase classname="i18n Utilities t() - Translation should fallback to English for missing Indonesian key" name="i18n Utilities t() - Translation should fallback to English for missing Indonesian key" time="0.001">
     </testcase>
-    <testcase classname="Notification Service sendNotification should handle Telegram API failure gracefully" name="Notification Service sendNotification should handle Telegram API failure gracefully" time="3.024">
+    <testcase classname="i18n Utilities t() - Translation should return key path if not found" name="i18n Utilities t() - Translation should return key path if not found" time="0.001">
     </testcase>
-    <testcase classname="Notification Service sendNotification should retry on failure" name="Notification Service sendNotification should retry on failure" time="3.049">
+    <testcase classname="i18n Utilities t() - Translation should use current locale if not specified" name="i18n Utilities t() - Translation should use current locale if not specified" time="0.001">
     </testcase>
-    <testcase classname="Notification Service sendNotification should handle missing Telegram credentials" name="Notification Service sendNotification should handle missing Telegram credentials" time="3.027">
+    <testcase classname="i18n Utilities setLocale / getLocale should set and get locale" name="i18n Utilities setLocale / getLocale should set and get locale" time="0.001">
     </testcase>
-    <testcase classname="Notification Service sendNotification should handle missing Discord webhook URL" name="Notification Service sendNotification should handle missing Discord webhook URL" time="3.013">
+    <testcase classname="i18n Utilities getTranslations should return all translations for a namespace" name="i18n Utilities getTranslations should return all translations for a namespace" time="0.002">
     </testcase>
-    <testcase classname="Notification Service sendNotification should handle missing WhatsApp credentials" name="Notification Service sendNotification should handle missing WhatsApp credentials" time="3.015">
+    <testcase classname="i18n Utilities getTranslations should return Indonesian translations" name="i18n Utilities getTranslations should return Indonesian translations" time="0.001">
+    </testcase>
+    <testcase classname="i18n Utilities getTranslations should return empty object for invalid namespace" name="i18n Utilities getTranslations should return empty object for invalid namespace" time="0.001">
+    </testcase>
+    <testcase classname="i18n Utilities detectLocale should detect Indonesian from Accept-Language" name="i18n Utilities detectLocale should detect Indonesian from Accept-Language" time="0.001">
+    </testcase>
+    <testcase classname="i18n Utilities detectLocale should detect English as default" name="i18n Utilities detectLocale should detect English as default" time="0.001">
+    </testcase>
+    <testcase classname="i18n Utilities detectLocale should default to English for no header" name="i18n Utilities detectLocale should default to English for no header" time="0.001">
+    </testcase>
+    <testcase classname="i18n Utilities detectLocale should default to English for empty string" name="i18n Utilities detectLocale should default to English for empty string" time="0.001">
+    </testcase>
+    <testcase classname="i18n Utilities LOCALE_NAMES should have English name" name="i18n Utilities LOCALE_NAMES should have English name" time="0.001">
+    </testcase>
+    <testcase classname="i18n Utilities LOCALE_NAMES should have Indonesian name" name="i18n Utilities LOCALE_NAMES should have Indonesian name" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="Storage Service" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:36" time="0.556" tests="7">
+    <testcase classname="Storage Service isConfigured should return false when env vars are missing" name="Storage Service isConfigured should return false when env vars are missing" time="0.003">
+    </testcase>
+    <testcase classname="Storage Service isConfigured should return true when all env vars are set" name="Storage Service isConfigured should return true when all env vars are set" time="0.001">
+    </testcase>
+    <testcase classname="Storage Service generateProductImageKey should generate a product image key" name="Storage Service generateProductImageKey should generate a product image key" time="0.002">
+    </testcase>
+    <testcase classname="Storage Service generateProductImageKey should handle special characters in filename" name="Storage Service generateProductImageKey should handle special characters in filename" time="0.002">
+    </testcase>
+    <testcase classname="Storage Service generateProductImageKey should default to jpg extension" name="Storage Service generateProductImageKey should default to jpg extension" time="0.001">
+    </testcase>
+    <testcase classname="Storage Service uploadFile should throw when not configured" name="Storage Service uploadFile should throw when not configured" time="0.052">
+    </testcase>
+    <testcase classname="Storage Service deleteFile should throw when not configured" name="Storage Service deleteFile should throw when not configured" time="0.004">
+    </testcase>
+  </testsuite>
+  <testsuite name="invoice storage" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:37" time="0.454" tests="3">
+    <testcase classname="invoice storage keeps invoice files in the invoices prefix with a safe filename" name="invoice storage keeps invoice files in the invoices prefix with a safe filename" time="0.003">
+    </testcase>
+    <testcase classname="invoice storage uses a bounded signed URL lifetime" name="invoice storage uses a bounded signed URL lifetime" time="0.002">
+    </testcase>
+    <testcase classname="invoice storage creates signed URLs from a private storage path" name="invoice storage creates signed URLs from a private storage path" time="0.002">
+    </testcase>
+  </testsuite>
+  <testsuite name="order idempotency migration contract" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:37" time="0.462" tests="3">
+    <testcase classname="order idempotency migration contract defines the protected idempotency table and uniqueness boundary" name="order idempotency migration contract defines the protected idempotency table and uniqueness boundary" time="0.003">
+    </testcase>
+    <testcase classname="order idempotency migration contract replaces the old RPC and serializes keyed requests" name="order idempotency migration contract replaces the old RPC and serializes keyed requests" time="0.002">
+    </testcase>
+    <testcase classname="order idempotency migration contract documents the live PostgreSQL concurrency requirement" name="order idempotency migration contract documents the live PostgreSQL concurrency requirement" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="datetime helpers" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:37" time="0.411" tests="8">
+    <testcase classname="datetime helpers formatDateTime memformat tanggal lengkap dalam id-ID" name="datetime helpers formatDateTime memformat tanggal lengkap dalam id-ID" time="0.003">
+    </testcase>
+    <testcase classname="datetime helpers formatDateTime menampilkan jam:menit" name="datetime helpers formatDateTime menampilkan jam:menit" time="0.002">
+    </testcase>
+    <testcase classname="datetime helpers formatDateTime menghormati timezone Asia/Jakarta" name="datetime helpers formatDateTime menghormati timezone Asia/Jakarta" time="0.001">
+    </testcase>
+    <testcase classname="datetime helpers formatDateTime menerima string dan number" name="datetime helpers formatDateTime menerima string dan number" time="0.001">
+    </testcase>
+    <testcase classname="datetime helpers formatDateTime mengembalikan &apos;-&apos; untuk tanggal tidak valid" name="datetime helpers formatDateTime mengembalikan &apos;-&apos; untuk tanggal tidak valid" time="0.001">
+    </testcase>
+    <testcase classname="datetime helpers formatDateTime mendukung override opsi" name="datetime helpers formatDateTime mendukung override opsi" time="0.002">
+    </testcase>
+    <testcase classname="datetime helpers formatShortDate memformat dd/mm/yyyy" name="datetime helpers formatShortDate memformat dd/mm/yyyy" time="0.001">
+    </testcase>
+    <testcase classname="datetime helpers formatShortDate mengembalikan &apos;-&apos; untuk tanggal tidak valid" name="datetime helpers formatShortDate mengembalikan &apos;-&apos; untuk tanggal tidak valid" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="Notification Service" errors="0" failures="0" skipped="0" timestamp="2026-08-05T06:03:29" time="24.97" tests="19">
+    <testcase classname="Notification Service sendNotification should send a Telegram notification successfully" name="Notification Service sendNotification should send a Telegram notification successfully" time="0.032">
+    </testcase>
+    <testcase classname="Notification Service sendNotification should send a Discord notification successfully" name="Notification Service sendNotification should send a Discord notification successfully" time="0.006">
+    </testcase>
+    <testcase classname="Notification Service sendNotification should send a WhatsApp notification successfully" name="Notification Service sendNotification should send a WhatsApp notification successfully" time="0.005">
+    </testcase>
+    <testcase classname="Notification Service sendNotification should send an email notification successfully (mock)" name="Notification Service sendNotification should send an email notification successfully (mock)" time="0.087">
+    </testcase>
+    <testcase classname="Notification Service sendNotification should handle Telegram API failure gracefully" name="Notification Service sendNotification should handle Telegram API failure gracefully" time="3.045">
+    </testcase>
+    <testcase classname="Notification Service sendNotification should retry on failure" name="Notification Service sendNotification should retry on failure" time="3.013">
+    </testcase>
+    <testcase classname="Notification Service sendNotification should handle missing Telegram credentials" name="Notification Service sendNotification should handle missing Telegram credentials" time="3.018">
+    </testcase>
+    <testcase classname="Notification Service sendNotification should handle missing Discord webhook URL" name="Notification Service sendNotification should handle missing Discord webhook URL" time="3.004">
+    </testcase>
+    <testcase classname="Notification Service sendNotification should handle missing WhatsApp credentials" name="Notification Service sendNotification should handle missing WhatsApp credentials" time="3.019">
     </testcase>
     <testcase classname="Notification Service Rate Limiting should respect rate limits" name="Notification Service Rate Limiting should respect rate limits" time="0.001">
     </testcase>
-    <testcase classname="Notification Service notifyNewOrder should send notifications via Telegram and Discord" name="Notification Service notifyNewOrder should send notifications via Telegram and Discord" time="0.024">
+    <testcase classname="Notification Service notifyNewOrder should send notifications via Telegram and Discord" name="Notification Service notifyNewOrder should send notifications via Telegram and Discord" time="0.025">
     </testcase>
-    <testcase classname="Notification Service notifyNewOrder should handle partial notification failures" name="Notification Service notifyNewOrder should handle partial notification failures" time="1.006">
+    <testcase classname="Notification Service notifyNewOrder should handle partial notification failures" name="Notification Service notifyNewOrder should handle partial notification failures" time="1.011">
     </testcase>
-    <testcase classname="Notification Service notifyNewOrder should handle all notifications failing" name="Notification Service notifyNewOrder should handle all notifications failing" time="3.018">
+    <testcase classname="Notification Service notifyNewOrder should handle all notifications failing" name="Notification Service notifyNewOrder should handle all notifications failing" time="3.026">
     </testcase>
-    <testcase classname="Notification Service notifyOrderStatusChange should return null (WhatsApp removed)" name="Notification Service notifyOrderStatusChange should return null (WhatsApp removed)" time="0">
+    <testcase classname="Notification Service notifyOrderStatusChange should return null (WhatsApp removed)" name="Notification Service notifyOrderStatusChange should return null (WhatsApp removed)" time="0.001">
     </testcase>
     <testcase classname="Notification Service notifyLowStock should send low stock notification" name="Notification Service notifyLowStock should send low stock notification" time="0.001">
     </testcase>
@@ -719,9 +1019,9 @@ Received: &quot;name.ilike.%a%22b&apos;c%25d%&quot;
     </testcase>
     <testcase classname="Notification Service notifyDailyReport should send daily report without throwing" name="Notification Service notifyDailyReport should send daily report without throwing" time="0.001">
     </testcase>
-    <testcase classname="Notification Service notifyDailyReport should handle report failure without throwing" name="Notification Service notifyDailyReport should handle report failure without throwing" time="3.018">
+    <testcase classname="Notification Service notifyDailyReport should handle report failure without throwing" name="Notification Service notifyDailyReport should handle report failure without throwing" time="3.016">
     </testcase>
-    <testcase classname="Notification Service notificationService object should export all notification functions" name="Notification Service notificationService object should export all notification functions" time="0.005">
+    <testcase classname="Notification Service notificationService object should export all notification functions" name="Notification Service notificationService object should export all notification functions" time="0.001">
     </testcase>
   </testsuite>
 </testsuites>
