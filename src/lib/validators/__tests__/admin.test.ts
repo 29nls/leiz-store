@@ -197,9 +197,22 @@ describe("upsertSettingSchema", () => {
   });
 
   it("coerces non-string values to string (DB column is TEXT)", () => {
-    const result = upsertSettingSchema.safeParse({ key: "max_stock", value: 42 });
+    const result = upsertSettingSchema.safeParse({ key: "tax_rate", value: 42 });
     expect(result.success).toBe(true);
     if (result.success) expect(result.data.value).toBe("42");
+  });
+
+  it("rejects a key outside the allowlist (setting table is world-readable)", () => {
+    const result = upsertSettingSchema.safeParse({ key: "max_stock", value: "10" });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.some((issue) => issue.path.join(".") === "key")).toBe(true);
+    }
+  });
+
+  it("rejects a secret-looking key", () => {
+    const result = upsertSettingSchema.safeParse({ key: "api_key", value: "sk-live-123" });
+    expect(result.success).toBe(false);
   });
 
   it("rejects when key is missing", () => {

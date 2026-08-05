@@ -38,6 +38,14 @@ export function hasValidPaymentProofSignature(mimeType: string, bytes: Uint8Arra
   return false;
 }
 
+/**
+ * Generic image magic-byte validator, shared with the product-image upload
+ * route (LOW-3). The historical "PaymentProof" name refers to the original
+ * consumer; the check itself is purely about the image format and covers the
+ * exact MIME allowlist used by product images (jpeg/png/webp/avif).
+ */
+export const hasValidImageSignature = hasValidPaymentProofSignature;
+
 export async function uploadPaymentProof(file: File, orderId: string): Promise<string> {
   if (!PAYMENT_PROOF_MIME_TYPES.has(file.type)) {
     throw new Error("Unsupported payment proof type");
