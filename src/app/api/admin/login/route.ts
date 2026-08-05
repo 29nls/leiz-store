@@ -13,6 +13,14 @@ import {
   safeCheckRateLimit,
   safePeekRateLimit,
 } from "@/lib/middleware";
+import {
+  successResponse,
+  errorResponse,
+  AppError,
+  ForbiddenError,
+  UnauthorizedError,
+  ValidationError,
+} from "@/lib/errors";
 
 // Supabase Auth is the canonical admin credential store. The legacy env-based
 // login is retained only as a controlled migration fallback.
@@ -41,25 +49,32 @@ async function attemptLogin(rawEmail: string, password: string): Promise<NextRes
       .maybeSingle();
 
     if (profile?.role === "ADMIN" && profile.is_active !== false) {
-      return NextResponse.json({
-        success: true,
-        user: { id: profile.id, email: profile.email, name: profile.name, role: profile.role },
-      });
+      return NextResponse.json(
+        successResponse({
+          user: { id: profile.id, email: profile.email, name: profile.name, role: profile.role },
+        })
+      );
     }
     await supabaseAdmin.auth.signOut();
-    return NextResponse.json({ error: "Akses ditolak. Hanya admin yang dapat masuk." }, { status: 403 });
+    return NextResponse.json(
+      errorResponse(new ForbiddenError("Akses ditolak. Hanya admin yang dapat masuk.")),
+      { status: 403 }
+    );
   }
 
   // Compatibility fallback for deployments that have not migrated credentials.
   if (!credentialsConfigured()) {
-    return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+    return NextResponse.json(
+      errorResponse(new UnauthorizedError("Invalid credentials")),
+      { status: 401 }
+    );
   }
 
   // Legacy fallback is deliberately exact-match and only sets the compatibility
   // cookie; new sessions use Supabase Auth.
   if (rawEmail !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
     return NextResponse.json(
-      { error: "Invalid credentials" },
+      errorResponse(new UnauthorizedError("Invalid credentials")),
       { status: 401 }
     );
   }
@@ -70,10 +85,11 @@ async function attemptLogin(rawEmail: string, password: string): Promise<NextRes
     role: "ADMIN",
   });
 
-  const response = NextResponse.json({
-    success: true,
-    user: { email: ADMIN_EMAIL, role: "ADMIN" },
-  });
+  const response = NextResponse.json(
+    successResponse({
+      user: { email: ADMIN_EMAIL, role: "ADMIN" },
+    })
+  );
 
   response.cookies.set("admin_token", token, {
     httpOnly: true,
@@ -91,7 +107,10 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { email, password } = body;
     if (!email || !password) {
-      return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
+      return NextResponse.json(
+        errorResponse(new ValidationError("Email and password are required")),
+        { status: 400 }
+      );
     }
 
     // Brute-force protection with dual buckets: per-IP and per-account. The
@@ -100,20 +119,24 @@ export async function POST(request: Request) {
     // auto-expire (no permanent lockout), and the safe* wrappers fail open so
     // a limiter bug can never lock the admin out. Thresholds are generous:
     // 20 attempts/IP and 10 attempts/account per 15 min (see LOGIN_RATE_LIMIT
-    // in src/lib/middleware.ts). Only FAILED attempts count; a successful
+    // in src/lib/rate-limit.ts). Only FAILED attempts count; a successful
     // login clears the counters.
+    //
+    // Note: this dedicated limiter replaces the generic enforceAdminRateLimit
+    // guard used by the other /api/admin/* routes (login is the one route that
+    // needs account-scoped throttling, not just per-IP).
     const normalizedEmail = String(email).trim().toLowerCase();
     const ipKey = `admin-login-ip:${getClientIp(request)}`;
     const acctKey = `admin-login-account:${normalizedEmail}`;
-    const ipLimit = safePeekRateLimit(ipKey, LOGIN_RATE_LIMIT.ipMax, LOGIN_RATE_LIMIT.windowMs);
-    const acctLimit = safePeekRateLimit(acctKey, LOGIN_RATE_LIMIT.accountMax, LOGIN_RATE_LIMIT.windowMs);
+    const ipLimit = await safePeekRateLimit(ipKey, LOGIN_RATE_LIMIT.ipMax, LOGIN_RATE_LIMIT.windowMs);
+    const acctLimit = await safePeekRateLimit(acctKey, LOGIN_RATE_LIMIT.accountMax, LOGIN_RATE_LIMIT.windowMs);
 
     if (!ipLimit.allowed || !acctLimit.allowed) {
       const retryAfter = Math.ceil(
         Math.min(ipLimit.resetAt, acctLimit.resetAt) / 1000 - Date.now() / 1000
       );
       return NextResponse.json(
-        { error: "Too many login attempts. Please try again later." },
+        errorResponse(new AppError(429, "RATE_LIMITED", "Too many login attempts. Please try again later.")),
         { status: 429, headers: { "Retry-After": String(Math.max(1, retryAfter)) } }
       );
     }
@@ -122,19 +145,19 @@ export async function POST(request: Request) {
 
     if (response.status >= 400) {
       // Record the failed attempt in both buckets (fail-open on limiter errors).
-      safeCheckRateLimit(ipKey, LOGIN_RATE_LIMIT.ipMax, LOGIN_RATE_LIMIT.windowMs);
-      safeCheckRateLimit(acctKey, LOGIN_RATE_LIMIT.accountMax, LOGIN_RATE_LIMIT.windowMs);
+      await safeCheckRateLimit(ipKey, LOGIN_RATE_LIMIT.ipMax, LOGIN_RATE_LIMIT.windowMs);
+      await safeCheckRateLimit(acctKey, LOGIN_RATE_LIMIT.accountMax, LOGIN_RATE_LIMIT.windowMs);
     } else {
       // Successful login clears the failure counters for this account/IP.
-      resetRateLimit(ipKey);
-      resetRateLimit(acctKey);
+      await resetRateLimit(ipKey);
+      await resetRateLimit(acctKey);
     }
 
     return response;
   } catch (err) {
     console.error("[admin/login] Unexpected error:", err);
     return NextResponse.json(
-      { error: "Internal server error" },
+      errorResponse(new AppError(500, "INTERNAL_ERROR", "Internal server error")),
       { status: 500 }
     );
   }

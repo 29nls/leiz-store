@@ -8,13 +8,17 @@ import { isAdminRequest } from "@/lib/admin-auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import { createCategorySchema, zodErrorMessages } from "@/lib/validators/admin";
 import { successResponse, errorResponse, AppError, UnauthorizedError, ValidationError } from "@/lib/errors";
+import { enforceAdminRateLimit } from "@/lib/rate-limit";
 
 async function checkAuth() {
   return isAdminRequest();
 }
 
 // GET /api/admin/categories
-export async function GET() {
+export async function GET(request: Request) {
+  const limited = await enforceAdminRateLimit(request, "categories");
+  if (limited) return limited;
+
   if (!(await checkAuth())) {
     return NextResponse.json(errorResponse(new UnauthorizedError()), { status: 401 });
   }
@@ -49,6 +53,9 @@ export async function GET() {
 
 // POST /api/admin/categories
 export async function POST(request: Request) {
+  const limited = await enforceAdminRateLimit(request, "categories");
+  if (limited) return limited;
+
   if (!(await checkAuth())) {
     return NextResponse.json(errorResponse(new UnauthorizedError()), { status: 401 });
   }

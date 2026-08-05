@@ -101,7 +101,14 @@ export default function CheckoutPage() {
 
       if (orderData.id) {
         clearCart();
-        router.push(`/payment/${orderData.id}`);
+        // Carry the order-scoped confirmation token on the payment URL so the
+        // buyer can confirm from any device (or after cookies are cleared):
+        // the token is unguessable, expires with the order, and authorizes
+        // only this order. The HttpOnly cookie remains the same-device path.
+        const paymentToken = orderData.paymentConfirmationToken;
+        router.push(
+          `/payment/${orderData.id}${paymentToken ? `?token=${encodeURIComponent(paymentToken)}` : ""}`
+        );
         return;
       }
       

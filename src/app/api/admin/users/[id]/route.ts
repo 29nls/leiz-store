@@ -9,6 +9,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/admin-auth";
+import {
+  successResponse,
+  errorResponse,
+  AppError,
+  NotFoundError,
+  ValidationError,
+} from "@/lib/errors";
+import { updateUserSchema, zodErrorMessages } from "@/lib/validators/admin";
+import { enforceAdminRateLimit } from "@/lib/rate-limit";
+
+function internalError(e: unknown, fallback: string) {
+  if (e instanceof AppError) {
+    return NextResponse.json(errorResponse(e), { status: e.statusCode });
+  }
+  const message = e instanceof Error ? e.message : fallback;
+  return NextResponse.json(
+    errorResponse(new AppError(500, "INTERNAL_ERROR", message)),
+    { status: 500 }
+  );
+}
+
+function notFound() {
+  return NextResponse.json(errorResponse(new NotFoundError("User")), { status: 404 });
+}
 
 // ─── GET: Get user details ────────────────────────────────────
 export async function GET(
@@ -16,6 +40,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const limited = await enforceAdminRateLimit(req, "users");
+    if (limited) return limited;
+
     await requireAdmin(req);
     const { id } = await params;
 
@@ -25,13 +52,11 @@ export async function GET(
       .eq("id", id)
       .single();
 
-    if (error || !user) {
-      return NextResponse.json({ error: "User tidak ditemukan" }, { status: 404 });
-    }
+    if (error || !user) return notFound();
 
-    return NextResponse.json({ user });
+    return NextResponse.json(successResponse(user));
   } catch (e: any) {
-    return NextResponse.json({ error: e.message || "Failed to get user" }, { status: 500 });
+    return internalError(e, "Failed to get user");
   }
 }
 
@@ -41,10 +66,22 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const limited = await enforceAdminRateLimit(req, "users");
+    if (limited) return limited;
+
     await requireAdmin(req);
     const { id } = await params;
     const body = await req.json();
-    const { name, role, discord, phone, is_active, password } = body;
+
+    const parsed = updateUserSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        errorResponse(new ValidationError(zodErrorMessages(parsed.error))),
+        { status: 400 }
+      );
+    }
+
+    const { name, role, discord, phone, is_active, password } = parsed.data;
 
     // Verify user exists
     const { data: existing, error: fetchError } = await supabaseAdmin
@@ -53,14 +90,7 @@ export async function PATCH(
       .eq("id", id)
       .single();
 
-    if (fetchError || !existing) {
-      return NextResponse.json({ error: "User tidak ditemukan" }, { status: 404 });
-    }
-
-    // Validate role
-    if (role && !["ADMIN", "CUSTOMER"].includes(role)) {
-      return NextResponse.json({ error: "Role tidak valid" }, { status: 400 });
-    }
+    if (fetchError || !existing) return notFound();
 
     // Build update payload
     const updatePayload: Record<string, unknown> = {
@@ -105,11 +135,11 @@ export async function PATCH(
       }
     }
 
-    return NextResponse.json({
-      message: "User berhasil diperbarui",
-    });
+    return NextResponse.json(
+      successResponse({ message: "User berhasil diperbarui" })
+    );
   } catch (e: any) {
-    return NextResponse.json({ error: e.message || "Failed to update user" }, { status: 500 });
+    return internalError(e, "Failed to update user");
   }
 }
 
@@ -119,6 +149,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const limited = await enforceAdminRateLimit(req, "users");
+    if (limited) return limited;
+
     await requireAdmin(req);
     const { id } = await params;
 
@@ -129,9 +162,7 @@ export async function DELETE(
       .eq("id", id)
       .single();
 
-    if (fetchError || !existing) {
-      return NextResponse.json({ error: "User tidak ditemukan" }, { status: 404 });
-    }
+    if (fetchError || !existing) return notFound();
 
     // Prevent deactivating the last admin
     if (existing.role === "ADMIN") {
@@ -143,7 +174,7 @@ export async function DELETE(
 
       if ((count || 0) <= 1) {
         return NextResponse.json(
-          { error: "Tidak dapat menonaktifkan admin terakhir" },
+          errorResponse(new ValidationError("Tidak dapat menonaktifkan admin terakhir")),
           { status: 400 }
         );
       }
@@ -167,10 +198,10 @@ export async function DELETE(
       });
     }
 
-    return NextResponse.json({
-      message: "User berhasil dinonaktifkan",
-    });
+    return NextResponse.json(
+      successResponse({ message: "User berhasil dinonaktifkan" })
+    );
   } catch (e: any) {
-    return NextResponse.json({ error: e.message || "Failed to deactivate user" }, { status: 500 });
+    return internalError(e, "Failed to deactivate user");
   }
 }

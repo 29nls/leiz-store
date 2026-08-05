@@ -1,17 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminRequest } from "@/lib/admin-auth";
 import { listInvoices, resendInvoice, getInvoiceByOrder } from "@/lib/invoice";
-import { successResponse, errorResponse } from "@/lib/errors";
+import { successResponse, errorResponse, AppError, UnauthorizedError, ValidationError } from "@/lib/errors";
+import { enforceAdminRateLimit } from "@/lib/rate-limit";
 
 async function checkAuth(req: NextRequest): Promise<{ authorized: boolean; error?: NextResponse }> {
   if (await isAdminRequest(req)) return { authorized: true };
   return {
     authorized: false,
-    error: NextResponse.json(errorResponse(new (require("@/lib/errors").ValidationError)("Unauthorized")), { status: 401 }),
+    error: NextResponse.json(errorResponse(new UnauthorizedError()), { status: 401 }),
   };
 }
 
 export async function GET(req: NextRequest) {
+  const limited = await enforceAdminRateLimit(req, "invoices");
+  if (limited) return limited;
+
   const auth = await checkAuth(req);
   if (!auth.authorized) return auth.error!;
 
@@ -36,11 +40,17 @@ export async function GET(req: NextRequest) {
     }));
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json(errorResponse(new (require("@/lib/errors").ValidationError)(msg)), { status: 500 });
+    return NextResponse.json(
+      errorResponse(new AppError(500, "INTERNAL_ERROR", msg)),
+      { status: 500 }
+    );
   }
 }
 
 export async function POST(req: NextRequest) {
+  const limited = await enforceAdminRateLimit(req, "invoices");
+  if (limited) return limited;
+
   const auth = await checkAuth(req);
   if (!auth.authorized) return auth.error!;
 
@@ -48,20 +58,32 @@ export async function POST(req: NextRequest) {
     const { invoiceId, action } = await req.json();
 
     if (!invoiceId) {
-      return NextResponse.json(errorResponse(new (require("@/lib/errors").ValidationError)("invoiceId required")), { status: 400 });
+      return NextResponse.json(
+        errorResponse(new ValidationError("invoiceId required")),
+        { status: 400 }
+      );
     }
 
     if (action === "resend") {
       const ok = await resendInvoice(invoiceId);
       if (!ok) {
-        return NextResponse.json(errorResponse(new (require("@/lib/errors").ValidationError)("Invoice not found")), { status: 404 });
+        return NextResponse.json(
+          errorResponse(new AppError(404, "NOT_FOUND", "Invoice not found")),
+          { status: 404 }
+        );
       }
       return NextResponse.json(successResponse({ message: "Invoice resend queued" }));
     }
 
-    return NextResponse.json(errorResponse(new (require("@/lib/errors").ValidationError)("Unknown action")), { status: 400 });
+    return NextResponse.json(
+      errorResponse(new ValidationError("Unknown action")),
+      { status: 400 }
+    );
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json(errorResponse(new (require("@/lib/errors").ValidationError)(msg)), { status: 500 });
+    return NextResponse.json(
+      errorResponse(new AppError(500, "INTERNAL_ERROR", msg)),
+      { status: 500 }
+    );
   }
 }

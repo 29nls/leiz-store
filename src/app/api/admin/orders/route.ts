@@ -6,14 +6,24 @@ import { NextResponse } from "next/server";
 import { isAdminRequest } from "@/lib/admin-auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import { buildIlikeOrFilter } from "@/lib/supabase-search";
+import {
+  successResponse,
+  errorResponse,
+  AppError,
+  UnauthorizedError,
+} from "@/lib/errors";
+import { enforceAdminRateLimit } from "@/lib/rate-limit";
 
 async function checkAuth() {
   return isAdminRequest();
 }
 
 export async function GET(request: Request) {
+  const limited = await enforceAdminRateLimit(request, "orders");
+  if (limited) return limited;
+
   if (!(await checkAuth())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(errorResponse(new UnauthorizedError()), { status: 401 });
   }
 
   const { searchParams } = new URL(request.url);
@@ -42,14 +52,19 @@ export async function GET(request: Request) {
 
     if (error) throw error;
 
-    return NextResponse.json({
-      orders: data || [],
-      total: count || 0,
-      page,
-      limit,
-      totalPages: Math.ceil((count || 0) / limit),
-    });
+    return NextResponse.json(
+      successResponse(data || [], {
+        page,
+        limit,
+        total: count || 0,
+        totalPages: Math.ceil((count || 0) / limit),
+      })
+    );
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json(
+      errorResponse(new AppError(500, "INTERNAL_ERROR", message)),
+      { status: 500 }
+    );
   }
 }

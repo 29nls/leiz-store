@@ -17,6 +17,7 @@ import {
 } from "@/lib/payment/payment-service";
 import { sendBuyerNotification } from "@/lib/discord/bot";
 import { timingSafeEqual } from "crypto";
+import { enforceAdminRateLimit } from "@/lib/rate-limit";
 
 function verifyAdminSecret(req: NextRequest): boolean {
   const secret = process.env.DISCORD_ADMIN_SECRET;
@@ -30,6 +31,9 @@ function verifyAdminSecret(req: NextRequest): boolean {
 }
 
 export async function POST(req: NextRequest) {
+  const limited = await enforceAdminRateLimit(req, "payment-action");
+  if (limited) return limited;
+
   // Verify admin secret
   if (!verifyAdminSecret(req)) {
     return NextResponse.json(

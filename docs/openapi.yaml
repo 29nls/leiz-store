@@ -7,12 +7,30 @@ info:
     di `src/app/api/**`.
 
     ## Konvensi
-    - Endpoint publik memakai envelope `{ success, data, meta }` / `{ success, error }`.
-    - Endpoint admin lama (sebagian besar `/api/admin/*`) masih memakai bentuk
-      respons legacy `{ orders, total, page, ... }` / `{ error }`.
+    - Semua endpoint (publik, admin, system) memakai envelope standar
+      `{ success, data, meta }` untuk sukses dan `{ success, error: { code, message, details } }`
+      untuk gagal. List endpoint menempatkan array di `data` dan paginasi di `meta`.
     - Semua error dikembalikan via `error.code` konsisten
       (`VALIDATION_ERROR`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`,
       `RATE_LIMITED`, `INTERNAL_ERROR`).
+
+    ## Rate limit
+    Endpoint publik & admin yang tercantum pada tabel di bawah dilindungi
+    rate limiter (Redis/KV `src/lib/rate-limit.ts`, fallback in-memory untuk
+    dev). Bucket kunci per IP (dan per order untuk confirm). Endpoint di
+    luar tabel (`/api/health`, system/cron, discord) tidak di-rate-limit.
+    Saat batas terlampaui dikembalikan `429` dengan envelope standar +
+    header `X-RateLimit-Limit` / `X-RateLimit-Remaining` / `X-RateLimit-Reset`.
+
+    | Endpoint | Batas | Jendela |
+    |----------|-------|---------|
+    | `GET /api/products` | 60 req | 1 menit/IP |
+    | `GET /api/products/{slug}` | 60 req | 1 menit/IP |
+    | `POST /api/orders` | 20 order | 1 menit/IP |
+    | `GET /api/orders/track` | 10 req | 1 menit/IP |
+    | `POST /api/orders/{orderId}/confirm` | 5 percobaan | 10 menit/IP/order |
+    | `POST /api/admin/login` | 20 gagal/IP, 10 gagal/akun | 15 menit |
+    | `/api/admin/*` | 120 req | 1 menit/IP/route |
 
     ## Autentikasi
     - **Admin:** Supabase Auth (cookie `sb-*` atau `Authorization: Bearer <access_token>`)
@@ -84,6 +102,7 @@ paths:
       description: |
         Daftar produk aktif dengan paginasi, filter, dan dual currency.
         Sorting: `price_asc`, `price_desc`, `newest`, `name`.
+        Rate limit: 60 request/menit/IP.
       operationId: listProducts
       parameters:
         - $ref: "#/components/parameters/PageParam"
@@ -143,11 +162,14 @@ paths:
                     category: { id: "cat1", name: "Game Currency", slug: "game-currency" }
                     images: [{ url: "https://example.com/img.jpg", alt: "500 UC" }]
                 meta: { page: 1, limit: 20, total: 1, totalPages: 1 }
+        "429":
+          $ref: "#/components/responses/RateLimitedResponse"
 
   /api/products/{slug}:
     get:
       tags: [Public]
       summary: Detail produk
+      description: "Rate limit: 60 request/menit/IP."
       operationId: getProductBySlug
       parameters:
         - name: slug
@@ -170,6 +192,8 @@ paths:
                       data: { $ref: "#/components/schemas/Product" }
         "404":
           $ref: "#/components/responses/NotFoundError"
+        "429":
+          $ref: "#/components/responses/RateLimitedResponse"
 
   /api/orders:
     post:
@@ -247,6 +271,8 @@ paths:
           $ref: "#/components/responses/ValidationErrorResponse"
         "409":
           $ref: "#/components/responses/ConflictResponse"
+        "429":
+          $ref: "#/components/responses/RateLimitedResponse"
 
   /api/orders/track:
     get:
@@ -395,10 +421,25 @@ paths:
               description: "Cookie session Supabase / `admin_token` (legacy)."
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/AdminLoginResponse" }
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          user:
+                            type: object
+                            properties:
+                              id: { type: string }
+                              email: { type: string }
+                              name: { type: string, nullable: true }
+                              role: { type: string, example: "ADMIN" }
               example:
                 success: true
-                user: { id: "u1", email: "admin@leiz.store", name: "Admin", role: "ADMIN" }
+                data:
+                  user: { id: "u1", email: "admin@leiz.store", name: "Admin", role: "ADMIN" }
         "400":
           $ref: "#/components/responses/ValidationErrorResponse"
         "401":
@@ -407,7 +448,10 @@ paths:
           description: Akun bukan admin.
           content:
             application/json:
-              example: { error: "Akses ditolak. Hanya admin yang dapat masuk." }
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+              example:
+                success: false
+                error: { code: FORBIDDEN, message: "Akses ditolak. Hanya admin yang dapat masuk." }
 
   /api/admin/logout:
     post:
@@ -441,16 +485,26 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  valid: { type: boolean, example: true }
-                  user:
-                    type: object
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
                     properties:
-                      id: { type: string }
-                      email: { type: string }
-                      name: { type: string, nullable: true }
-                      role: { type: string, example: "ADMIN" }
+                      data:
+                        type: object
+                        properties:
+                          valid: { type: boolean, example: true }
+                          user:
+                            type: object
+                            properties:
+                              id: { type: string }
+                              email: { type: string }
+                              name: { type: string, nullable: true }
+                              role: { type: string, example: "ADMIN" }
+              example:
+                success: true
+                data:
+                  valid: true
+                  user: { id: "u1", email: "admin@leiz.store", name: "Admin", role: "ADMIN" }
         "401":
           $ref: "#/components/responses/UnauthorizedResponse"
 
@@ -472,53 +526,60 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  stats:
-                    type: object
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
                     properties:
-                      totalProducts: { type: number }
-                      activeProducts: { type: number }
-                      totalCategories: { type: number }
-                      totalOrders: { type: number }
-                      pendingOrders: { type: number }
-                      completedOrders: { type: number }
-                      totalRevenue: { type: number }
-                  recentOrders:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        id: { type: string }
-                        order_number: { type: string }
-                        customer_name: { type: string }
-                        total: { type: number }
-                        status: { type: string }
-                        created_at: { type: string, format: date-time }
-                  lowStock:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        id: { type: string }
-                        name: { type: string }
-                        slug: { type: string }
-                        stock: { type: number }
-                        min_stock: { type: number }
-                  warnings:
-                    type: array
-                    items: { type: string }
+                      data:
+                        type: object
+                        properties:
+                          stats:
+                            type: object
+                            properties:
+                              totalProducts: { type: number }
+                              activeProducts: { type: number }
+                              totalCategories: { type: number }
+                              totalOrders: { type: number }
+                              pendingOrders: { type: number }
+                              completedOrders: { type: number }
+                              totalRevenue: { type: number }
+                          recentOrders:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id: { type: string }
+                                order_number: { type: string }
+                                customer_name: { type: string }
+                                total: { type: number }
+                                status: { type: string }
+                                created_at: { type: string, format: date-time }
+                          lowStock:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id: { type: string }
+                                name: { type: string }
+                                slug: { type: string }
+                                stock: { type: number }
+                                min_stock: { type: number }
+                          warnings:
+                            type: array
+                            items: { type: string }
               example:
-                stats:
-                  totalProducts: 120
-                  activeProducts: 110
-                  totalCategories: 8
-                  totalOrders: 340
-                  pendingOrders: 3
-                  completedOrders: 310
-                  totalRevenue: 25000000
-                recentOrders: []
-                lowStock: []
+                success: true
+                data:
+                  stats:
+                    totalProducts: 120
+                    activeProducts: 110
+                    totalCategories: 8
+                    totalOrders: 340
+                    pendingOrders: 3
+                    completedOrders: 310
+                    totalRevenue: 25000000
+                  recentOrders: []
+                  lowStock: []
         "401":
           $ref: "#/components/responses/UnauthorizedResponse"
 
@@ -548,19 +609,26 @@ paths:
         - $ref: "#/components/parameters/LimitParam"
       responses:
         "200":
-          description: Daftar produk (shape legacy).
+          description: Daftar produk (envelope standar + meta).
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  products:
-                    type: array
-                    items: { $ref: "#/components/schemas/Product" }
-                  total: { type: number }
-                  page: { type: number }
-                  limit: { type: number }
-                  totalPages: { type: number }
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          allOf:
+                            - $ref: "#/components/schemas/Product"
+                            - type: object
+                              properties:
+                                min_stock: { type: number }
+                                is_active: { type: boolean }
+                                compare_price: { type: number, nullable: true }
+                                category_id: { type: string }
+                      meta: { $ref: "#/components/schemas/Meta" }
         "401":
           $ref: "#/components/responses/UnauthorizedResponse"
     post:
@@ -589,22 +657,40 @@ paths:
               images: [{ url: "https://example.com/500uc.jpg", alt: "500 UC", sortOrder: 0 }]
       responses:
         "201":
-          description: Produk dibuat.
+          description: Produk dibuat (envelope, data = { product, message }).
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success: { type: boolean, example: true }
-                  product: { $ref: "#/components/schemas/Product" }
-                  message: { type: string }
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          product: {}
+                          message: { type: string }
+              example:
+                success: true
+                data:
+                  product:
+                    id: "prod_1"
+                    name: "500 UC"
+                    slug: "500-uc"
+                    price: 100000
+                    is_active: true
+                    category_id: "cat1"
+                  message: "Product created successfully"
         "400":
           $ref: "#/components/responses/ValidationErrorResponse"
         "409":
           description: Slug sudah dipakai.
           content:
             application/json:
-              example: { error: "Slug already exists" }
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+              example:
+                success: false
+                error: { code: CONFLICT, message: "Slug already exists" }
 
   /api/admin/products/{id}:
     put:
@@ -626,15 +712,30 @@ paths:
             schema: { $ref: "#/components/schemas/ProductUpsertRequest" }
       responses:
         "200":
-          description: Produk diperbarui.
+          description: Produk diperbarui (envelope, data = { product, message }).
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success: { type: boolean, example: true }
-                  product: { $ref: "#/components/schemas/Product" }
-                  message: { type: string }
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          product: {}
+                          message: { type: string }
+              example:
+                success: true
+                data:
+                  product:
+                    id: "prod_1"
+                    name: "500 UC"
+                    slug: "500-uc"
+                    price: 100000
+                    is_active: true
+                    category_id: "cat1"
+                  message: "Product updated successfully"
         "404":
           $ref: "#/components/responses/NotFoundError"
         "409":
@@ -657,7 +758,15 @@ paths:
           description: Produk dinonaktifkan.
           content:
             application/json:
-              example: { success: true, message: "Produk berhasil dinonaktifkan" }
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          message: { type: string, example: "Produk berhasil dinonaktifkan" }
         "401":
           $ref: "#/components/responses/UnauthorizedResponse"
 
@@ -671,20 +780,22 @@ paths:
         - bearerAuth: []
       responses:
         "200":
-          description: Daftar kategori + jumlah produk.
+          description: Daftar kategori + jumlah produk (envelope, data = array).
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  categories:
-                    type: array
-                    items:
-                      allOf:
-                        - $ref: "#/components/schemas/Category"
-                        - type: object
-                          properties:
-                            product_count: { type: number }
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          allOf:
+                            - $ref: "#/components/schemas/Category"
+                            - type: object
+                              properties:
+                                product_count: { type: number }
     post:
       tags: [Admin]
       summary: Buat kategori
@@ -709,11 +820,18 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success: { type: boolean, example: true }
-                  category: { $ref: "#/components/schemas/Category" }
-                  message: { type: string }
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          category: { $ref: "#/components/schemas/Category" }
+              example:
+                success: true
+                data:
+                  category: { id: "cat1", name: "Game Currency", slug: "game-currency", is_active: true }
         "400":
           $ref: "#/components/responses/ValidationErrorResponse"
         "409":
@@ -743,11 +861,14 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success: { type: boolean, example: true }
-                  category: { $ref: "#/components/schemas/Category" }
-                  message: { type: string }
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          category: { $ref: "#/components/schemas/Category" }
         "404":
           $ref: "#/components/responses/NotFoundError"
     delete:
@@ -768,12 +889,25 @@ paths:
           description: Kategori dihapus.
           content:
             application/json:
-              example: { success: true, message: "Category deleted successfully" }
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          message: { type: string, example: "Category deleted successfully" }
         "400":
           description: Kategori masih memiliki produk.
           content:
             application/json:
-              example: { error: "Cannot delete category with 5 product(s). Reassign or delete products first." }
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+              example:
+                success: false
+                error:
+                  code: VALIDATION_ERROR
+                  message: "Cannot delete category with 5 product(s). Reassign or delete products first."
 
   /api/admin/orders:
     get:
@@ -795,24 +929,23 @@ paths:
         - $ref: "#/components/parameters/LimitParam"
       responses:
         "200":
-          description: Daftar order + items.
+          description: Daftar order + items (envelope + meta).
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  orders:
-                    type: array
-                    items:
-                      allOf:
-                        - $ref: "#/components/schemas/Order"
-                        - type: object
-                          properties:
-                            items: { type: array, items: { $ref: "#/components/schemas/OrderItem" } }
-                  total: { type: number }
-                  page: { type: number }
-                  limit: { type: number }
-                  totalPages: { type: number }
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          allOf:
+                            - $ref: "#/components/schemas/Order"
+                            - type: object
+                              properties:
+                                items: { type: array, items: { $ref: "#/components/schemas/OrderItem" } }
+                      meta: { $ref: "#/components/schemas/Meta" }
         "401":
           $ref: "#/components/responses/UnauthorizedResponse"
   /api/admin/orders/{id}:
@@ -830,19 +963,21 @@ paths:
           schema: { type: string }
       responses:
         "200":
-          description: Order + items + payment.
+          description: Order + items + payment (envelope, data = order).
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  order:
-                    allOf:
-                      - $ref: "#/components/schemas/Order"
-                      - type: object
-                        properties:
-                          items: { type: array, items: { $ref: "#/components/schemas/OrderItem" } }
-                          payment: { $ref: "#/components/schemas/Payment" }
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        allOf:
+                          - $ref: "#/components/schemas/Order"
+                          - type: object
+                            properties:
+                              items: { type: array, items: { $ref: "#/components/schemas/OrderItem" } }
+                              payment: { $ref: "#/components/schemas/Payment" }
         "404":
           $ref: "#/components/responses/NotFoundError"
     put:
@@ -850,8 +985,8 @@ paths:
       summary: Update order (status / nama / catatan)
       description: |
         Mengubah `status` divalidasi oleh state machine (`STATUS_TRANSITIONS`).
-        Respons `400` menyertakan `allowedTransitions`. Menyinkronkan tabel
-        `payment` saat status `PAID`, dan mengirim notifikasi Discord ke pembeli.
+        Menyinkronkan tabel `payment` saat status `PAID`, dan mengirim notifikasi
+        Discord ke pembeli.
       operationId: adminUpdateOrder
       security:
         - cookieAuth: []
@@ -874,29 +1009,29 @@ paths:
             example: { status: "PROCESSING" }
       responses:
         "200":
-          description: Order diperbarui.
+          description: Order diperbarui (envelope, data = { order, message }).
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success: { type: boolean, example: true }
-                  order: { $ref: "#/components/schemas/Order" }
-                  message: { type: string }
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          order: { $ref: "#/components/schemas/Order" }
+                          message: { type: string }
         "400":
           description: Transisi status tidak valid.
           content:
             application/json:
-              schema:
-                type: object
-                properties:
-                  error: { type: string }
-                  allowedTransitions:
-                    type: array
-                    items: { $ref: "#/components/schemas/OrderStatus" }
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
               example:
-                error: "Transisi status tidak valid: PAID → REJECTED"
-                allowedTransitions: ["PROCESSING", "COMPLETED"]
+                success: false
+                error:
+                  code: VALIDATION_ERROR
+                  message: "Transisi status tidak valid: PAID → REJECTED"
         "404":
           $ref: "#/components/responses/NotFoundError"
     delete:
@@ -917,7 +1052,15 @@ paths:
           description: Order dihapus.
           content:
             application/json:
-              example: { success: true, message: "Order deleted successfully" }
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          message: { type: string, example: "Order deleted successfully" }
         "401":
           $ref: "#/components/responses/UnauthorizedResponse"
 
@@ -943,18 +1086,18 @@ paths:
           schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
       responses:
         "200":
-          description: Daftar user + info auth (last_sign_in_at, banned_until).
+          description: Daftar user + info auth (last_sign_in_at, banned_until) — envelope + meta.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  users:
-                    type: array
-                    items: { $ref: "#/components/schemas/User" }
-                  total: { type: number }
-                  page: { type: number }
-                  totalPages: { type: number }
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/User" }
+                      meta: { $ref: "#/components/schemas/Meta" }
         "401":
           $ref: "#/components/responses/UnauthorizedResponse"
     post:
@@ -984,17 +1127,22 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  user:
-                    type: object
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
                     properties:
-                      id: { type: string }
-                      email: { type: string }
-                      name: { type: string }
-                      role: { $ref: "#/components/schemas/Role" }
-                      is_active: { type: boolean }
-                  message: { type: string, example: "Admin berhasil dibuat" }
+                      data:
+                        type: object
+                        properties:
+                          user:
+                            type: object
+                            properties:
+                              id: { type: string }
+                              email: { type: string }
+                              name: { type: string }
+                              role: { $ref: "#/components/schemas/Role" }
+                              is_active: { type: boolean }
+                          message: { type: string, example: "Admin berhasil dibuat" }
         "400":
           $ref: "#/components/responses/ValidationErrorResponse"
         "409":
@@ -1015,13 +1163,15 @@ paths:
           schema: { type: string }
       responses:
         "200":
-          description: Detail user.
+          description: Detail user (envelope, data = user).
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  user: { $ref: "#/components/schemas/User" }
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/User" }
         "404":
           $ref: "#/components/responses/NotFoundError"
     patch:
@@ -1051,7 +1201,15 @@ paths:
           description: User diperbarui.
           content:
             application/json:
-              example: { message: "User berhasil diperbarui" }
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          message: { type: string, example: "User berhasil diperbarui" }
         "400":
           $ref: "#/components/responses/ValidationErrorResponse"
         "404":
@@ -1076,7 +1234,15 @@ paths:
           description: User dinonaktifkan.
           content:
             application/json:
-              example: { message: "User berhasil dinonaktifkan" }
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          message: { type: string, example: "User berhasil dinonaktifkan" }
         "400":
           description: Admin terakhir tidak boleh dinonaktifkan.
         "404":
@@ -1092,15 +1258,17 @@ paths:
         - bearerAuth: []
       responses:
         "200":
-          description: Daftar setting.
+          description: Daftar setting (envelope, data = array).
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  settings:
-                    type: array
-                    items: { $ref: "#/components/schemas/Setting" }
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/Setting" }
         "401":
           $ref: "#/components/responses/UnauthorizedResponse"
     put:
@@ -1122,11 +1290,15 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success: { type: boolean, example: true }
-                  setting: { $ref: "#/components/schemas/Setting" }
-                  message: { type: string }
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          setting: { $ref: "#/components/schemas/Setting" }
+                          message: { type: string, example: "Setting updated successfully" }
         "400":
           $ref: "#/components/responses/ValidationErrorResponse"
 
@@ -1227,13 +1399,18 @@ paths:
           schema: { type: string }
       responses:
         "200":
-          description: Signed URL.
+          description: Signed URL (envelope, data = { url }).
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  url: { type: string }
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          url: { type: string }
         "404":
           $ref: "#/components/responses/NotFoundError"
         "503":
@@ -1264,18 +1441,31 @@ paths:
                   description: "Image file (jpeg/png/webp/avif, ≤ 5MB)."
       responses:
         "200":
-          description: URL publik gambar.
+          description: URL publik gambar (envelope, data = { url }).
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  url: { type: string, example: "https://xxxx.supabase.co/storage/v1/object/public/product-images/products/123.png" }
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          url: { type: string, example: "https://xxxx.supabase.co/storage/v1/object/public/product-images/products/123.png" }
+              example:
+                success: true
+                data: { url: "https://xxxx.supabase.co/storage/v1/object/public/product-images/products/123.png" }
         "400":
           description: File tidak ada / tipe tidak didukung / terlalu besar.
           content:
             application/json:
-              example: { error: "File terlalu besar. Maksimal 5MB" }
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+              example:
+                success: false
+                error:
+                  code: VALIDATION_ERROR
+                  message: "file: File terlalu besar. Maksimal 5MB"
         "401":
           $ref: "#/components/responses/UnauthorizedResponse"
 

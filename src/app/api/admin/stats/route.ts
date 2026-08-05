@@ -10,6 +10,12 @@
 import { NextResponse } from "next/server";
 import { isAdminRequest } from "@/lib/admin-auth";
 import { supabaseAdmin } from "@/lib/supabase";
+import {
+  successResponse,
+  errorResponse,
+  UnauthorizedError,
+} from "@/lib/errors";
+import { enforceAdminRateLimit } from "@/lib/rate-limit";
 
 async function checkAuth() {
   return isAdminRequest();
@@ -37,9 +43,12 @@ async function safeQuery(
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const limited = await enforceAdminRateLimit(request, "stats");
+  if (limited) return limited;
+
   if (!(await checkAuth())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(errorResponse(new UnauthorizedError()), { status: 401 });
   }
 
   const warnings: string[] = [];
@@ -125,18 +134,20 @@ export async function GET() {
     .filter((p: any) => p.min_stock != null && p.stock <= p.min_stock)
     .slice(0, 5);
 
-  return NextResponse.json({
-    stats: {
-      totalProducts: productsRes.count ?? 0,
-      activeProducts: activeProductsRes.count ?? 0,
-      totalCategories: categoriesRes.count ?? 0,
-      totalOrders: ordersRes.count ?? 0,
-      pendingOrders: pendingRes.count ?? 0,
-      completedOrders: completedRes.count ?? 0,
-      totalRevenue,
-    },
-    recentOrders: recentRes.data ?? [],
-    lowStock,
-    ...(warnings.length > 0 && { warnings }),
-  });
+  return NextResponse.json(
+    successResponse({
+      stats: {
+        totalProducts: productsRes.count ?? 0,
+        activeProducts: activeProductsRes.count ?? 0,
+        totalCategories: categoriesRes.count ?? 0,
+        totalOrders: ordersRes.count ?? 0,
+        pendingOrders: pendingRes.count ?? 0,
+        completedOrders: completedRes.count ?? 0,
+        totalRevenue,
+      },
+      recentOrders: recentRes.data ?? [],
+      lowStock,
+      ...(warnings.length > 0 && { warnings }),
+    })
+  );
 }

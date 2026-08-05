@@ -5,9 +5,18 @@
 import { NextResponse } from "next/server";
 import { authenticateAdmin, isAdminRequest } from "@/lib/admin-auth";
 import { supabaseAdmin } from "@/lib/supabase";
-import { isValidTransition, STATUS_TRANSITIONS } from "@/lib/payment/constants";
+import { isValidTransition } from "@/lib/payment/constants";
 import { logOrderStatusChange } from "@/lib/payment/order-logger";
 import { sendBuyerNotification } from "@/lib/discord/bot";
+import {
+  successResponse,
+  errorResponse,
+  AppError,
+  NotFoundError,
+  UnauthorizedError,
+  ValidationError,
+} from "@/lib/errors";
+import { enforceAdminRateLimit } from "@/lib/rate-limit";
 
 async function checkAuth() {
   return isAdminRequest();
@@ -17,8 +26,11 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const limited = await enforceAdminRateLimit(request, "orders");
+  if (limited) return limited;
+
   if (!(await checkAuth())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(errorResponse(new UnauthorizedError()), { status: 401 });
   }
 
   const { id } = await params;
@@ -31,11 +43,17 @@ export async function GET(
       .single();
 
     if (error) throw error;
-    if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    if (!order) {
+      return NextResponse.json(errorResponse(new NotFoundError("Order", id)), { status: 404 });
+    }
 
-    return NextResponse.json({ order });
+    return NextResponse.json(successResponse(order));
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json(
+      errorResponse(new AppError(500, "INTERNAL_ERROR", message)),
+      { status: 500 }
+    );
   }
 }
 
@@ -43,8 +61,11 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const limited = await enforceAdminRateLimit(request, "orders");
+  if (limited) return limited;
+
   if (!(await checkAuth())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(errorResponse(new UnauthorizedError()), { status: 401 });
   }
 
   const { id } = await params;
@@ -61,7 +82,7 @@ export async function PUT(
       .single();
 
     if (fetchError || !currentOrder) {
-      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+      return NextResponse.json(errorResponse(new NotFoundError("Order", id)), { status: 404 });
     }
 
     const updateData: any = { updated_at: new Date().toISOString() };
@@ -72,10 +93,9 @@ export async function PUT(
       // ── Validate status transition ─────────────────────────────────────────
       if (!isValidTransition(currentOrder.status, newStatus)) {
         return NextResponse.json(
-          {
-            error: `Transisi status tidak valid: ${currentOrder.status} → ${newStatus}`,
-            allowedTransitions: STATUS_TRANSITIONS[currentOrder.status] || [],
-          },
+          errorResponse(
+            new ValidationError(`Transisi status tidak valid: ${currentOrder.status} → ${newStatus}`)
+          ),
           { status: 400 }
         );
       }
@@ -152,14 +172,16 @@ export async function PUT(
       }
     }
 
-    return NextResponse.json({
-      success: true,
-      order,
-      message: "Order updated successfully",
-    });
+    return NextResponse.json(
+      successResponse({ order, message: "Order updated successfully" })
+    );
   } catch (error: any) {
     console.error("[Admin Orders] PUT error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json(
+      errorResponse(new AppError(500, "INTERNAL_ERROR", message)),
+      { status: 500 }
+    );
   }
 }
 
@@ -167,8 +189,11 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const limited = await enforceAdminRateLimit(request, "orders");
+  if (limited) return limited;
+
   if (!(await checkAuth())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(errorResponse(new UnauthorizedError()), { status: 401 });
   }
 
   const { id } = await params;
@@ -181,8 +206,14 @@ export async function DELETE(
     const { error } = await supabaseAdmin.from("order").delete().eq("id", id);
     if (error) throw error;
 
-    return NextResponse.json({ success: true, message: "Order deleted successfully" });
+    return NextResponse.json(
+      successResponse({ message: "Order deleted successfully" })
+    );
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json(
+      errorResponse(new AppError(500, "INTERNAL_ERROR", message)),
+      { status: 500 }
+    );
   }
 }

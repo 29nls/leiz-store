@@ -1,47 +1,53 @@
 import { NextResponse } from "next/server";
 import { isAdminRequest } from "@/lib/admin-auth";
 import { supabaseAdmin } from "@/lib/supabase";
+import {
+  successResponse,
+  errorResponse,
+  AppError,
+  UnauthorizedError,
+  ValidationError,
+} from "@/lib/errors";
+import { uploadFileSchema, zodErrorMessages, MAX_UPLOAD_SIZE } from "@/lib/validators/admin";
+import { enforceAdminRateLimit } from "@/lib/rate-limit";
+
+// z.instanceof(File) memerlukan global File — pastikan runtime Node (bukan edge).
+export const runtime = "nodejs";
 
 async function checkAuth() {
   return isAdminRequest();
 }
 
 const BUCKET = "product-images";
-const MAX_SIZE = 5 * 1024 * 1024; // 5MB
-const ALLOWED = ["image/jpeg", "image/png", "image/webp", "image/avif"];
+const MAX_SIZE = MAX_UPLOAD_SIZE; // 5MB
 
 export async function POST(request: Request) {
+  const limited = await enforceAdminRateLimit(request, "upload");
+  if (limited) return limited;
+
   if (!(await checkAuth())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(errorResponse(new UnauthorizedError()), { status: 401 });
   }
 
   try {
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
 
-    if (!file) {
-      return NextResponse.json({ error: "File tidak ditemukan" }, { status: 400 });
-    }
-
-    if (!ALLOWED.includes(file.type)) {
+    const parsed = uploadFileSchema.safeParse({ file });
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Tipe file tidak didukung. Gunakan JPEG, PNG, WebP, atau AVIF" },
+        errorResponse(new ValidationError(zodErrorMessages(parsed.error))),
         { status: 400 }
       );
     }
 
-    if (file.size > MAX_SIZE) {
-      return NextResponse.json(
-        { error: "File terlalu besar. Maksimal 5MB" },
-        { status: 400 }
-      );
-    }
+    const validFile = parsed.data.file;
 
-    const ext = file.type.split("/")[1] || "png";
+    const ext = validFile.type.split("/")[1] || "png";
     const fileName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
     const filePath = `products/${fileName}`;
 
-    const buffer = Buffer.from(await file.arrayBuffer());
+    const buffer = Buffer.from(await validFile.arrayBuffer());
 
     // Ensure bucket exists
     const { data: buckets } = await supabaseAdmin.storage.listBuckets();
@@ -56,18 +62,25 @@ export async function POST(request: Request) {
     const { error: uploadError } = await supabaseAdmin.storage
       .from(BUCKET)
       .upload(filePath, buffer, {
-        contentType: file.type,
+        contentType: validFile.type,
         upsert: false,
       });
 
     if (uploadError) {
-      return NextResponse.json({ error: "Gagal upload: " + uploadError.message }, { status: 500 });
+      return NextResponse.json(
+        errorResponse(new AppError(500, "UPLOAD_FAILED", "Gagal upload: " + uploadError.message)),
+        { status: 500 }
+      );
     }
 
     const { data: publicUrl } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(filePath);
 
-    return NextResponse.json({ url: publicUrl.publicUrl });
+    return NextResponse.json(successResponse({ url: publicUrl.publicUrl }));
   } catch (e: any) {
-    return NextResponse.json({ error: e.message || "Terjadi kesalahan" }, { status: 500 });
+    const message = e instanceof Error ? e.message : "Terjadi kesalahan";
+    return NextResponse.json(
+      errorResponse(new AppError(500, "INTERNAL_ERROR", message)),
+      { status: 500 }
+    );
   }
 }

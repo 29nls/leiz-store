@@ -119,7 +119,7 @@ git push origin --delete feat/cart-persistence   # hapus branch remote (oleh mai
 
 1. **Subject** (baris pertama):
    - Imperatif, aktif: *"add X"*, *"fix Y"* — bukan *"added X"* / *"fixing Y"*.
-   - **Maksimal 72 karakter** (ideal ≤ 50), tanpa titik di akhir.
+   - **Maksimal 100 karakter** (ideal ≤ 50), tanpa titik di akhir.
    - Mulai huruf kecil, kecuali nama properti (mis. `feat: add README`).
 2. **Body** (opsional, setelah baris kosong): jelaskan **mengapa**, bukan apa — terutama untuk perubahan yang tidak obvious. Tulis dalam **Bahasa Indonesia** kecuali istilah teknis.
 3. **Footer** (opsional): `Closes #12`, `BREAKING CHANGE: ...`.

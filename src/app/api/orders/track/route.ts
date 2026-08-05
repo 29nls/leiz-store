@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import { orderRepository } from "@/lib/repositories";
 import { successResponse, errorResponse } from "@/lib/errors";
-import { checkRateLimit, getClientIp } from "@/lib/middleware";
+import { getClientIp, safeCheckRateLimit } from "@/lib/middleware";
 import { getOrderForPayment, validateTransferToken } from "@/lib/payment/payment-service";
 import { paymentConfirmationCookieName } from "@/lib/order-idempotency";
 
@@ -18,9 +18,10 @@ function maskCustomerName(name: string | null | undefined): string {
 
 export async function GET(request: NextRequest) {
   try {
-    // Rate limit public tracking endpoint
+    // Rate limit public tracking endpoint (fail-open: a limiter outage must
+    // never take the tracking page down)
     const clientIp = getClientIp(request);
-    const rateLimit = checkRateLimit(`track:${clientIp}`, 10, 60000);
+    const rateLimit = await safeCheckRateLimit(`track:${clientIp}`, 10, 60000);
     if (!rateLimit.allowed) {
       return Response.json({ error: "Rate limit exceeded" }, { status: 429 });
     }
@@ -44,13 +45,17 @@ export async function GET(request: NextRequest) {
 
     // If orderId is provided, use the payment service for richer data.
     // The orderId branch returns buyer PII (customer name + Discord ID), so it
-    // is gated on the order-scoped confirmation cookie that checkout issued
-    // (broadened to path /api/orders so this endpoint receives it). A missing
-    // or invalid cookie fails closed with the same generic 404 as a missing
-    // order — no PII, and no way to probe whether an order exists.
+    // is gated on the order-scoped bearer credential: the confirmation cookie
+    // that checkout issued (broadened to path /api/orders so this endpoint
+    // receives it), or the same token carried on the payment URL (?token=…)
+    // for cross-device/incognito sessions. A missing or invalid credential
+    // fails closed with the same generic 404 as a missing order — no PII, and
+    // no way to probe whether an order exists.
     if (orderId) {
       const cookieToken = (await cookies()).get(paymentConfirmationCookieName(orderId))?.value;
-      if (!cookieToken || !(await validateTransferToken(orderId, cookieToken))) {
+      const queryToken = request.nextUrl.searchParams.get("token");
+      const bearerToken = cookieToken || queryToken;
+      if (!bearerToken || !(await validateTransferToken(orderId, bearerToken))) {
         return Response.json(
           errorResponse(new Error("Order not found") as any),
           { status: 404 }

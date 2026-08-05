@@ -75,9 +75,9 @@ Semua endpoint publik & checkout memakai envelope standar:
 { "success": false, "error": { "code": "VALIDATION_ERROR", "message": "items: ...", "details": { "field": ["pesan"] } } }
 ```
 
-> ⚠️ Catatan: sebagian endpoint admin lama (`/api/admin/*` pra-migrasi) masih
-> mengembalikan bentuk lama `{ "orders": [...], "total": N }` / `{ "error": "..." }`.
-> Konsolidasi ke envelope standar adalah agenda teknis (lihat §9).
+> ✅ **Semua endpoint** (publik, admin, system) kini konsisten memakai envelope
+> standar ini. List endpoint menempatkan array di `data` dan paginasi di `meta`
+> (`{ "data": [...], "meta": { "page", "limit", "total", "totalPages" } }`).
 
 ### 2.2 Kode Error Standar
 
@@ -113,7 +113,7 @@ terpisah (lihat §5.3).
 | Fitur | Detail |
 |---|---|
 | **CORS** | `CORS_ORIGINS` (default `http://localhost:3000`); preflight `OPTIONS` → 204. |
-| **Rate limit** | In-memory (`Map`); header `X-RateLimit-Limit/-Remaining/-Reset`. Contoh: confirm transfer 5/10 mnt/IP, tracking 10/mnt/IP. |
+| **Rate limit** | Redis/KV-backed (`src/lib/rate-limit.ts`, fallback in-memory untuk dev); header `X-RateLimit-Limit/-Remaining/-Reset`. Lihat tabel lengkap di `docs/openapi.yaml` §Rate limit. |
 | **Pagination** | `page` (min 1), `limit` (1–100, default 20); helper `parsePagination`. |
 | **Sort** | `parseSort` dengan allowlist kolom. |
 | **Store context** | Header `X-Store-Id` / `X-Store-Slug`, query `store_slug` (multi-toko). |
@@ -129,7 +129,7 @@ terpisah (lihat §5.3).
   + **validasi transisi state machine** → cegah double-process / race.
 - Idempotensi checkout: header `Idempotency-Key` + RPC `create_order_atomic`
   (transaksi Postgres; stok dipesan atomik; replay mengembalikan order sama).
-- Rate limit di endpoint publik (confirm, track).
+- Rate limit di endpoint publik (products, orders, track, confirm) & semua route admin. Endpoint system/cron/discord tidak di-rate-limit.
 - Password admin: PBKDF2-SHA512 (100k iterasi) atau Supabase Auth.
 - Public tracking memakai **allowlist field eksplisit** (tidak pernah
   meneruskan email/notes/token hash/proof path).
@@ -306,6 +306,8 @@ Side effect: log status + notifikasi pembeli via Discord DM.
 `sort` (`price_asc|price_desc|newest|name`), `badge`, `featured=true`,
 `minPrice`, `maxPrice`, `currency` (`IDR`|`USD`).
 
+**Rate limit:** 60 request/menit/IP (sama untuk detail produk `GET /api/products/:slug`).
+
 **Respons 200:** `{ success, data: [product+priceFormatted], meta: {page, limit, total, totalPages} }`
 — produk menyertakan `priceFormatted` sesuai currency (`Rp…` / `$…`).
 
@@ -390,10 +392,19 @@ Pembeli → GET /api/orders/track?orderNumber=LZ-…
 | `confirmTransferSchema` | sama | buyerName, buyerDiscordId, token opsional (dicek `isValidPaymentToken`), note ≤500 |
 | `adminPaymentActionSchema` | sama | action enum `accept/reject/cancel/force_cancel` |
 | `isValidDiscordId` | sama | snowflake 17–19 digit \| `user#0000` \| username 2–32 char |
+| `createProductSchema` | `src/lib/validators/admin.ts` | nama ≤200, slug `[a-z0-9-]`, price ≥0 (coerce), stock int, images ≤20 |
+| `updateProductSchema` | sama | `createProductSchema.partial()` (toggle `{ isActive }` aman) |
+| `createCategorySchema` | sama | nama ≤100, slug opsional, sortOrder int ≥0 |
+| `updateCategorySchema` | sama | partial; tolak sortOrder negatif |
+| `createUserSchema` | sama | email regex non-polinomial ≤254, password ≥6, role `ADMIN`/`CUSTOMER` |
+| `updateUserSchema` | sama | partial; tolak body kosong (refine); email UI diterima & diabaikan |
+| `upsertSettingSchema` | sama | key ≤100, value di-coerce ke string (kolom `value TEXT`) |
+| `uploadFileSchema` | sama | `File`, tipe JPEG/PNG/WebP/AVIF, ≤5MB, non-kosong |
 
 Selain itu: regex ketat `orderNumber` (`LZ-\d{8}-[A-Z0-9]{6}`) dan `orderId`
-pada tracking; validasi manual pada beberapa route admin lama (belum semua
-memakai Zod — agenda konsolidasi).
+pada tracking. Semua route admin create/update kini memakai Zod
+(`zodErrorMessages` menghasilkan pesan `field: pesan` yang dibungkus
+`ValidationError` → HTTP 400).
 
 ---
 
@@ -420,9 +431,9 @@ Setelah implementasi/migrasi, jalankan verifikasi berikut (unit + integration):
 
 ## 9. Temuan & Agenda Teknis (untuk iterasi berikutnya)
 
-- [ ] **Konsolidasi envelope respons** admin lama → `{ success, data, error, meta }` seragam.
-- [ ] **Zod di semua route admin** (saat ini sebagian masih validasi manual).
-- [ ] **Rate limit di lebih banyak endpoint** publik/admin (saat ini hanya confirm & track).
-- [ ] **Migrasi storage rate-limit** dari in-memory ke Redis/KV untuk multi-instance.
+- [x] **Konsolidasi envelope respons** semua endpoint (publik + admin) → `{ success, data, error, meta }` seragam (2026-08-05).
+- [x] **Zod di semua route admin** (products, categories, users, settings, upload — create & update) + unit test `src/lib/validators/__tests__/admin.test.ts`.
+- [x] **Rate limit di lebih banyak endpoint** publik/admin — products list/detail (60/mnt/IP), orders create (20/mnt/IP), track (10/mnt/IP), confirm (5/10mnt/IP/order), admin login, semua route admin (120/mnt/IP/route) (2026-08-05).
+- [x] **Migrasi storage rate-limit** dari in-memory ke Redis/KV untuk multi-instance — `src/lib/rate-limit.ts` (Vercel KV / Upstash REST, fallback in-memory) (2026-08-05).
 - [ ] **Idempotensi-Key** di ekspose ke dokumentasi frontend + test double-submit.
 - [ ] **Dokumentasi OpenAPI** dari spesifikasi ini (opsional, generate dari sini).

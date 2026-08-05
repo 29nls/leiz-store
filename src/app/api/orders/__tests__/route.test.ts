@@ -94,7 +94,10 @@ describe("POST /api/orders", () => {
       sameSite: "lax",
       path: "/api/orders",
     }));
-    expect(payload.data.paymentConfirmationToken).toBeUndefined();
+    // The token is exposed in the response so the checkout page can carry it
+    // on the payment URL (cross-device confirmation), while the hash fields
+    // remain private.
+    expect(payload.data.paymentConfirmationToken).toBe("raw-token-value");
     expect(payload.data.paymentConfirmationTokenHash).toBeUndefined();
     expect(payload.data.payment_confirmation_token_hash).toBeUndefined();
   });

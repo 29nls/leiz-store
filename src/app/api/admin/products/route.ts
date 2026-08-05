@@ -9,6 +9,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { createProductSchema, zodErrorMessages } from "@/lib/validators/admin";
 import { successResponse, errorResponse, AppError, UnauthorizedError, ValidationError } from "@/lib/errors";
 import { buildIlikeOrFilter } from "@/lib/supabase-search";
+import { enforceAdminRateLimit } from "@/lib/rate-limit";
 
 // Auth helper
 async function checkAuth() {
@@ -17,6 +18,9 @@ async function checkAuth() {
 
 // GET /api/admin/products
 export async function GET(request: Request) {
+  const limited = await enforceAdminRateLimit(request, "products");
+  if (limited) return limited;
+
   if (!(await checkAuth())) {
     return NextResponse.json(errorResponse(new UnauthorizedError()), { status: 401 });
   }
@@ -66,6 +70,9 @@ export async function GET(request: Request) {
 
 // POST /api/admin/products
 export async function POST(request: Request) {
+  const limited = await enforceAdminRateLimit(request, "products");
+  if (limited) return limited;
+
   if (!(await checkAuth())) {
     return NextResponse.json(errorResponse(new UnauthorizedError()), { status: 401 });
   }

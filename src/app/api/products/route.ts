@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withErrorHandling } from "@/lib/api-helpers";
-import { successResponse } from "@/lib/errors";
+import { errorResponse, RateLimitError, successResponse } from "@/lib/errors";
 import { productService } from "@/lib/services";
-import { parsePagination, corsHeaders, handleCors } from "@/lib/middleware";
+import {
+  addRateLimitHeaders,
+  corsHeaders,
+  getClientIp,
+  handleCors,
+  parsePagination,
+  PUBLIC_READ_RATE_LIMIT,
+  safeCheckRateLimit,
+} from "@/lib/middleware";
 import type { Currency } from "@/lib/currency";
 
 export const GET = withErrorHandling(async (
@@ -11,6 +19,19 @@ export const GET = withErrorHandling(async (
 ) => {
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
+
+  const rateLimit = await safeCheckRateLimit(
+    `products:list:${getClientIp(req)}`,
+    PUBLIC_READ_RATE_LIMIT.max,
+    PUBLIC_READ_RATE_LIMIT.windowMs
+  );
+  if (!rateLimit.allowed) {
+    const response = NextResponse.json(
+      errorResponse(new RateLimitError("Too many requests. Please try again later.")),
+      { status: 429, headers: corsHeaders(req.headers.get("origin") || undefined) }
+    );
+    return addRateLimitHeaders(response, rateLimit, PUBLIC_READ_RATE_LIMIT.max);
+  }
 
   const { searchParams } = new URL(req.url);
   const { page, limit } = parsePagination(searchParams);

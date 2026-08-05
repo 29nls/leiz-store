@@ -1,16 +1,37 @@
 import "@testing-library/jest-dom";
 
-// Mock next/server to avoid "Request is not defined" in jsdom
+// Mock next/server to avoid "Request/Response is not defined" in jsdom.
+// The mock is self-contained (no reliance on global Response) and mirrors the
+// MockResponse pattern used by the API route tests.
 jest.mock("next/server", () => {
-  const MockNextResponse = {
-    json: function (data, init) {
-      return new (globalThis as Record<string, unknown>).Response(JSON.stringify(data), {
-        status: (init && init.status) || 200,
-        headers: { "Content-Type": "application/json", ...(init && init.headers) },
-      });
+  class MockResponse {
+    status: number;
+    private headersMap: Record<string, string> = {};
+    private body: unknown;
+    constructor(body: unknown, init?: { status?: number; headers?: Record<string, string> }) {
+      this.body = body;
+      this.status = (init && init.status) || 200;
+      this.headersMap["Content-Type"] = "application/json";
+      if (init && init.headers) Object.assign(this.headersMap, init.headers);
+    }
+    get headers() {
+      return {
+        set: (name: string, value: string) => {
+          this.headersMap[name] = value;
+        },
+        get: (name: string) => this.headersMap[name] ?? null,
+      };
+    }
+    async json() {
+      return typeof this.body === "string" ? JSON.parse(this.body) : this.body;
+    }
+  }
+  return {
+    NextResponse: {
+      json: (data: unknown, init?: { status?: number; headers?: Record<string, string> }) =>
+        new MockResponse(data, init),
     },
   };
-  return { NextResponse: MockNextResponse };
 });
 
 // Mock Prisma

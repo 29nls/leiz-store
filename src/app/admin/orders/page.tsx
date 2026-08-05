@@ -121,7 +121,7 @@ export default function AdminOrdersPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || `Gagal update (${res.status})`);
+        throw new Error(data.error?.message || `Gagal update (${res.status})`);
       }
 
       showOk(`Status → ${newStatus.replace("_", " ")}`);
