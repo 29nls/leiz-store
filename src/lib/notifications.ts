@@ -4,6 +4,7 @@
  */
 
 import { prisma } from "@/lib/db";
+import { formatDateTime } from "@/lib/datetime";
 import { NotificationStatus, NotificationChannel } from "@/lib/prisma-types";
 type InputJsonValue = any;
 
@@ -269,7 +270,7 @@ export async function notifyNewOrder(order: {
     `💳 Payment: ${order.paymentMethod}`,
     order.customerDiscord ? `🎮 Discord: ${order.customerDiscord}` : null,
     ``,
-    `⏰ ${new Date().toLocaleString("id-ID")}`,
+    `⏰ ${formatDateTime(new Date(), { month: "numeric", second: "2-digit" })}`,
   ]
     .filter(Boolean)
     .join("\n");
@@ -334,7 +335,7 @@ export async function notifyDailyReport(stats: {
   lowStockItems: number;
 }): Promise<void> {
   const message = [
-    `📊 *Daily Report - ${new Date().toLocaleDateString("id-ID")}*`,
+    `📊 *Daily Report - ${formatDateTime(new Date(), { day: "numeric", month: "numeric", year: "numeric" })}*`,
     ``,
     `📦 Orders: ${stats.totalOrders}`,
     `💰 Revenue: Rp${stats.totalRevenue.toLocaleString("id-ID")}`,

@@ -3,6 +3,8 @@
  * Rich embed messages for seller notifications and buyer DMs
  */
 
+import { formatDateTime } from "@/lib/datetime";
+
 interface OrderItem {
   name?: string;
   quantity?: number;
@@ -78,9 +80,10 @@ export function buildSellerEmbed(order: OrderData) {
           { name: "━━━━━━━━━━━━━━━━━", value: "**📋 INFORMASI ORDER**", inline: false },
           { name: "Order", value: `\`${orderNumber}\``, inline: true },
           { name: "Status", value: `\`${order.status}\``, inline: true },
-          { name: "Waktu", value: order.confirmed_at
-            ? new Date(order.confirmed_at).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" })
-            : new Date().toLocaleString("id-ID", { timeZone: "Asia/Jakarta" }), inline: false },
+          { name: "Waktu", value: formatDateTime(
+            order.confirmed_at || new Date(),
+            { month: "numeric", second: "2-digit" }
+          ), inline: false },
 
           { name: "━━━━━━━━━━━━━━━━━", value: "**👤 DATA PEMBELI**", inline: false },
           { name: "Nama", value: customerName, inline: true },
@@ -96,7 +99,7 @@ export function buildSellerEmbed(order: OrderData) {
           { name: "Items", value: items, inline: false },
           ...(order.paymentProofUrl ? [{ name: "Bukti Transfer", value: `[Lihat bukti](${order.paymentProofUrl})`, inline: false }] : []),
         ],
-        footer: { text: "LEIZ STORE • Payment Verification • " + new Date().toLocaleDateString("id-ID") },
+        footer: { text: "LEIZ STORE • Payment Verification • " + formatDateTime(new Date(), { day: "numeric", month: "numeric", year: "numeric" }) },
         timestamp: new Date().toISOString(),
       },
     ],
@@ -117,7 +120,7 @@ export function buildBuyerEmbed(orderNumber: string, message: string) {
           { name: "━━━━━━━━━━━━━━━━━", value: "**📋 INFORMASI ORDER**", inline: false },
           { name: "Order", value: `\`${orderNumber}\``, inline: true },
         ],
-        footer: { text: "LEIZ STORE • " + new Date().toLocaleDateString("id-ID") },
+        footer: { text: "LEIZ STORE • " + formatDateTime(new Date(), { day: "numeric", month: "numeric", year: "numeric" }) },
         timestamp: new Date().toISOString(),
       },
     ],
