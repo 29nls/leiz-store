@@ -11,15 +11,19 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/admin-auth";
 import { hashPassword } from "@/lib/auth";
 import crypto from "crypto";
+import { createUserSchema, zodErrorMessages } from "@/lib/validators/admin";
+import { successResponse, errorResponse, AppError, ValidationError } from "@/lib/errors";
 
 function generateId(): string {
   return crypto.randomUUID().replace(/-/g, "").slice(0, 25);
 }
 
-// Email regex that is NOT polynomial (no ambiguous overlapping character classes).
-// Linear-time guaranteed — each position in the input is matched by exactly one
-// alternative, with a hard length cap at RFC 5321's 254-byte limit for safety.
-const EMAIL_RE = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,63}$/;
+function toEnvelopeError(e: unknown, fallback: string) {
+  const err = e instanceof AppError
+    ? e
+    : new AppError(500, "INTERNAL_ERROR", e instanceof Error ? e.message : fallback);
+  return NextResponse.json(errorResponse(err), { status: err.statusCode });
+}
 
 // ─── GET: List all users ──────────────────────────────────────
 export async function GET(req: NextRequest) {
@@ -72,14 +76,14 @@ export async function GET(req: NextRequest) {
       banned_until: authUsers[u.email]?.banned_until || null,
     }));
 
-    return NextResponse.json({
-      users,
-      total: count || 0,
+    return NextResponse.json(successResponse(users, {
       page,
+      limit,
+      total: count || 0,
       totalPages: Math.ceil((count || 0) / limit) || 1,
-    });
+    }));
   } catch (e: any) {
-    return NextResponse.json({ error: e.message || "Failed to list users" }, { status: 500 });
+    return toEnvelopeError(e, "Failed to list users");
   }
 }
 
@@ -88,21 +92,14 @@ export async function POST(req: NextRequest) {
   try {
     await requireAdmin(req);
     const body = await req.json();
-    const { email, password, name, role = "ADMIN", discord, phone } = body;
-
-    // Validate
-    if (!email || !password || !name) {
-      return NextResponse.json({ error: "Email, password, dan nama wajib diisi" }, { status: 400 });
+    const parsed = createUserSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        errorResponse(new ValidationError(zodErrorMessages(parsed.error))),
+        { status: 400 }
+      );
     }
-    if (email.length > 254 || !EMAIL_RE.test(email)) {
-      return NextResponse.json({ error: "Format email tidak valid" }, { status: 400 });
-    }
-    if (password.length < 6) {
-      return NextResponse.json({ error: "Password minimal 6 karakter" }, { status: 400 });
-    }
-    if (!["ADMIN", "CUSTOMER"].includes(role)) {
-      return NextResponse.json({ error: "Role tidak valid" }, { status: 400 });
-    }
+    const { email, password, name, role, discord, phone } = parsed.data;
 
     // Check if email already exists in public.user
     const { data: existing } = await supabaseAdmin
@@ -112,7 +109,10 @@ export async function POST(req: NextRequest) {
       .limit(1);
 
     if (existing && existing.length > 0) {
-      return NextResponse.json({ error: "Email sudah terdaftar" }, { status: 409 });
+      return NextResponse.json(
+        errorResponse(new AppError(409, "CONFLICT", "Email sudah terdaftar")),
+        { status: 409 }
+      );
     }
 
     // Step 1: Create in Supabase Auth
@@ -125,7 +125,10 @@ export async function POST(req: NextRequest) {
 
     if (authError) {
       if (authError.message.includes("already exists")) {
-        return NextResponse.json({ error: "Email sudah terdaftar di sistem autentikasi" }, { status: 409 });
+        return NextResponse.json(
+          errorResponse(new AppError(409, "CONFLICT", "Email sudah terdaftar di sistem autentikasi")),
+          { status: 409 }
+        );
       }
       throw authError;
     }
@@ -155,11 +158,14 @@ export async function POST(req: NextRequest) {
       throw insError;
     }
 
-    return NextResponse.json({
-      user: { id: userId, email, name, role, is_active: true },
-      message: "Admin berhasil dibuat",
-    }, { status: 201 });
+    return NextResponse.json(
+      successResponse({
+        user: { id: userId, email, name, role, is_active: true },
+        message: "Admin berhasil dibuat",
+      }),
+      { status: 201 }
+    );
   } catch (e: any) {
-    return NextResponse.json({ error: e.message || "Failed to create user" }, { status: 500 });
+    return toEnvelopeError(e, "Failed to create user");
   }
 }

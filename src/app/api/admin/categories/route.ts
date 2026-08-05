@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import { isAdminRequest } from "@/lib/admin-auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import { createCategorySchema, zodErrorMessages } from "@/lib/validators/admin";
+import { successResponse, errorResponse, AppError, UnauthorizedError, ValidationError } from "@/lib/errors";
 
 async function checkAuth() {
   return isAdminRequest();
@@ -15,7 +16,7 @@ async function checkAuth() {
 // GET /api/admin/categories
 export async function GET() {
   if (!(await checkAuth())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(errorResponse(new UnauthorizedError()), { status: 401 });
   }
 
   try {
@@ -37,23 +38,29 @@ export async function GET() {
       })
     );
 
-    return NextResponse.json({ categories: categoriesWithCount });
+    return NextResponse.json(successResponse(categoriesWithCount));
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      errorResponse(new AppError(500, "INTERNAL_ERROR", error.message)),
+      { status: 500 }
+    );
   }
 }
 
 // POST /api/admin/categories
 export async function POST(request: Request) {
   if (!(await checkAuth())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(errorResponse(new UnauthorizedError()), { status: 401 });
   }
 
   try {
     const body = await request.json();
     const parsed = createCategorySchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json({ error: zodErrorMessages(parsed.error) }, { status: 400 });
+      return NextResponse.json(
+        errorResponse(new ValidationError(zodErrorMessages(parsed.error))),
+        { status: 400 }
+      );
     }
 
     const { name, slug, description, icon, image, sortOrder, isActive, parentId } = parsed.data;
@@ -69,7 +76,10 @@ export async function POST(request: Request) {
       .limit(1);
 
     if (existing && existing.length > 0) {
-      return NextResponse.json({ error: "Slug already exists" }, { status: 409 });
+      return NextResponse.json(
+        errorResponse(new AppError(409, "CONFLICT", "Slug already exists")),
+        { status: 409 }
+      );
     }
 
     const { data: category, error } = await supabaseAdmin
@@ -89,12 +99,14 @@ export async function POST(request: Request) {
 
     if (error) throw error;
 
-    return NextResponse.json({
-      success: true,
-      category,
-      message: "Category created successfully",
-    }, { status: 201 });
+    return NextResponse.json(
+      successResponse({ category, message: "Category created successfully" }),
+      { status: 201 }
+    );
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      errorResponse(new AppError(500, "INTERNAL_ERROR", error.message)),
+      { status: 500 }
+    );
   }
 }

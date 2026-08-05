@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import { isAdminRequest } from "@/lib/admin-auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import { updateProductSchema, zodErrorMessages } from "@/lib/validators/admin";
+import { successResponse, errorResponse, AppError, NotFoundError, UnauthorizedError, ValidationError } from "@/lib/errors";
 
 async function checkAuth() {
   return isAdminRequest();
@@ -18,7 +19,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   if (!(await checkAuth())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(errorResponse(new UnauthorizedError()), { status: 401 });
   }
 
   const { id } = await params;
@@ -27,7 +28,10 @@ export async function PUT(
     const body = await request.json();
     const parsed = updateProductSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json({ error: zodErrorMessages(parsed.error) }, { status: 400 });
+      return NextResponse.json(
+        errorResponse(new ValidationError(zodErrorMessages(parsed.error))),
+        { status: 400 }
+      );
     }
 
     const {
@@ -44,7 +48,7 @@ export async function PUT(
       .limit(1);
 
     if (!existing || existing.length === 0) {
-      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+      return NextResponse.json(errorResponse(new NotFoundError("Product", id)), { status: 404 });
     }
 
     // If slug changed, check uniqueness
@@ -57,7 +61,10 @@ export async function PUT(
         .limit(1);
 
       if (slugCheck && slugCheck.length > 0) {
-        return NextResponse.json({ error: "Slug already exists" }, { status: 409 });
+        return NextResponse.json(
+          errorResponse(new AppError(409, "CONFLICT", "Slug already exists")),
+          { status: 409 }
+        );
       }
     }
 
@@ -102,13 +109,12 @@ export async function PUT(
       }
     }
 
-    return NextResponse.json({
-      success: true,
-      product,
-      message: "Product updated successfully",
-    });
+    return NextResponse.json(successResponse({ product, message: "Product updated successfully" }));
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      errorResponse(new AppError(500, "INTERNAL_ERROR", error.message)),
+      { status: 500 }
+    );
   }
 }
 
@@ -118,7 +124,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   if (!(await checkAuth())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(errorResponse(new UnauthorizedError()), { status: 401 });
   }
 
   const { id } = await params;
@@ -132,11 +138,11 @@ export async function DELETE(
 
     if (error) throw error;
 
-    return NextResponse.json({
-      success: true,
-      message: "Produk berhasil dinonaktifkan",
-    });
+    return NextResponse.json(successResponse({ message: "Produk berhasil dinonaktifkan" }));
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      errorResponse(new AppError(500, "INTERNAL_ERROR", error.message)),
+      { status: 500 }
+    );
   }
 }

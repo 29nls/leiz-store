@@ -5,6 +5,8 @@
 import { NextResponse } from "next/server";
 import { isAdminRequest } from "@/lib/admin-auth";
 import { supabaseAdmin } from "@/lib/supabase";
+import { updateCategorySchema, zodErrorMessages } from "@/lib/validators/admin";
+import { successResponse, errorResponse, AppError, NotFoundError, UnauthorizedError, ValidationError } from "@/lib/errors";
 
 async function checkAuth() {
   return isAdminRequest();
@@ -15,14 +17,21 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   if (!(await checkAuth())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(errorResponse(new UnauthorizedError()), { status: 401 });
   }
 
   const { id } = await params;
 
   try {
     const body = await request.json();
-    const { name, slug, description, icon, image, sortOrder, isActive, parentId } = body;
+    const parsed = updateCategorySchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        errorResponse(new ValidationError(zodErrorMessages(parsed.error))),
+        { status: 400 }
+      );
+    }
+    const { name, slug, description, icon, image, sortOrder, isActive, parentId } = parsed.data;
 
     const { data: existing } = await supabaseAdmin
       .from("category")
@@ -31,7 +40,7 @@ export async function PUT(
       .limit(1);
 
     if (!existing || existing.length === 0) {
-      return NextResponse.json({ error: "Category not found" }, { status: 404 });
+      return NextResponse.json(errorResponse(new NotFoundError("Category", id)), { status: 404 });
     }
 
     if (slug) {
@@ -43,7 +52,10 @@ export async function PUT(
         .limit(1);
 
       if (slugCheck && slugCheck.length > 0) {
-        return NextResponse.json({ error: "Slug already exists" }, { status: 409 });
+        return NextResponse.json(
+          errorResponse(new AppError(409, "CONFLICT", "Slug already exists")),
+          { status: 409 }
+        );
       }
     }
 
@@ -66,9 +78,12 @@ export async function PUT(
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, category, message: "Category updated successfully" });
+    return NextResponse.json(successResponse({ category, message: "Category updated successfully" }));
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      errorResponse(new AppError(500, "INTERNAL_ERROR", error.message)),
+      { status: 500 }
+    );
   }
 }
 
@@ -77,7 +92,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   if (!(await checkAuth())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(errorResponse(new UnauthorizedError()), { status: 401 });
   }
 
   const { id } = await params;
@@ -91,7 +106,9 @@ export async function DELETE(
 
     if (count && count > 0) {
       return NextResponse.json(
-        { error: `Cannot delete category with ${count} product(s). Reassign or delete products first.` },
+        errorResponse(new ValidationError(
+          `Cannot delete category with ${count} product(s). Reassign or delete products first.`
+        )),
         { status: 400 }
       );
     }
@@ -99,8 +116,11 @@ export async function DELETE(
     const { error } = await supabaseAdmin.from("category").delete().eq("id", id);
     if (error) throw error;
 
-    return NextResponse.json({ success: true, message: "Category deleted successfully" });
+    return NextResponse.json(successResponse({ message: "Category deleted successfully" }));
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      errorResponse(new AppError(500, "INTERNAL_ERROR", error.message)),
+      { status: 500 }
+    );
   }
 }
