@@ -166,6 +166,8 @@ export const productService = {
 export const orderService = {
   async create(data: {
     customerName: string;
+    /** Buyer email stored to order.customer_email; invoice is emailed here. */
+    customerEmail?: string;
     customerDiscord?: string;
     customerIGN?: string;
     customerNotes?: string;
@@ -203,6 +205,7 @@ export const orderService = {
     const fingerprint = idempotencyKey
       ? fingerprintCreateOrderInput({
           customerName: data.customerName,
+          customerEmail: data.customerEmail,
           customerDiscord: data.customerDiscord,
           customerIGN: data.customerIGN,
           customerNotes: data.customerNotes,
@@ -226,6 +229,7 @@ export const orderService = {
           order_number: orderNumber,
           status: OrderStatus.PENDING_PAYMENT,
           customer_name: data.customerName,
+          customer_email: data.customerEmail || "",
           customer_discord: data.customerDiscord || "",
           customer_ign: data.customerIGN || "",
           customer_notes: data.customerNotes || "",

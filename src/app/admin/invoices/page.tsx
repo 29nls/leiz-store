@@ -7,12 +7,35 @@ import {
 } from "lucide-react";
 import { getSupabaseBrowser, subscribeToTable } from "@/lib/supabase-browser";
 import { getInvoiceStatusBadge } from "@/lib/status-colors";
+import { InvoiceEmailStatus } from "@/lib/invoice/types";
 
 interface Invoice {
   id: string; order_id: string; invoice_no: string; status: string;
   pdf_url: string | null; pdf_path?: string | null; error_log: string | null;
+  email_status: string | null;
   created_at: string; sent_at: string | null;
   order?: { order_number: string; customer_name: string; total: number; currency: string } | null;
+}
+
+// Email delivery sub-state that warrants offering a resend: the PDF exists but
+// the email was skipped (no recipient / SMTP unconfigured) or failed.
+function needsResend(inv: Invoice): boolean {
+  return inv.status === "FAILED"
+    || inv.email_status === InvoiceEmailStatus.FAILED
+    || inv.email_status === InvoiceEmailStatus.SKIPPED;
+}
+
+function EmailStatusChip({ status }: { status: string | null }) {
+  if (status === InvoiceEmailStatus.SENT) {
+    return <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium border border-success/30 text-success ml-1">Email ✓</span>;
+  }
+  if (status === InvoiceEmailStatus.FAILED) {
+    return <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium border border-error/30 text-error ml-1">Email ✗</span>;
+  }
+  if (status === InvoiceEmailStatus.SKIPPED) {
+    return <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium border border-warning/30 text-warning ml-1">Email lewati</span>;
+  }
+  return null;
 }
 
 const STATUSES = ["ALL", "PENDING", "SENT", "FAILED"];
@@ -118,15 +141,19 @@ export default function AdminInvoicesPage() {
                   <td className="py-3 px-4"><span className="text-text-secondary font-mono text-xs">{inv.order?.order_number || inv.order_id.slice(0, 8)}</span></td>
                   <td className="py-3 px-4"><p className="text-white">{inv.order?.customer_name || "-"}</p></td>
                   <td className="py-3 px-4 text-center">
-                    <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium border ${getInvoiceStatusBadge(inv.status)}`}>{inv.status}</span>
+                    <span className="inline-flex items-center">
+                      <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium border ${getInvoiceStatusBadge(inv.status)}`}>{inv.status}</span>
+                      <EmailStatusChip status={inv.email_status} />
+                    </span>
                   </td>
                   <td className="py-3 px-4 text-right text-text-secondary text-xs">{fmtDate(inv.created_at)}</td>
                   <td className="py-3 px-4 text-center">
                     <div className="flex items-center justify-center gap-1">
                       <button onClick={e => { e.stopPropagation(); setSelected(inv); }} className="p-2 text-text-secondary hover:text-arcane hover:bg-arcane/10 rounded-lg"><Eye className="h-4 w-4" /></button>
-                      {inv.status === "FAILED" && (
+                      {needsResend(inv) && (
                         <button onClick={e => { e.stopPropagation(); handleResend(inv.id); }} disabled={resending}
-                          className="p-2 text-text-secondary hover:text-arcane hover:bg-arcane/10 rounded-lg disabled:opacity-30">
+                          className="p-2 text-text-secondary hover:text-arcane hover:bg-arcane/10 rounded-lg disabled:opacity-30"
+                          title="Buat ulang & kirim ulang invoice">
                           <Send className="h-4 w-4" />
                         </button>
                       )}
@@ -160,6 +187,7 @@ export default function AdminInvoicesPage() {
             <div className="p-6 space-y-6">
               <div className="flex items-center gap-3">
                 <span className={`inline-flex px-3 py-1.5 rounded-full text-sm font-medium border ${getInvoiceStatusBadge(selected.status)}`}>{selected.status}</span>
+                <EmailStatusChip status={selected.email_status} />
                 <span className="text-xs text-text-tertiary">{fmtDate(selected.created_at)}</span>
               </div>
 
@@ -184,12 +212,12 @@ export default function AdminInvoicesPage() {
                 <p className="text-xs text-text-tertiary">Terkirim: {fmtDate(selected.sent_at)}</p>
               )}
 
-              {selected.status === "FAILED" && (
+              {needsResend(selected) && (
                 <div className="border-t border-border pt-4">
                   <button onClick={() => handleResend(selected.id)} disabled={resending}
                     className="inline-flex items-center gap-2 px-4 py-2.5 bg-arcane hover:bg-arcane/80 text-white rounded-lg text-sm font-medium disabled:opacity-50 transition-colors">
                     {resending ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" /> : <Send className="h-4 w-4" />}
-                    Buat Ulang Invoice
+                    Buat Ulang & Kirim Ulang Invoice
                   </button>
                 </div>
               )}
