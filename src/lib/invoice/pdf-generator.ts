@@ -1,5 +1,6 @@
 import PDFDocument from "pdfkit";
 import type { InvoiceData } from "./types";
+import { formatDateTime } from "@/lib/datetime";
 
 function formatCurrency(amount: number, currency: string): string {
   if (currency === "USD") {
@@ -9,13 +10,9 @@ function formatCurrency(amount: number, currency: string): string {
 }
 
 function formatDate(dateStr: string): string {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("id-ID", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  return formatDateTime(dateStr, { hour: undefined, minute: undefined });
 }
+
 
 export async function generateInvoicePdf(data: InvoiceData): Promise<Buffer> {
   return new Promise((resolve, reject) => {

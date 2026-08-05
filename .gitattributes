@@ -1,0 +1,4 @@
+# Skrip shell wajib ber-encoding LF agar berjalan di Git Bash (Windows)
+# maupun Linux/macOS. Tanpa aturan ini, core.autocrlf=true akan mengubah
+# .sh menjadi CRLF dan merusak skrip di Windows.
+*.sh text eol=lf

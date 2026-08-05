@@ -65,14 +65,21 @@ export function handleCors(request: NextRequest): NextResponse | null {
 }
 
 /**
- * Extract client IP from request
+ * Extract client IP from request.
+ *
+ * Trust model: in the Docker deployment only the Caddy reverse proxy
+ * (Caddyfile) publishes ports, and Caddy replaces any client-supplied
+ * X-Forwarded-For with the real peer IP — so the first value is trustworthy.
+ * On Vercel the edge likewise sets X-Forwarded-For to the real client IP.
+ * Only when the app is exposed directly (no trusted proxy in front) can a
+ * client spoof this header; the account-keyed login throttle is the backstop
+ * in that case (see LOGIN_RATE_LIMIT below).
  */
-export function getClientIp(request: NextRequest): string {
-  return (
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
-    "unknown"
-  );
+export function getClientIp(request: Request): string {
+  const forwarded = request.headers.get("x-forwarded-for");
+  const first = forwarded?.split(",")[0]?.trim() || "";
+  const candidate = first || request.headers.get("x-real-ip")?.trim() || "";
+  return candidate.length > 0 && candidate.length <= 64 ? candidate : "unknown";
 }
 
 /**
@@ -111,6 +118,77 @@ export function checkRateLimit(
     remaining: maxRequests - entry.count,
     resetAt: entry.resetAt,
   };
+}
+
+// ─── Login & order-create throttling ─────────────────────────
+// Generous, fail-open thresholds (see MED-2 in docs/security-audit-report.md).
+// Windows auto-expire: there is no permanent lockout, and every limiter call
+// in the routes below goes through the fail-open safe* wrappers so a limiter
+// bug can never block legitimate traffic.
+
+export const LOGIN_RATE_LIMIT = {
+  /** Failed attempts allowed per client IP per window. */
+  ipMax: 20,
+  /** Failed attempts allowed per account per window — backstop against IP rotation. */
+  accountMax: 10,
+  windowMs: 15 * 60 * 1000,
+} as const;
+
+export const ORDER_CREATE_RATE_LIMIT = {
+  /** Orders allowed per client IP per window. Generous so NAT-shared legitimate buyers are unaffected. */
+  max: 20,
+  windowMs: 60 * 1000,
+} as const;
+
+/** Read a bucket without incrementing it. */
+export function peekRateLimit(
+  key: string,
+  maxRequests = 100,
+  windowMs = 60000
+): { allowed: boolean; remaining: number; resetAt: number } {
+  const now = Date.now();
+  const entry = rateLimitStore.get(key);
+  if (!entry || now > entry.resetAt) {
+    return { allowed: true, remaining: maxRequests, resetAt: now + windowMs };
+  }
+  return {
+    allowed: entry.count < maxRequests,
+    remaining: Math.max(0, maxRequests - entry.count),
+    resetAt: entry.resetAt,
+  };
+}
+
+/** Delete a bucket (e.g. clear the failure counter after a successful login). */
+export function resetRateLimit(key: string): void {
+  rateLimitStore.delete(key);
+}
+
+/** Fail-open wrapper: a limiter bug must never block legitimate traffic. */
+export function safeCheckRateLimit(
+  key: string,
+  maxRequests = 100,
+  windowMs = 60000
+): { allowed: boolean; remaining: number; resetAt: number } {
+  try {
+    return checkRateLimit(key, maxRequests, windowMs);
+  } catch (err) {
+    console.error("[rate-limit] checkRateLimit failed open:", err);
+    return { allowed: true, remaining: maxRequests, resetAt: Date.now() + windowMs };
+  }
+}
+
+/** Fail-open peek (see safeCheckRateLimit). */
+export function safePeekRateLimit(
+  key: string,
+  maxRequests = 100,
+  windowMs = 60000
+): { allowed: boolean; remaining: number; resetAt: number } {
+  try {
+    return peekRateLimit(key, maxRequests, windowMs);
+  } catch (err) {
+    console.error("[rate-limit] peekRateLimit failed open:", err);
+    return { allowed: true, remaining: maxRequests, resetAt: Date.now() + windowMs };
+  }
 }
 
 /**

@@ -1,0 +1,26 @@
+# ─────────────────────────────────────────────────────────────
+# CODEOWNERS — DRAFT
+#
+# ⚠️  FILE INI MASIH DRAFT. Semua baris owner masih dikomentari
+#     agar tidak aktif sebelum diisi username/team yang benar.
+#     Ganti "@your-github-username" dengan handle tim, lalu hapus
+#     tanda pagar (#) pada baris yang ingin diaktifkan, dan commit.
+#
+# Referensi: docs/branch-protection.md
+# Dokumentasi: https://docs.github.com/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+# ─────────────────────────────────────────────────────────────
+
+# Aturan berurutan dari spesifik ke umum — pola terakhir yang cocok MENANG.
+
+# Keamanan & area sensitif — wajib review maintainer senior
+# /src/lib/payment/          @your-github-username
+# /src/lib/auth.ts           @your-github-username
+# /scripts/migrations/       @your-github-username
+# /scripts/supabase-schema.sql @your-github-username
+
+# Area kritis lainnya
+# /src/app/api/              @your-github-username
+# /src/lib/db.ts             @your-github-username
+
+# Seluruh repo — fallback (opsional)
+# *                          @your-github-username
