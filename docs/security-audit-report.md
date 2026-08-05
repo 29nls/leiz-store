@@ -13,12 +13,12 @@
 
 LEIZ STORE's **payment/checkout integrity core is well engineered** — server-side pricing authority, atomic stock handling, idempotency with encrypted replay tokens, order-scoped confirmation tokens, and magic-byte-validated payment-proof uploads are all handled correctly. The real exposure is at the **edges**: Discord-button authorization, anon INSERT grants in Row-Level Security, PII leakage through the unauthenticated tracking endpoint, and missing rate limits on sensitive endpoints.
 
-**Verdict: 2 High (both remediated ✅), 4 Medium (2 remediated ✅, 1 investigated 🔍, 1 open ⏳), 4 Low findings.** The two High findings and two of the Medium findings were fixed on 2026-08-05 (see remediation notes below); MED-1 received a read-only investigation; MED-2 and the Low items remain open.
+**Verdict: 2 High (both remediated ✅), 4 Medium (3 remediated ✅, 1 investigated 🔍), 4 Low findings.** The two High findings and three of the Medium findings were fixed on 2026-08-05 (see remediation notes below); MED-1 received a read-only investigation; the Low items remain open.
 
 | Severity | Count | Status |
 |---|---|---|
 | 🔴 High | 2 | ✅ Remediated 2026-08-05 |
-| 🟠 Medium | 4 | 2 ✅ Remediated · 1 🔍 Investigated · 1 ⏳ Open |
+| 🟠 Medium | 4 | 3 ✅ Remediated · 1 🔍 Investigated |
 | 🟡 Low | 4 | ⏳ Open |
 
 > **Remediation log**
@@ -27,6 +27,7 @@ LEIZ STORE's **payment/checkout integrity core is well engineered** — server-s
 > - **2026-08-05 — MED-3 remediated:** `createOrderSchema` now caps `items` at 20 line items (`.max(20)`) and constrains `paymentMethod` to `z.enum([...MANUAL_PAYMENT_METHODS])` = `bank_transfer | gopay | dana`. Regression tests added in `src/app/api/orders/__tests__/route.test.ts`.
 > - **2026-08-05 — MED-4 remediated:** all PostgREST `.or()` search interpolations now percent-encode the user term via the shared `buildIlikeOrFilter()` helper (`src/lib/supabase-search.ts`) — applied to `/api/admin/orders`, `/api/admin/products`, `/api/admin/users`, and the client-side admin orders table. Unit tests in `src/lib/__tests__/supabase-search.test.ts`.
 > - **2026-08-05 — MED-1 investigated (read-only, no code change):** see the investigation notes in the MED-1 section below. Fix decision still pending.
+> - **2026-08-05 — MED-2 remediated:** brute-force protection added to `/api/admin/login` (dual buckets: 20 attempts/IP + 10 attempts/account per 15 min; only failures count, success resets; fail-open via `safe*` wrappers; windows auto-expire — no permanent lockout) and `POST /api/orders` (20 orders/IP per 60 s, fail-open). See MED-2 section for the full design incl. IP trust model. Tests in `middleware.test.ts` and a new login-route test file.
 
 ---
 
@@ -151,6 +152,16 @@ The 25-char random order ID is the *only* barrier, and it lives in the URL — l
 2. `checkRateLimit("order-create:" + ip, 10, 60000)` in the orders route.
 3. **Note (both):** the in-memory store resets on restart, is not shared across serverless instances, and `getClientIp` trusts the first `X-Forwarded-For` value, which clients can spoof. For real protection use a Redis/KV-backed limiter and pin IP extraction to your trusted proxy (or hash IP + fingerprint together so spoofing one value isn't enough).
 
+**✅ REMEDIATED (2026-08-05):**
+
+*Design.* Both limits reuse the existing in-memory store (`rateLimitStore` in `src/lib/middleware.ts`) with new fail-open helpers and generous thresholds, documented in code and this report.
+
+- **Admin login — dual buckets, fail-open:** `LOGIN_RATE_LIMIT` = **20 failed attempts per IP** + **10 failed attempts per account** per **15 min**. The flow: `safePeekRateLimit` on both keys before attempting; on failure, both buckets are recorded via `safeCheckRateLimit`; on success both are reset. Only *failed* attempts count, so a legitimate admin's typos don't exhaust the budget, and a successful login clears the counters. Windows auto-expire (no permanent lockout); `Retry-After` is returned on 429. The **per-account bucket is the backstop against IP rotation/spoofing** — rotating `X-Forwarded-For` still hits the account cap. All calls go through `safe*` wrappers that **fail open** (a limiter bug degrades to no-limit, never a lockout).
+- **Order creation — per-client, fail-open:** `ORDER_CREATE_RATE_LIMIT` = **20 orders per IP per 60 s** — generous enough that buyers behind shared NAT IPs are unaffected, but scripted flooding (which produces dozens of orders per second) is stopped with a 429.
+- **IP trust model (audited):** in the Docker deployment only the Caddy reverse proxy publishes ports and Caddy *replaces* any client-supplied `X-Forwarded-For` with the real peer IP, so the first XFF value is trustworthy; on Vercel the edge likewise sets it. `getClientIp` was hardened (trim + length cap, fall back to `unknown`) and its trust model documented in a comment. Only a direct-exposure deployment (no proxy) can spoof XFF — covered by the per-account bucket. A Redis/KV-backed limiter remains recommended for multi-instance serverless, as noted in the original finding.
+
+*Tests.* `middleware.test.ts`: peek-doesn't-increment, failure accumulation → blocked, lockout expiry restores access, reset clears, fail-open wrappers, order-cap boundary. New `src/app/api/admin/login/__tests__/route.test.ts`: repeated failed logins → 429, IP-rotation backstop → 429, lockout expiry restores, success resets counters, missing credentials → 400. `route.test.ts` (orders): order flood → 429 while legitimate orders still pass. Full suite green (385 tests), lint + typecheck clean.
+
 ---
 
 ### 🟠 MED-3 — Unbounded `items` array and free-form inputs in order creation
@@ -271,7 +282,7 @@ Settings are readable by anonymous users and `PUT /api/admin/settings` accepts a
 | ✅ | MED-3: Cap `items` array (`.max(20)`), enum `paymentMethod` | Applied 2026-08-05 (body-size guard still open as defense-in-depth) |
 | ✅ | MED-4: Parameterize `.or()` search values | Applied 2026-08-05 (`buildIlikeOrFilter` at 4 sites) |
 | 🔍 | MED-1: Gate `track?orderId=` behind the confirmation token/cookie; mask PII | Investigated 2026-08-05 — fix needs a token/cookie mechanism that doesn't break the post-checkout payment page |
-| P1 | MED-2: Rate-limit admin login + order creation (Redis-backed in prod) | ~2 h |
+| ✅ | MED-2: Rate-limit admin login + order creation | Applied 2026-08-05 (in-memory, fail-open; Redis-backed recommended for multi-instance serverless) |
 | P2 | LOW-1…4: constant-time comparisons, legacy-JWT profile check, CORS default, upload magic bytes, settings key allowlist | ~half day |
 | P3 | Add regression tests: unauth Discord interaction → denied; anon REST INSERT → denied; track without cookie → 401 | ~half day |
 

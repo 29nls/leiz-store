@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withErrorHandling } from "@/lib/api-helpers";
-import { successResponse, errorResponse, ValidationError } from "@/lib/errors";
+import { successResponse, errorResponse, ValidationError, AppError } from "@/lib/errors";
 import { orderService } from "@/lib/services";
-import { corsHeaders, handleCors } from "@/lib/middleware";
+import { corsHeaders, handleCors, getClientIp, safeCheckRateLimit, ORDER_CREATE_RATE_LIMIT } from "@/lib/middleware";
 import type { Currency } from "@/lib/currency";
 import { createOrderSchema } from "@/lib/validators/order";
 import { paymentConfirmationCookieName, validateIdempotencyKey } from "@/lib/order-idempotency";
@@ -15,6 +15,21 @@ export const POST = withErrorHandling(async (
 ) => {
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
+
+  // Rate limit order creation per client (generous cap; fail-open). Stops
+  // scripted flooding while a legitimate buyer (even behind a shared NAT IP)
+  // is unaffected. See ORDER_CREATE_RATE_LIMIT in src/lib/middleware.ts.
+  const rateLimit = safeCheckRateLimit(
+    `order-create:${getClientIp(req)}`,
+    ORDER_CREATE_RATE_LIMIT.max,
+    ORDER_CREATE_RATE_LIMIT.windowMs
+  );
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      errorResponse(new AppError(429, "RATE_LIMITED", "Too many orders. Please try again later.")),
+      { status: 429, headers: corsHeaders() }
+    );
+  }
 
   const body = await req.json();
 

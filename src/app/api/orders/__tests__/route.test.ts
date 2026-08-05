@@ -30,9 +30,14 @@ jest.mock("@/lib/services", () => ({
   },
 }));
 
+const mockRateLimit = jest.fn();
+
 jest.mock("@/lib/middleware", () => ({
   corsHeaders: () => ({ "Access-Control-Allow-Origin": "*" }),
   handleCors: () => null,
+  getClientIp: () => "203.0.113.5",
+  safeCheckRateLimit: (...args: unknown[]) => mockRateLimit(...args),
+  ORDER_CREATE_RATE_LIMIT: { max: 20, windowMs: 60_000 },
 }));
 
 import { POST } from "@/app/api/orders/route";
@@ -57,6 +62,7 @@ const body = {
 describe("POST /api/orders", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockRateLimit.mockReturnValue({ allowed: true, remaining: 19, resetAt: Date.now() + 60_000 });
     mockOrderCreate.mockResolvedValue({
       order: {
         id: "order-1",
@@ -130,6 +136,14 @@ describe("POST /api/orders", () => {
     const response = await POST(request({ ...body, paymentMethod: "crypto_btc" }) as never, { params: Promise.resolve({}) });
 
     expect(response.status).toBe(400);
+    expect(mockOrderCreate).not.toHaveBeenCalled();
+  });
+
+  it("returns 429 when the order creation rate limit is exceeded", async () => {
+    mockRateLimit.mockReturnValueOnce({ allowed: false, remaining: 0, resetAt: Date.now() + 60_000 });
+    const response = await POST(request(body) as never, { params: Promise.resolve({}) });
+
+    expect(response.status).toBe(429);
     expect(mockOrderCreate).not.toHaveBeenCalled();
   });
 });
