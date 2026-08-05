@@ -2,6 +2,10 @@ import type { NextConfig } from "next";
 import path from "path";
 
 const nextConfig: NextConfig = {
+  // Emit standalone output for self-hosted Docker deployments (see Dockerfile).
+  // On Vercel this flag is ignored, so it's safe to keep off by default.
+  output: process.env.NEXT_OUTPUT === "standalone" ? "standalone" : undefined,
+
   // Turbopack config required alongside webpack config in Next.js 16
   turbopack: {
     resolveAlias: {

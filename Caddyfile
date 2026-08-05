@@ -1,0 +1,27 @@
+# ─────────────────────────────────────────────────────────────
+# LEIZ STORE - Caddy reverse proxy
+# TLS otomatis via Let's Encrypt. Set DOMAIN & ACME_EMAIL di .env
+# sebelum menjalankan `docker compose --profile proxy up -d`.
+# ─────────────────────────────────────────────────────────────
+
+{
+	# Default email untuk notifikasi sertifikat (bisa di-override via env)
+	email {$ACME_EMAIL:admin@example.com}
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	reverse_proxy web:3000
+
+	# Security headers (redundansi dengan header dari Next.js)
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

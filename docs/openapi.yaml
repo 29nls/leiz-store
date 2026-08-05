@@ -1,0 +1,1914 @@
+openapi: 3.0.3
+info:
+  title: LEIZ STORE API
+  description: |
+    REST API backend leiz-store (Next.js 14 App Router + Supabase PostgreSQL).
+    Spesifikasi ini diturunkan dari `docs/api-specification.md` dan kode sumber
+    di `src/app/api/**`.
+
+    ## Konvensi
+    - Endpoint publik memakai envelope `{ success, data, meta }` / `{ success, error }`.
+    - Endpoint admin lama (sebagian besar `/api/admin/*`) masih memakai bentuk
+      respons legacy `{ orders, total, page, ... }` / `{ error }`.
+    - Semua error dikembalikan via `error.code` konsisten
+      (`VALIDATION_ERROR`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`,
+      `RATE_LIMITED`, `INTERNAL_ERROR`).
+
+    ## Autentikasi
+    - **Admin:** Supabase Auth (cookie `sb-*` atau `Authorization: Bearer <access_token>`)
+      ATAU legacy JWT (cookie `admin_token` atau Bearer HS256, role `ADMIN`, 24 jam).
+    - **System:** header `x-admin-secret` (`DISCORD_ADMIN_SECRET`) untuk
+      `POST /api/admin/payment-action`; header `x-cron-secret` / `Authorization: Bearer`
+      (`CRON_SECRET`) untuk cron.
+    - **Discord:** verifikasi signature ed25519 (`x-signature-ed25519`,
+      `x-signature-timestamp`) dengan `DISCORD_PUBLIC_KEY`.
+  version: 1.0.0
+  contact:
+    name: LEIZ STORE Backend
+  license:
+    name: Proprietary
+
+servers:
+  - url: https://leiz-store.vercel.app
+    description: Production
+  - url: http://localhost:3000
+    description: Local development
+
+tags:
+  - name: Public
+    description: Endpoint publik tanpa autentikasi (CORS + rate limit).
+  - name: Admin
+    description: Endpoint panel admin (Supabase Auth / legacy JWT admin).
+  - name: System
+    description: Webhook internal, cron, dan integrasi Discord (secret khusus).
+
+security: []
+
+paths:
+  # ─────────────────────────────── PUBLIC ───────────────────────────────
+  /api/health:
+    get:
+      tags: [Public]
+      summary: Health check
+      description: Mengecek koneksi database dan kesiapan server.
+      operationId: getHealth
+      responses:
+        "200":
+          description: Server sehat.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+              example:
+                status: healthy
+                timestamp: "2026-08-05T10:00:00.000Z"
+                database: connected
+                version: "2.0.0"
+                uptime: 1234.56
+        "503":
+          description: Database tidak tersedia.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+              example:
+                status: unhealthy
+                timestamp: "2026-08-05T10:00:00.000Z"
+                database: disconnected
+                error: "Connection refused"
+
+  /api/products:
+    get:
+      tags: [Public]
+      summary: List produk
+      description: |
+        Daftar produk aktif dengan paginasi, filter, dan dual currency.
+        Sorting: `price_asc`, `price_desc`, `newest`, `name`.
+      operationId: listProducts
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+        - name: category
+          in: query
+          schema: { type: string, example: "game-currency" }
+          description: Slug kategori.
+        - name: q
+          in: query
+          schema: { type: string }
+          description: Pencarian nama/deskripsi.
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [price_asc, price_desc, newest, name]
+        - name: badge
+          in: query
+          schema: { type: string }
+        - name: featured
+          in: query
+          schema: { type: boolean }
+        - name: minPrice
+          in: query
+          schema: { type: number }
+        - name: maxPrice
+          in: query
+          schema: { type: number }
+        - name: currency
+          in: query
+          schema: { $ref: "#/components/schemas/Currency" }
+      responses:
+        "200":
+          description: Daftar produk (envelope standar + meta).
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/Product" }
+                      meta: { $ref: "#/components/schemas/Meta" }
+              example:
+                success: true
+                data:
+                  - id: "abc123"
+                    name: "500 UC"
+                    slug: "500-uc"
+                    price: 100000
+                    priceFormatted: "Rp100.000"
+                    stock: 50
+                    badge: "BEST SELLER"
+                    category: { id: "cat1", name: "Game Currency", slug: "game-currency" }
+                    images: [{ url: "https://example.com/img.jpg", alt: "500 UC" }]
+                meta: { page: 1, limit: 20, total: 1, totalPages: 1 }
+
+  /api/products/{slug}:
+    get:
+      tags: [Public]
+      summary: Detail produk
+      operationId: getProductBySlug
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string }
+        - name: currency
+          in: query
+          schema: { $ref: "#/components/schemas/Currency" }
+      responses:
+        "200":
+          description: Detail produk + kategori + gambar.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/Product" }
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+
+  /api/orders:
+    post:
+      tags: [Public]
+      summary: Buat order (manual payment)
+      description: |
+        Membuat order dengan status `PENDING_PAYMENT`. Stok dipesan secara
+        atomik via RPC `create_order_atomic`. **Idempoten** — sertakan header
+        `Idempotency-Key` agar retry tidak membuat duplikat (replay mengembalikan
+        order yang sama). Token konfirmasi dikirim via cookie httpOnly
+        `pc_<orderId>` (path-scoped), bukan di body respons.
+      operationId: createOrder
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+            maxLength: 128
+            example: "5e2b9f6a-3c8d-4a1e-9f2b-7c6d5e4f3a2b"
+          description: |
+            Kunci idempotensi checkout. Wajib UUID v4 (diverifikasi
+            `validateIdempotencyKey`); nilai lain ditolak dengan 400.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateOrderRequest" }
+            example:
+              customerName: "Budi"
+              customerDiscord: "123456789012345678"
+              customerIGN: "BudiGG"
+              customerNotes: ""
+              items:
+                - { productId: "prod_abc", quantity: 2 }
+              paymentMethod: "gopay"
+              currency: "IDR"
+      responses:
+        "201":
+          description: Order berhasil dibuat.
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+              description: "Cookie `payment_confirmation_<orderId>` berisi token konfirmasi (httpOnly, path-scoped)."
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        allOf:
+                          - $ref: "#/components/schemas/Order"
+                          - type: object
+                            properties:
+                              manualPayment: { type: boolean, example: true }
+                              replayed: { type: boolean, example: false }
+              example:
+                success: true
+                data:
+                  id: "8f3a2b1c4d5e6f7a8b9c0d1e2f3a4b5c"
+                  order_number: "LZ-20260805-ABC123"
+                  status: "PENDING_PAYMENT"
+                  customer_name: "Budi"
+                  total: 222000
+                  tax: 22000
+                  currency: "IDR"
+                  payment_method: "gopay"
+                  expiry_at: "2026-08-06T10:00:00.000Z"
+                  manualPayment: true
+                  replayed: false
+        "400":
+          $ref: "#/components/responses/ValidationErrorResponse"
+        "409":
+          $ref: "#/components/responses/ConflictResponse"
+
+  /api/orders/track:
+    get:
+      tags: [Public]
+      summary: Lacak status order
+      description: |
+        Lacak order via `orderNumber` (`LZ-YYYYMMDD-XXXXXX`) atau `orderId`.
+        Hanya field yang aman yang dikembalikan (allowlist) — email, catatan,
+        token hash, dan path bukti pembayaran tidak pernah diekspos.
+        Rate limit: 10 request/menit/IP.
+
+        Bentuk respons tergantung query param:
+        - `?orderNumber=` → `TrackingInfo` (camelCase, status history).
+        - `?orderId=` → `SafeOrderData` (snake_case, allowlist field dari
+          `getOrderForPayment`).
+      operationId: trackOrder
+      parameters:
+        - name: orderNumber
+          in: query
+          schema:
+            type: string
+            pattern: "^LZ-[0-9]{8}-[A-Z0-9]{6}$"
+            example: "LZ-20260805-ABC123"
+        - name: orderId
+          in: query
+          schema:
+            type: string
+            pattern: "^[a-zA-Z0-9_-]{8,64}$"
+      responses:
+        "200":
+          description: Informasi tracking (allowlist field).
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        oneOf:
+                          - $ref: "#/components/schemas/TrackingInfo"
+                          - $ref: "#/components/schemas/SafeOrderData"
+              example:
+                success: true
+                data:
+                  id: "8f3a2b1c..."
+                  orderNumber: "LZ-20260805-ABC123"
+                  status: "WAITING_CONFIRMATION"
+                  items:
+                    - { name: "500 UC", quantity: 2, price: 100000, total: 200000 }
+                  subtotal: 200000
+                  tax: 22000
+                  total: 222000
+                  currency: "IDR"
+                  paymentMethod: "gopay"
+                  statusHistory:
+                    - { status: "PENDING", date: "2026-08-05T10:00:00.000Z" }
+                  expiryAt: "2026-08-06T10:00:00.000Z"
+                  createdAt: "2026-08-05T10:00:00.000Z"
+        "400":
+          $ref: "#/components/responses/ValidationErrorResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "429":
+          $ref: "#/components/responses/RateLimitedResponse"
+
+  /api/orders/{orderId}/confirm:
+    post:
+      tags: [Public]
+      summary: Konfirmasi transfer pembayaran
+      description: |
+        Pembeli mengonfirmasi transfer manual (opsional upload bukti).
+        Token konfirmasi diambil dari cookie `payment_confirmation_<orderId>`
+        atau body `confirmationToken`. Status berubah ke `WAITING_CONFIRMATION`.
+        Rate limit: 5 percobaan/10 menit/IP per order.
+      operationId: confirmTransfer
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: { $ref: "#/components/schemas/ConfirmTransferRequest" }
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/ConfirmTransferRequest"
+                - type: object
+                  properties:
+                    paymentProofBase64:
+                      type: string
+                      deprecated: true
+                      description: Tidak didukung — gunakan multipart.
+            example:
+              buyerName: "Budi"
+              buyerDiscordId: "123456789012345678"
+              note: "Sudah transfer ya"
+      responses:
+        "200":
+          description: Transfer terkonfirmasi.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          message: { type: string, example: "Transfer confirmed" }
+                          orderId: { type: string }
+        "400":
+          $ref: "#/components/responses/ValidationErrorResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedResponse"
+        "429":
+          $ref: "#/components/responses/RateLimitedResponse"
+
+  # ─────────────────────────────── ADMIN ───────────────────────────────
+  /api/admin/login:
+    post:
+      tags: [Admin]
+      summary: Login admin
+      description: |
+        Login via Supabase Auth (primer). Fallback legacy `ADMIN_EMAIL` /
+        `ADMIN_PASSWORD` menyetel cookie `admin_token` (JWT HS256, 24 jam)
+        hanya bila Supabase belum dikonfigurasi.
+      operationId: adminLogin
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AdminLoginRequest" }
+            example: { email: "admin@leiz.store", password: "rahasia123" }
+      responses:
+        "200":
+          description: Login berhasil.
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+              description: "Cookie session Supabase / `admin_token` (legacy)."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminLoginResponse" }
+              example:
+                success: true
+                user: { id: "u1", email: "admin@leiz.store", name: "Admin", role: "ADMIN" }
+        "400":
+          $ref: "#/components/responses/ValidationErrorResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedResponse"
+        "403":
+          description: Akun bukan admin.
+          content:
+            application/json:
+              example: { error: "Akses ditolak. Hanya admin yang dapat masuk." }
+
+  /api/admin/logout:
+    post:
+      tags: [Admin]
+      summary: Logout admin
+      operationId: adminLogout
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Berhasil logout (cookie `admin_token` dihapus).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+
+  /api/admin/verify:
+    get:
+      tags: [Admin]
+      summary: Verifikasi session admin
+      operationId: verifyAdmin
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Session valid.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid: { type: boolean, example: true }
+                  user:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      email: { type: string }
+                      name: { type: string, nullable: true }
+                      role: { type: string, example: "ADMIN" }
+        "401":
+          $ref: "#/components/responses/UnauthorizedResponse"
+
+  /api/admin/stats:
+    get:
+      tags: [Admin]
+      summary: Statistik dashboard
+      description: |
+        Data dashboard dalam satu panggilan. Setiap query independen
+        (try/catch sendiri); kegagalan satu tabel tidak menggagalkan respons,
+        melainkan dicatat dalam array `warnings`.
+      operationId: adminStats
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Statistik dashboard.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stats:
+                    type: object
+                    properties:
+                      totalProducts: { type: number }
+                      activeProducts: { type: number }
+                      totalCategories: { type: number }
+                      totalOrders: { type: number }
+                      pendingOrders: { type: number }
+                      completedOrders: { type: number }
+                      totalRevenue: { type: number }
+                  recentOrders:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        order_number: { type: string }
+                        customer_name: { type: string }
+                        total: { type: number }
+                        status: { type: string }
+                        created_at: { type: string, format: date-time }
+                  lowStock:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        name: { type: string }
+                        slug: { type: string }
+                        stock: { type: number }
+                        min_stock: { type: number }
+                  warnings:
+                    type: array
+                    items: { type: string }
+              example:
+                stats:
+                  totalProducts: 120
+                  activeProducts: 110
+                  totalCategories: 8
+                  totalOrders: 340
+                  pendingOrders: 3
+                  completedOrders: 310
+                  totalRevenue: 25000000
+                recentOrders: []
+                lowStock: []
+        "401":
+          $ref: "#/components/responses/UnauthorizedResponse"
+
+  /api/admin/products:
+    get:
+      tags: [Admin]
+      summary: List produk (admin)
+      operationId: adminListProducts
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: category
+          in: query
+          schema: { type: string }
+          description: ID kategori.
+        - name: sort
+          in: query
+          schema: { type: string, default: created_at }
+        - name: order
+          in: query
+          schema: { type: string, enum: [asc, desc], default: desc }
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+      responses:
+        "200":
+          description: Daftar produk (shape legacy).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products:
+                    type: array
+                    items: { $ref: "#/components/schemas/Product" }
+                  total: { type: number }
+                  page: { type: number }
+                  limit: { type: number }
+                  totalPages: { type: number }
+        "401":
+          $ref: "#/components/responses/UnauthorizedResponse"
+    post:
+      tags: [Admin]
+      summary: Buat produk
+      operationId: adminCreateProduct
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProductUpsertRequest" }
+            example:
+              name: "500 UC"
+              slug: "500-uc"
+              price: 100000
+              comparePrice: 110000
+              stock: 50
+              minStock: 5
+              badge: "BEST SELLER"
+              isActive: true
+              isFeatured: true
+              categoryId: "cat1"
+              images: [{ url: "https://example.com/500uc.jpg", alt: "500 UC", sortOrder: 0 }]
+      responses:
+        "201":
+          description: Produk dibuat.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  product: { $ref: "#/components/schemas/Product" }
+                  message: { type: string }
+        "400":
+          $ref: "#/components/responses/ValidationErrorResponse"
+        "409":
+          description: Slug sudah dipakai.
+          content:
+            application/json:
+              example: { error: "Slug already exists" }
+
+  /api/admin/products/{id}:
+    put:
+      tags: [Admin]
+      summary: Update produk
+      operationId: adminUpdateProduct
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProductUpsertRequest" }
+      responses:
+        "200":
+          description: Produk diperbarui.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  product: { $ref: "#/components/schemas/Product" }
+                  message: { type: string }
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "409":
+          description: Slug sudah dipakai produk lain.
+    delete:
+      tags: [Admin]
+      summary: Nonaktifkan produk (soft delete)
+      description: Menyetel `is_active = false` untuk menjaga riwayat order.
+      operationId: adminDeleteProduct
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Produk dinonaktifkan.
+          content:
+            application/json:
+              example: { success: true, message: "Produk berhasil dinonaktifkan" }
+        "401":
+          $ref: "#/components/responses/UnauthorizedResponse"
+
+  /api/admin/categories:
+    get:
+      tags: [Admin]
+      summary: List kategori
+      operationId: adminListCategories
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Daftar kategori + jumlah produk.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  categories:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: "#/components/schemas/Category"
+                        - type: object
+                          properties:
+                            product_count: { type: number }
+    post:
+      tags: [Admin]
+      summary: Buat kategori
+      operationId: adminCreateCategory
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CategoryUpsertRequest" }
+            example:
+              name: "Game Currency"
+              slug: "game-currency"
+              description: "Top up game"
+              sortOrder: 1
+              isActive: true
+      responses:
+        "201":
+          description: Kategori dibuat (slug auto-generated bila kosong).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  category: { $ref: "#/components/schemas/Category" }
+                  message: { type: string }
+        "400":
+          $ref: "#/components/responses/ValidationErrorResponse"
+        "409":
+          description: Slug sudah dipakai.
+
+  /api/admin/categories/{id}:
+    put:
+      tags: [Admin]
+      summary: Update kategori
+      operationId: adminUpdateCategory
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CategoryUpsertRequest" }
+      responses:
+        "200":
+          description: Kategori diperbarui.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  category: { $ref: "#/components/schemas/Category" }
+                  message: { type: string }
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+    delete:
+      tags: [Admin]
+      summary: Hapus kategori
+      description: Gagal (400) bila kategori masih memiliki produk.
+      operationId: adminDeleteCategory
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Kategori dihapus.
+          content:
+            application/json:
+              example: { success: true, message: "Category deleted successfully" }
+        "400":
+          description: Kategori masih memiliki produk.
+          content:
+            application/json:
+              example: { error: "Cannot delete category with 5 product(s). Reassign or delete products first." }
+
+  /api/admin/orders:
+    get:
+      tags: [Admin]
+      summary: List order (admin)
+      operationId: adminListOrders
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: search
+          in: query
+          schema: { type: string }
+          description: Cari berdasarkan `order_number` / `customer_name` (ilike).
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/OrderStatus" }
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+      responses:
+        "200":
+          description: Daftar order + items.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orders:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: "#/components/schemas/Order"
+                        - type: object
+                          properties:
+                            items: { type: array, items: { $ref: "#/components/schemas/OrderItem" } }
+                  total: { type: number }
+                  page: { type: number }
+                  limit: { type: number }
+                  totalPages: { type: number }
+        "401":
+          $ref: "#/components/responses/UnauthorizedResponse"
+  /api/admin/orders/{id}:
+    get:
+      tags: [Admin]
+      summary: Detail order (admin)
+      operationId: adminGetOrder
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Order + items + payment.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  order:
+                    allOf:
+                      - $ref: "#/components/schemas/Order"
+                      - type: object
+                        properties:
+                          items: { type: array, items: { $ref: "#/components/schemas/OrderItem" } }
+                          payment: { $ref: "#/components/schemas/Payment" }
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+    put:
+      tags: [Admin]
+      summary: Update order (status / nama / catatan)
+      description: |
+        Mengubah `status` divalidasi oleh state machine (`STATUS_TRANSITIONS`).
+        Respons `400` menyertakan `allowedTransitions`. Menyinkronkan tabel
+        `payment` saat status `PAID`, dan mengirim notifikasi Discord ke pembeli.
+      operationId: adminUpdateOrder
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { $ref: "#/components/schemas/OrderStatus" }
+                customerName: { type: string }
+                notes: { type: string }
+            example: { status: "PROCESSING" }
+      responses:
+        "200":
+          description: Order diperbarui.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  order: { $ref: "#/components/schemas/Order" }
+                  message: { type: string }
+        "400":
+          description: Transisi status tidak valid.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error: { type: string }
+                  allowedTransitions:
+                    type: array
+                    items: { $ref: "#/components/schemas/OrderStatus" }
+              example:
+                error: "Transisi status tidak valid: PAID → REJECTED"
+                allowedTransitions: ["PROCESSING", "COMPLETED"]
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+    delete:
+      tags: [Admin]
+      summary: Hapus order (hard delete)
+      description: Menghapus `order_item` dan `payment` terlebih dahulu, lalu order.
+      operationId: adminDeleteOrder
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Order dihapus.
+          content:
+            application/json:
+              example: { success: true, message: "Order deleted successfully" }
+        "401":
+          $ref: "#/components/responses/UnauthorizedResponse"
+
+  /api/admin/users:
+    get:
+      tags: [Admin]
+      summary: List user (admin)
+      operationId: adminListUsers
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: search
+          in: query
+          schema: { type: string }
+          description: Cari `name` / `email` (ilike).
+        - name: role
+          in: query
+          schema: { $ref: "#/components/schemas/Role" }
+        - $ref: "#/components/parameters/PageParam"
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+      responses:
+        "200":
+          description: Daftar user + info auth (last_sign_in_at, banned_until).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items: { $ref: "#/components/schemas/User" }
+                  total: { type: number }
+                  page: { type: number }
+                  totalPages: { type: number }
+        "401":
+          $ref: "#/components/responses/UnauthorizedResponse"
+    post:
+      tags: [Admin]
+      summary: Buat user/admin
+      description: |
+        Membuat user di Supabase Auth + tabel `user` (password di-hash PBKDF2).
+        Rollback otomatis bila salah satu langkah gagal.
+      operationId: adminCreateUser
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateUserRequest" }
+            example:
+              email: "staff@leiz.store"
+              password: "rahasia123"
+              name: "Staff"
+              role: "ADMIN"
+              discord: "staff#0001"
+      responses:
+        "201":
+          description: User dibuat.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      email: { type: string }
+                      name: { type: string }
+                      role: { $ref: "#/components/schemas/Role" }
+                      is_active: { type: boolean }
+                  message: { type: string, example: "Admin berhasil dibuat" }
+        "400":
+          $ref: "#/components/responses/ValidationErrorResponse"
+        "409":
+          description: Email sudah terdaftar.
+
+  /api/admin/users/{id}:
+    get:
+      tags: [Admin]
+      summary: Detail user
+      operationId: adminGetUser
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Detail user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user: { $ref: "#/components/schemas/User" }
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+    patch:
+      tags: [Admin]
+      summary: Update user
+      description: |
+        Update `name`, `role`, `discord`, `phone`, `is_active`, atau `password`
+        (≥ 6 karakter; diteruskan ke Supabase Auth). Reaktivasi juga
+        menghapus ban pada Supabase Auth.
+      operationId: adminUpdateUser
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateUserRequest" }
+            example: { name: "Staff Baru", role: "ADMIN", is_active: true }
+      responses:
+        "200":
+          description: User diperbarui.
+          content:
+            application/json:
+              example: { message: "User berhasil diperbarui" }
+        "400":
+          $ref: "#/components/responses/ValidationErrorResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+    delete:
+      tags: [Admin]
+      summary: Nonaktifkan user (soft delete + ban auth)
+      description: |
+        Menyetel `is_active = false` dan mem-ban akun Supabase Auth
+        (36500 hari). Menolak menonaktifkan admin terakhir.
+      operationId: adminDeactivateUser
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: User dinonaktifkan.
+          content:
+            application/json:
+              example: { message: "User berhasil dinonaktifkan" }
+        "400":
+          description: Admin terakhir tidak boleh dinonaktifkan.
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+
+  /api/admin/settings:
+    get:
+      tags: [Admin]
+      summary: List pengaturan toko
+      operationId: adminGetSettings
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Daftar setting.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  settings:
+                    type: array
+                    items: { $ref: "#/components/schemas/Setting" }
+        "401":
+          $ref: "#/components/responses/UnauthorizedResponse"
+    put:
+      tags: [Admin]
+      summary: Upsert pengaturan
+      operationId: adminUpsertSetting
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpsertSettingRequest" }
+            example: { key: "store_name", value: "LEIZ STORE", type: "text", group: "general" }
+      responses:
+        "200":
+          description: Setting disimpan (upsert).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  setting: { $ref: "#/components/schemas/Setting" }
+                  message: { type: string }
+        "400":
+          $ref: "#/components/responses/ValidationErrorResponse"
+
+  /api/admin/invoices:
+    get:
+      tags: [Admin]
+      summary: List invoice
+      operationId: adminListInvoices
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: order_id
+          in: query
+          schema: { type: string }
+          description: Ambil invoice untuk satu order.
+      responses:
+        "200":
+          description: Daftar invoice (envelope) atau satu invoice.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          invoices:
+                            type: array
+                            items: { $ref: "#/components/schemas/Invoice" }
+                          total: { type: number }
+                          page: { type: number }
+                          totalPages: { type: number }
+                          invoice: { $ref: "#/components/schemas/Invoice" }
+                      meta: { $ref: "#/components/schemas/Meta" }
+        "401":
+          $ref: "#/components/responses/UnauthorizedResponse"
+    post:
+      tags: [Admin]
+      summary: Aksi invoice (resend)
+      operationId: adminInvoiceAction
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [invoiceId]
+              properties:
+                invoiceId: { type: string }
+                action:
+                  type: string
+                  enum: [resend]
+                  default: resend
+            example: { invoiceId: "inv_1", action: "resend" }
+      responses:
+        "200":
+          description: Aksi diproses.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          message: { type: string, example: "Invoice resend queued" }
+        "400":
+          $ref: "#/components/responses/ValidationErrorResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+
+  /api/admin/invoices/{id}/download:
+    get:
+      tags: [Admin]
+      summary: URL unduh invoice (PDF)
+      description: Mengembalikan signed URL untuk mengunduh PDF invoice.
+      operationId: adminDownloadInvoice
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Signed URL.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url: { type: string }
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "503":
+          description: URL invoice tidak tersedia.
+
+  /api/admin/upload:
+    post:
+      tags: [Admin]
+      summary: Upload gambar produk
+      description: |
+        Upload ke bucket Supabase `product-images`. Hanya
+        JPEG/PNG/WebP/AVIF, maksimal 5MB.
+      operationId: adminUploadImage
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: "Image file (jpeg/png/webp/avif, ≤ 5MB)."
+      responses:
+        "200":
+          description: URL publik gambar.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url: { type: string, example: "https://xxxx.supabase.co/storage/v1/object/public/product-images/products/123.png" }
+        "400":
+          description: File tidak ada / tipe tidak didukung / terlalu besar.
+          content:
+            application/json:
+              example: { error: "File terlalu besar. Maksimal 5MB" }
+        "401":
+          $ref: "#/components/responses/UnauthorizedResponse"
+
+  # ─────────────────────────────── SYSTEM ───────────────────────────────
+  /api/admin/payment-action:
+    post:
+      tags: [System]
+      summary: Aksi verifikasi pembayaran (Discord bot / admin)
+      description: |
+        Mengubah status order dengan conditional update (anti double-process)
+        dan mengirim notifikasi ke pembeli via Discord DM.
+        Divalidasi oleh state machine. Auth: header `x-admin-secret`
+        (`DISCORD_ADMIN_SECRET`) atau `Authorization: Bearer <secret>`.
+      operationId: adminPaymentAction
+      security:
+        - adminSecret: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PaymentActionRequest" }
+            example: { orderId: "8f3a2b1c...", action: "accept" }
+      responses:
+        "200":
+          description: Aksi berhasil.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          message: { type: string }
+                          orderId: { type: string }
+        "400":
+          $ref: "#/components/responses/ValidationErrorResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedResponse"
+
+  /api/payments/expire:
+    post:
+      tags: [System]
+      summary: Expire order lewat batas waktu
+      description: |
+        Menemukan order `PENDING_PAYMENT` / `WAITING_CONFIRMATION` yang sudah
+        melewati `expiry_at` dan mengubahnya menjadi `EXPIRED` (per-order,
+        conditional update). Auth: `x-cron-secret` / Bearer (`CRON_SECRET`).
+      operationId: expireOverdueOrders
+      security:
+        - cronSecret: []
+      responses:
+        "200":
+          description: Ringkasan order yang di-expire.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          message: { type: string }
+                          expired: { type: number }
+                          errors:
+                            type: array
+                            items: { type: string }
+              example:
+                success: true
+                data: { message: "Expired 3 orders", expired: 3, errors: [] }
+        "401":
+          $ref: "#/components/responses/UnauthorizedResponse"
+        "503":
+          description: CRON_SECRET belum dikonfigurasi.
+
+  /api/cron/process-jobs:
+    get:
+      tags: [System]
+      summary: Proses antrian job invoice
+      description: "Memproses hingga 20 job invoice tertunda. Auth via Bearer atau `x-cron-secret` (`CRON_SECRET`)."
+      operationId: processJobs
+      security:
+        - cronSecret: []
+      responses:
+        "200":
+          description: Jumlah job yang diproses.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  processed: { type: number }
+                  message: { type: string }
+        "401":
+          $ref: "#/components/responses/UnauthorizedResponse"
+        "503":
+          description: CRON_SECRET belum dikonfigurasi.
+
+  /api/discord/interactions:
+    post:
+      tags: [System]
+      summary: Webhook interaksi Discord bot
+      description: |
+        Endpoint interaksi slash-command Discord. Signature ed25519 diverifikasi
+        menggunakan `DISCORD_PUBLIC_KEY` melalui header `x-signature-ed25519`
+        dan `x-signature-timestamp` (lib `discord-interactions`).
+      operationId: discordInteractions
+      security:
+        - discordSignature: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type: { type: integer, example: 1 }
+                id: { type: string }
+                token: { type: string }
+      responses:
+        "200":
+          description: Respons interaksi (PONG untuk ping).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type: { type: integer, example: 1 }
+        "401":
+          $ref: "#/components/responses/UnauthorizedResponse"
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: admin_token
+      description: |
+        Cookie session admin. Menerima `admin_token` (legacy JWT) dan cookie
+        Supabase Auth (`sb-*`).
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Bearer token admin — access token Supabase Auth ATAU legacy JWT HS256
+        (role `ADMIN`).
+    adminSecret:
+      type: apiKey
+      in: header
+      name: x-admin-secret
+      description: Secret `DISCORD_ADMIN_SECRET` untuk aksi verifikasi pembayaran.
+    cronSecret:
+      type: apiKey
+      in: header
+      name: x-cron-secret
+      description: "Secret `CRON_SECRET` untuk endpoint cron. Alternatifnya `Authorization: Bearer <secret>`."
+    discordSignature:
+      type: apiKey
+      in: header
+      name: x-signature-ed25519
+      description: |
+        Signature ed25519 Discord (dengan header `x-signature-timestamp`),
+        diverifikasi terhadap `DISCORD_PUBLIC_KEY`.
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+      description: Nomor halaman.
+    LimitParam:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      description: Jumlah item per halaman.
+
+  responses:
+    ValidationErrorResponse:
+      description: Input tidak valid (400).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+          example:
+            success: false
+            error:
+              code: VALIDATION_ERROR
+              message: "customerName: Name is required; items: At least one item is required"
+              details: { customerName: ["Name is required"] }
+    UnauthorizedResponse:
+      description: |
+        Tidak terautentikasi / kredensial salah (401). Catatan: sebagian
+        endpoint (confirm-transfer, payment-action, payments/expire, discord)
+        membungkus `ValidationError` dengan status 401, sehingga `error.code`
+        yang dikembalikan bisa `VALIDATION_ERROR` meski HTTP-nya 401.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+          example:
+            success: false
+            error: { code: UNAUTHORIZED, message: "Authentication required" }
+    NotFoundError:
+      description: Resource tidak ditemukan (404).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+          example:
+            success: false
+            error: { code: NOT_FOUND, message: "Product with id 'prod_abc' not found" }
+    ConflictResponse:
+      description: Konflik (409).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+          example:
+            success: false
+            error: { code: CONFLICT, message: "This checkout retry key is no longer valid" }
+    RateLimitedResponse:
+      description: Terlalu banyak permintaan (429).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+          example:
+            success: false
+            error: { code: RATE_LIMITED, message: "Too many requests" }
+
+  schemas:
+    # ── Envelope ──
+    SuccessEnvelope:
+      type: object
+      required: [success]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: {}
+        meta: { $ref: "#/components/schemas/Meta" }
+    ErrorEnvelope:
+      type: object
+      required: [success, error]
+      properties:
+        success: { type: boolean, enum: [false] }
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum: [VALIDATION_ERROR, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, CONFLICT, RATE_LIMITED, INTERNAL_ERROR]
+            message: { type: string }
+            details: {}
+    Meta:
+      type: object
+      properties:
+        page: { type: integer }
+        limit: { type: integer }
+        total: { type: integer }
+        totalPages: { type: integer }
+
+    # ── Enums ──
+    Currency:
+      type: string
+      enum: [IDR, USD]
+      default: IDR
+    Role:
+      type: string
+      enum: [ADMIN, CUSTOMER]
+    OrderStatus:
+      type: string
+      enum:
+        - PENDING
+        - PENDING_PAYMENT
+        - WAITING_PAYMENT
+        - WAITING_CONFIRMATION
+        - PAID
+        - PROCESSING
+        - COMPLETED
+        - REJECTED
+        - NEEDS_REVIEW
+        - CANCELLED
+        - FORCE_CANCELLED
+        - REFUNDED
+        - EXPIRED
+    PaymentAction:
+      type: string
+      enum: [accept, reject, cancel, force_cancel]
+
+    # ── Domain models ──
+    HealthResponse:
+      type: object
+      properties:
+        status: { type: string, enum: [healthy, unhealthy] }
+        timestamp: { type: string, format: date-time }
+        database: { type: string, enum: [connected, disconnected] }
+        version: { type: string }
+        uptime: { type: number }
+        error: { type: string }
+
+    Product:
+      type: object
+      description: |
+        Produk (camelCase) seperti dikembalikan endpoint publik `/api/products`.
+        Endpoint admin (`/api/admin/products*`) mengembalikan baris DB snake_case
+        (`min_stock`, `is_active`, `compare_price`, `category_id`, `created_at`,
+        dst.) — lihat contoh respons masing-masing operasi.
+      properties:
+        id: { type: string }
+        name: { type: string }
+        slug: { type: string }
+        description: { type: string }
+        price: { type: number }
+        priceUSD: { type: number, nullable: true }
+        comparePrice: { type: number, nullable: true }
+        unit: { type: string }
+        stock: { type: number }
+        minStock: { type: number }
+        badge: { type: string, nullable: true }
+        isActive: { type: boolean }
+        isFeatured: { type: boolean }
+        categoryId: { type: string }
+        priceFormatted: { type: string }
+        category: { $ref: "#/components/schemas/Category" }
+        images:
+          type: array
+          items: { $ref: "#/components/schemas/ProductImage" }
+
+    ProductImage:
+      type: object
+      properties:
+        id: { type: string }
+        productId: { type: string }
+        url: { type: string }
+        alt: { type: string, nullable: true }
+        sortOrder: { type: number }
+
+    Category:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        slug: { type: string }
+        description: { type: string, nullable: true }
+        icon: { type: string, nullable: true }
+        image: { type: string, nullable: true }
+        sortOrder: { type: number }
+        isActive: { type: boolean }
+        parentId: { type: string, nullable: true }
+
+    Order:
+      type: object
+      properties:
+        id: { type: string }
+        order_number: { type: string, pattern: "^LZ-[0-9]{8}-[A-Z0-9]{6}$" }
+        status: { $ref: "#/components/schemas/OrderStatus" }
+        customer_name: { type: string }
+        customer_discord: { type: string, nullable: true }
+        buyer_discord_id: { type: string, nullable: true }
+        subtotal: { type: number }
+        tax: { type: number }
+        total: { type: number }
+        total_usd: { type: number, nullable: true }
+        currency: { $ref: "#/components/schemas/Currency" }
+        payment_method: { type: string, nullable: true }
+        expiry_at: { type: string, format: date-time, nullable: true }
+        confirmed_at: { type: string, format: date-time, nullable: true }
+        paid_at: { type: string, format: date-time, nullable: true }
+        completed_at: { type: string, format: date-time, nullable: true }
+        cancelled_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    OrderItem:
+      type: object
+      properties:
+        id: { type: string }
+        order_id: { type: string }
+        product_id: { type: string }
+        name: { type: string }
+        price: { type: number }
+        quantity: { type: number }
+        total: { type: number }
+
+    Payment:
+      type: object
+      properties:
+        id: { type: string }
+        order_id: { type: string }
+        method: { type: string }
+        amount: { type: number }
+        currency: { type: string }
+        status: { type: string }
+        verified_at: { type: string, format: date-time, nullable: true }
+        paid_at: { type: string, format: date-time, nullable: true }
+
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        email: { type: string, format: email }
+        name: { type: string }
+        role: { $ref: "#/components/schemas/Role" }
+        avatar: { type: string, nullable: true }
+        discord: { type: string, nullable: true }
+        phone: { type: string, nullable: true }
+        is_active: { type: boolean }
+        last_login_at: { type: string, format: date-time, nullable: true }
+        last_sign_in_at: { type: string, format: date-time, nullable: true }
+        banned_until: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+
+    Setting:
+      type: object
+      properties:
+        id: { type: string }
+        key: { type: string }
+        value: { type: string }
+        type: { type: string }
+        group_name: { type: string }
+
+    Invoice:
+      type: object
+      properties:
+        id: { type: string }
+        invoice_no: { type: string }
+        order_id: { type: string }
+        status: { type: string }
+        pdf_path: { type: string, nullable: true }
+
+    SafeOrderData:
+      type: object
+      description: >-
+        Respons lookup `?orderId=` di `/api/orders/track`: allowlist field
+        snake_case dari `getOrderForPayment`. Field sensitif (email, notes,
+        token hash, payment_proof) tidak pernah disertakan.
+      properties:
+        id: { type: string }
+        order_number: { type: string }
+        customer_name: { type: string }
+        buyer_discord_id: { type: string, nullable: true }
+        customer_discord: { type: string, nullable: true }
+        total: { type: number }
+        currency: { type: string }
+        payment_method: { type: string, nullable: true }
+        status: { $ref: "#/components/schemas/OrderStatus" }
+        expiry_at: { type: string, format: date-time, nullable: true }
+        confirmed_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+        order_item: { type: array, items: { $ref: "#/components/schemas/OrderItem" } }
+        items: { type: array, items: { $ref: "#/components/schemas/OrderItem" } }
+        orderItem: { type: array, items: { $ref: "#/components/schemas/OrderItem" } }
+
+    TrackingInfo:
+      type: object
+      description: >-
+        Respons lookup `?orderNumber=` di `/api/orders/track` (camelCase).
+      properties:
+        id: { type: string }
+        orderNumber: { type: string }
+        status: { $ref: "#/components/schemas/OrderStatus" }
+        customerName: { type: string }
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              quantity: { type: number }
+              price: { type: number }
+              total: { type: number }
+        subtotal: { type: number }
+        tax: { type: number }
+        total: { type: number }
+        currency: { type: string }
+        paymentMethod: { type: string, nullable: true }
+        statusHistory:
+          type: array
+          items:
+            type: object
+            properties:
+              status: { $ref: "#/components/schemas/OrderStatus" }
+              date: { type: string, format: date-time }
+        expiryAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    # ── Request bodies ──
+    CreateOrderRequest:
+      type: object
+      required: [customerName, customerDiscord, items, paymentMethod]
+      properties:
+        customerName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        customerDiscord:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: "Snowflake 17–19 digit, user#0000, atau username Discord."
+        customerIGN:
+          type: string
+          maxLength: 100
+        customerNotes:
+          type: string
+          maxLength: 500
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [productId, quantity]
+            properties:
+              productId: { type: string, minLength: 1 }
+              quantity: { type: integer, minimum: 1, maximum: 999 }
+        paymentMethod:
+          type: string
+          minLength: 1
+          description: "Contoh: bank_transfer, gopay, dana, qris."
+        currency: { $ref: "#/components/schemas/Currency" }
+
+    ConfirmTransferRequest:
+      type: object
+      required: [buyerName, buyerDiscordId]
+      properties:
+        buyerName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        buyerDiscordId:
+          type: string
+          minLength: 1
+          maxLength: 100
+        confirmationToken:
+          type: string
+          description: Wajib bila token tidak tersedia di cookie `payment_confirmation_<orderId>`.
+        note:
+          type: string
+          maxLength: 500
+        paymentProof:
+          type: string
+          format: binary
+          description: "File bukti transfer (multipart/form-data)."
+
+    AdminLoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+
+    AdminLoginResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        user:
+          type: object
+          properties:
+            id: { type: string }
+            email: { type: string }
+            name: { type: string, nullable: true }
+            role: { type: string, example: "ADMIN" }
+
+    ProductUpsertRequest:
+      type: object
+      properties:
+        name: { type: string }
+        slug: { type: string }
+        description: { type: string }
+        price: { type: number }
+        comparePrice: { type: number }
+        unit: { type: string }
+        stock: { type: integer }
+        minStock: { type: integer }
+        badge: { type: string }
+        isActive: { type: boolean }
+        isFeatured: { type: boolean }
+        categoryId: { type: string }
+        images:
+          type: array
+          items:
+            type: object
+            properties:
+              url: { type: string }
+              alt: { type: string }
+              sortOrder: { type: integer }
+
+    CategoryUpsertRequest:
+      type: object
+      properties:
+        name: { type: string }
+        slug: { type: string }
+        description: { type: string, nullable: true }
+        icon: { type: string, nullable: true }
+        image: { type: string, nullable: true }
+        sortOrder: { type: integer }
+        isActive: { type: boolean }
+        parentId: { type: string, nullable: true }
+
+    CreateUserRequest:
+      type: object
+      required: [email, password, name]
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+        password: { type: string, minLength: 6 }
+        name: { type: string }
+        role: { $ref: "#/components/schemas/Role" }
+        discord: { type: string, nullable: true }
+        phone: { type: string, nullable: true }
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        name: { type: string }
+        role: { $ref: "#/components/schemas/Role" }
+        discord: { type: string, nullable: true }
+        phone: { type: string, nullable: true }
+        is_active: { type: boolean }
+        password: { type: string, minLength: 6 }
+
+    UpsertSettingRequest:
+      type: object
+      required: [key, value]
+      properties:
+        key: { type: string }
+        value: { type: string }
+        type: { type: string, default: text }
+        group: { type: string, default: general }
+
+    PaymentActionRequest:
+      type: object
+      required: [orderId, action]
+      properties:
+        orderId: { type: string, minLength: 1 }
+        action: { $ref: "#/components/schemas/PaymentAction" }

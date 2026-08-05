@@ -6,6 +6,8 @@
 import { NextResponse } from "next/server";
 import { isAdminRequest } from "@/lib/admin-auth";
 import { supabaseAdmin } from "@/lib/supabase";
+import { createProductSchema, zodErrorMessages } from "@/lib/validators/admin";
+import { successResponse, errorResponse, AppError, UnauthorizedError, ValidationError } from "@/lib/errors";
 
 // Auth helper
 async function checkAuth() {
@@ -15,7 +17,7 @@ async function checkAuth() {
 // GET /api/admin/products
 export async function GET(request: Request) {
   if (!(await checkAuth())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(errorResponse(new UnauthorizedError()), { status: 401 });
   }
 
   const { searchParams } = new URL(request.url);
@@ -46,35 +48,42 @@ export async function GET(request: Request) {
 
     if (error) throw error;
 
-    return NextResponse.json({
-      products: data || [],
-      total: count || 0,
+    const total = count || 0;
+    return NextResponse.json(successResponse(data || [], {
       page,
       limit,
-      totalPages: Math.ceil((count || 0) / limit),
-    });
+      total,
+      totalPages: Math.ceil(total / limit),
+    }));
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      errorResponse(new AppError(500, "INTERNAL_ERROR", error.message)),
+      { status: 500 }
+    );
   }
 }
 
 // POST /api/admin/products
 export async function POST(request: Request) {
   if (!(await checkAuth())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(errorResponse(new UnauthorizedError()), { status: 401 });
   }
 
   try {
     const body = await request.json();
+    const parsed = createProductSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        errorResponse(new ValidationError(zodErrorMessages(parsed.error))),
+        { status: 400 }
+      );
+    }
+
     const {
       name, slug, description, price, comparePrice, unit,
       stock, minStock, badge, isActive, isFeatured,
       categoryId, images,
-    } = body;
-
-    if (!name || !slug || price === undefined || !categoryId) {
-      return NextResponse.json({ error: "Name, slug, price, and category are required" }, { status: 400 });
-    }
+    } = parsed.data;
 
     // Check if slug already exists
     const { data: existing } = await supabaseAdmin
@@ -84,7 +93,10 @@ export async function POST(request: Request) {
       .limit(1);
 
     if (existing && existing.length > 0) {
-      return NextResponse.json({ error: "Slug already exists" }, { status: 409 });
+      return NextResponse.json(
+        errorResponse(new AppError(409, "CONFLICT", "Slug already exists")),
+        { status: 409 }
+      );
     }
 
     // Create product
@@ -130,12 +142,14 @@ export async function POST(request: Request) {
       if (imgError) throw imgError;
     }
 
-    return NextResponse.json({
-      success: true,
-      product,
-      message: "Product created successfully",
-    }, { status: 201 });
+    return NextResponse.json(
+      successResponse({ product, message: "Product created successfully" }),
+      { status: 201 }
+    );
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      errorResponse(new AppError(500, "INTERNAL_ERROR", error.message)),
+      { status: 500 }
+    );
   }
 }
