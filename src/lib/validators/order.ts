@@ -5,6 +5,7 @@
 
 import { z } from "zod";
 import { isValidPaymentToken } from "@/lib/payment/confirmation-token";
+import { MANUAL_PAYMENT_METHODS } from "@/lib/payment/constants";
 
 // ─── Order Creation ─────────────────────────────────────────
 
@@ -22,8 +23,16 @@ export const createOrderSchema = z.object({
         quantity: z.number().int().min(1).max(999),
       })
     )
-    .min(1, "At least one item is required"),
-  paymentMethod: z.string().min(1, "Payment method is required"),
+    .min(1, "At least one item is required")
+    // Cap distinct line items so a single request can't make the atomic RPC
+    // lock/re-select an unbounded number of product rows (row-lock DoS).
+    // 20 is well above any realistic cart for this catalog.
+    .max(20, "Maximum 20 items per order"),
+  // Close the data model: only the payment methods the store actually
+  // supports (PAYMENT_ACCOUNTS) are accepted.
+  paymentMethod: z.enum([...MANUAL_PAYMENT_METHODS], {
+    message: "Payment method tidak didukung",
+  }),
   currency: z.string().optional().default("IDR"),
 });
 

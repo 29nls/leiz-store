@@ -5,6 +5,7 @@
 import { NextResponse } from "next/server";
 import { isAdminRequest } from "@/lib/admin-auth";
 import { supabaseAdmin } from "@/lib/supabase";
+import { buildIlikeOrFilter } from "@/lib/supabase-search";
 
 async function checkAuth() {
   return isAdminRequest();
@@ -28,9 +29,7 @@ export async function GET(request: Request) {
       .select("*, items:order_item(*)", { count: "exact" });
 
     if (search) {
-      query = query.or(
-        `order_number.ilike.%${search}%,customer_name.ilike.%${search}%`
-      );
+      query = query.or(buildIlikeOrFilter(["order_number", "customer_name"], search));
     }
 
     if (status) {

@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { getSupabaseBrowser, subscribeToTable } from "@/lib/supabase-browser";
 import { getStatusBadge } from "@/lib/status-colors";
+import { buildIlikeOrFilter } from "@/lib/supabase-search";
 
 interface OrderItem {
   id: string; name: string; price: number; quantity: number; total: number;
@@ -88,7 +89,7 @@ export default function AdminOrdersPage() {
     setLoading(true); setError("");
     try {
       let q = supabase.from("order").select("*, items:order_item(*)", { count: "exact" });
-      if (searchDb) q = q.or(`order_number.ilike.%${searchDb}%,customer_name.ilike.%${searchDb}%`);
+      if (searchDb) q = q.or(buildIlikeOrFilter(["order_number", "customer_name"], searchDb));
       if (statusFilter !== "ALL") q = q.eq("status", statusFilter);
       const from = (page - 1) * limit;
       const { data, error: err, count } = await q.order("created_at", { ascending: false }).range(from, from + limit - 1);
