@@ -126,14 +126,37 @@ export type UpdateUserInput = z.infer<typeof updateUserSchema>;
 
 // ─── Setting ─────────────────────────────────────────────────
 
-export const upsertSettingSchema = z.object({
-  key: z.string().trim().min(1, "Key wajib diisi").max(100, "Key terlalu panjang"),
-  value: z
-    .union([z.string(), z.number(), z.boolean()])
-    .transform((v) => String(v)),
-  type: z.string().trim().max(50).optional().default("text"),
-  group: z.string().trim().max(50).optional().default("general"),
-});
+/** Key setting yang diizinkan. Tabel `setting` bersifat world-readable (RLS
+ *  "Public read"), jadi key arbitrer dilarang agar secret tidak pernah bisa
+ *  tersimpan lalu bocor publik (LOW-4). Tambahkan key baru di sini dan di
+ *  `src/app/admin/settings/page.tsx` (DISPLAY_NAMES) secara beriringan. */
+export const ALLOWED_SETTING_KEYS = [
+  "store_name",
+  "store_description",
+  "currency",
+  "tax_rate",
+  "min_order_amount",
+  "discord_link",
+  "whatsapp_link",
+  "email",
+  "announcement",
+] as const;
+
+export type AllowedSettingKey = (typeof ALLOWED_SETTING_KEYS)[number];
+
+export const upsertSettingSchema = z
+  .object({
+    key: z.string().trim().min(1, "Key wajib diisi").max(100, "Key terlalu panjang"),
+    value: z
+      .union([z.string(), z.number(), z.boolean()])
+      .transform((v) => String(v)),
+    type: z.string().trim().max(50).optional().default("text"),
+    group: z.string().trim().max(50).optional().default("general"),
+  })
+  .refine(
+    (data) => ALLOWED_SETTING_KEYS.includes(data.key as AllowedSettingKey),
+    { message: "Key setting tidak diizinkan", path: ["key"] }
+  );
 
 export type UpsertSettingInput = z.infer<typeof upsertSettingSchema>;
 

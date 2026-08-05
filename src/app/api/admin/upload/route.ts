@@ -10,6 +10,7 @@ import {
 } from "@/lib/errors";
 import { uploadFileSchema, zodErrorMessages, MAX_UPLOAD_SIZE } from "@/lib/validators/admin";
 import { enforceAdminRateLimit } from "@/lib/rate-limit";
+import { hasValidImageSignature } from "@/lib/payment/payment-proof-storage";
 
 // z.instanceof(File) memerlukan global File — pastikan runtime Node (bukan edge).
 export const runtime = "nodejs";
@@ -48,6 +49,19 @@ export async function POST(request: Request) {
     const filePath = `products/${fileName}`;
 
     const buffer = Buffer.from(await validFile.arrayBuffer());
+
+    // Fail-closed magic-byte check (LOW-3): verify the content matches the
+    // declared image type instead of trusting the client-sent MIME type, so
+    // the public bucket can never serve a polyglot/HTML-as-image. Same
+    // validation as payment-proof uploads (covers all ALLOWED_IMAGE_TYPES).
+    if (!hasValidImageSignature(validFile.type, buffer)) {
+      return NextResponse.json(
+        errorResponse(
+          new ValidationError("Konten file tidak sesuai dengan tipe yang dideklarasikan")
+        ),
+        { status: 400 }
+      );
+    }
 
     // Ensure bucket exists
     const { data: buckets } = await supabaseAdmin.storage.listBuckets();
