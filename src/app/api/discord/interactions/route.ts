@@ -300,6 +300,41 @@ export async function POST(req: NextRequest) {
       `[Discord] Button click: action=${action} orderId=${orderId} admin=${adminId}`
     );
 
+    // ── Admin authorization (fail closed) ────────────────────────────────────
+    // The ed25519 signature verified above only proves the request came from
+    // Discord — NOT that the clicker may perform privileged actions. Any member
+    // who can see the seller-channel message can click these buttons, so gate
+    // them on a dedicated admin role. When DISCORD_ADMIN_ROLE_ID is not
+    // configured, every privileged action is denied rather than defaulting open.
+    const adminRoleId = process.env.DISCORD_ADMIN_ROLE_ID;
+    if (!adminRoleId) {
+      console.error(
+        "[Discord] DISCORD_ADMIN_ROLE_ID is not configured; denying privileged button action"
+      );
+      return NextResponse.json({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          content:
+            "❌ Aksi ini sedang dinonaktifkan (server misconfiguration). Silakan hubungi developer.",
+          flags: 64, // EPHEMERAL
+        },
+      });
+    }
+
+    const memberRoles: string[] = interaction.member?.roles ?? [];
+    if (!memberRoles.includes(adminRoleId)) {
+      console.warn(
+        `[Discord] Unauthorized button click denied: action=${action} orderId=${orderId} user=${adminId}`
+      );
+      return NextResponse.json({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          content: "❌ Kamu tidak punya akses untuk melakukan aksi ini.",
+          flags: 64, // EPHEMERAL
+        },
+      });
+    }
+
     // ── Do ALL work synchronously before returning ────────────────────────────
     // Uses UPDATE_MESSAGE (type 7) so the response itself directly updates the
     // Discord message, eliminating the need for a separate PATCH call.

@@ -83,11 +83,13 @@ function req(body: any, headers: Record<string, string> = {}, textThrows = false
   };
 }
 
+const ADMIN_ROLE = "admin_role";
+
 function btn(customId: string, overrides: Record<string, any> = {}): any {
   return {
     type: 3, id: "interact_1", application_id: APP_ID, token: TOKEN,
     data: { custom_id: customId },
-    member: { user: { id: "admin_1", username: "Admin" } },
+    member: { user: { id: "admin_1", username: "Admin" }, roles: [ADMIN_ROLE] },
     message: { id: "msg_1", embeds: [{ title: "Test", color: 0xf59e0b, fields: [], footer: { text: "LEIZ" } }] },
     ...overrides,
   };
@@ -110,9 +112,13 @@ beforeEach(() => {
   }
   (global.fetch as jest.Mock).mockReset().mockResolvedValue({ ok: true, text: jest.fn().mockResolvedValue("") });
   process.env.DISCORD_PUBLIC_KEY = "test_public_key";
+  process.env.DISCORD_ADMIN_ROLE_ID = ADMIN_ROLE;
 });
 
-afterEach(() => { delete process.env.DISCORD_PUBLIC_KEY; });
+afterEach(() => {
+  delete process.env.DISCORD_PUBLIC_KEY;
+  delete process.env.DISCORD_ADMIN_ROLE_ID;
+});
 
 // ── Mock verification test ──────────────────────────────────────────────────
 
@@ -203,14 +209,50 @@ describe("Custom ID", () => {
     expect(b.data.content).toContain("tidak dikenali");
   });
 
-  it("falls back to interaction.user when member.user missing", async () => {
-    mocks.adminAcceptPayment.mockResolvedValueOnce({ success: true, order: order() });
+  it("denies when member is absent (DM context) even with interaction.user", async () => {
+    // No mockResolvedValueOnce here: the request must be denied before the
+    // payment service is reached. Queuing a once-value that never gets consumed
+    // would leak into the next test that calls the same mock.
     const interaction = btn("payment_accept_ord-1", { user: { id: "direct_u", username: "Direct" } });
     delete interaction.member;
     const res = await POST(req(interaction, hdrs()) as any);
     const b = await res.json();
+    expect(b.type).toBe(4);
+    expect(b.data.flags).toBe(64);
+    expect(mocks.adminAcceptPayment).not.toHaveBeenCalled();
+  });
+});
+
+// ── Admin role authorization (HIGH-1) ───────────────────────────────────────
+
+describe("Admin authorization", () => {
+  it("denies (fail closed) when DISCORD_ADMIN_ROLE_ID is not configured", async () => {
+    delete process.env.DISCORD_ADMIN_ROLE_ID;
+    const res = await POST(req(btn("payment_accept_ord-1"), hdrs()) as any);
+    const b = await res.json();
+    expect(b.type).toBe(4);
+    expect(b.data.flags).toBe(64);
+    expect(mocks.adminAcceptPayment).not.toHaveBeenCalled();
+  });
+
+  it("denies when the clicking member does not hold the admin role", async () => {
+    const interaction = btn("payment_accept_ord-1", {
+      member: { user: { id: "user_9", username: "Member" }, roles: ["some_other_role"] },
+    });
+    const res = await POST(req(interaction, hdrs()) as any);
+    const b = await res.json();
+    expect(b.type).toBe(4);
+    expect(b.data.flags).toBe(64);
+    expect(b.data.content).toContain("tidak punya akses");
+    expect(mocks.adminAcceptPayment).not.toHaveBeenCalled();
+  });
+
+  it("allows when the member holds the admin role", async () => {
+    mocks.adminAcceptPayment.mockResolvedValueOnce({ success: true, order: order() });
+    const res = await POST(req(btn("payment_accept_ord-1"), hdrs()) as any);
+    const b = await res.json();
     expect(b.type).toBe(7);
-    expect(b.data.content).toContain("<@direct_u>");
+    expect(mocks.adminAcceptPayment).toHaveBeenCalledWith("ord-1", "admin_1");
   });
 });
 
