@@ -49,6 +49,7 @@ test.describe("Checkout payment token transport", () => {
 
     await page.goto("/checkout");
     await page.getByLabel("Name *").fill("E2E Customer");
+    await page.getByLabel("Email *").fill("e2e@example.com");
     await page.getByLabel("Discord User ID *").fill("123456789012345678");
     await page.getByRole("button", { name: "Continue" }).click();
     await page.getByRole("button", { name: "Continue" }).click();

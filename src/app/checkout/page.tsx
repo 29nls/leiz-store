@@ -20,6 +20,8 @@ import { useCartStore } from "@/stores/cart-store";
 import { formatPrice, cn } from "@/lib/utils";
 import { PAYMENT_ACCOUNTS } from "@/lib/payment/constants";
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 const steps = [
   { id: 1, name: "Customer Info", icon: User },
   { id: 2, name: "Order Review", icon: Package },
@@ -43,11 +45,14 @@ export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [discordError, setDiscordError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
   const discordRef = useRef<HTMLInputElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
   const idempotencyKeyRef = useRef<string | null>(null);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
+    email: "",
     discord: "",
     ign: "",
     notes: "",
@@ -77,6 +82,7 @@ export default function CheckoutPage() {
         },
         body: JSON.stringify({
           customerName: formData.name,
+          customerEmail: formData.email || undefined,
           customerDiscord: formData.discord || undefined,
           customerIGN: formData.ign || undefined,
           customerNotes: formData.notes || undefined,
@@ -132,7 +138,21 @@ export default function CheckoutPage() {
       discordRef.current?.focus();
       return;
     }
+    if (step === 1) {
+      const emailValue = formData.email.trim();
+      if (!emailValue) {
+        setEmailError("Email is required so we can send your invoice.");
+        emailRef.current?.focus();
+        return;
+      }
+      if (!EMAIL_PATTERN.test(emailValue)) {
+        setEmailError("Please enter a valid email address.");
+        emailRef.current?.focus();
+        return;
+      }
+    }
     setDiscordError(null);
+    setEmailError(null);
     setStep(step + 1);
   };
 
@@ -230,6 +250,35 @@ export default function CheckoutPage() {
                       className="rounded-lg border border-border bg-surface"
                       placeholder="Your name"
                     />
+                  </div>
+                  <div>
+                    <label htmlFor="email" className="block text-sm font-medium text-text mb-2">Email *</label>
+                    <input
+                      id="email"
+                      ref={emailRef}
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => {
+                        setFormData({ ...formData, email: e.target.value });
+                        if (emailError) setEmailError(null);
+                      }}
+                      onBlur={() => {
+                        const emailValue = formData.email.trim();
+                        if (!emailValue) {
+                          setEmailError("Email is required so we can send your invoice.");
+                        } else if (!EMAIL_PATTERN.test(emailValue)) {
+                          setEmailError("Please enter a valid email address.");
+                        }
+                      }}
+                      aria-invalid={emailError ? true : undefined}
+                      aria-describedby={emailError ? "email-error" : undefined}
+                      className={cn("rounded-lg border bg-surface", emailError ? "border-error" : "border-border")}
+                      placeholder="you@example.com"
+                    />
+                    <p className="text-xs text-text-secondary/60 mt-1">Your invoice will be sent to this email.</p>
+                    {emailError && (
+                      <p id="email-error" className="text-xs text-error mt-1">{emailError}</p>
+                    )}
                   </div>
                   <div>
                     <label htmlFor="discord" className="block text-sm font-medium text-text mb-2">Discord User ID *</label>
@@ -440,7 +489,7 @@ export default function CheckoutPage() {
             <div className="flex justify-between mt-10 pt-6 border-t border-border">
               {step > 1 ? (
                <button
-                   onClick={() => { setError(null); setDiscordError(null); setStep(step - 1); }}
+                   onClick={() => { setError(null); setDiscordError(null); setEmailError(null); setStep(step - 1); }}
                   className="flex items-center gap-2 rounded-lg border border-border px-6 py-3 text-sm font-medium text-text-secondary hover:text-text hover:bg-surface/40 transition-all duration-300"
                 >
                   <ArrowLeft className="h-4 w-4" />
@@ -452,7 +501,7 @@ export default function CheckoutPage() {
               <button
                 onClick={handleContinue}
                 disabled={
-                  (step === 1 && !formData.name) ||
+                  (step === 1 && (!formData.name || !formData.email.trim())) ||
                   (step === 3 && isSubmitting)
                 }
                 className={cn(
@@ -460,7 +509,7 @@ export default function CheckoutPage() {
                   step === 3
                     ? "bg-success text-white shadow-lg shadow-success/20 hover:bg-success/90"
                     : "bg-primary text-white shadow-lg shadow-primary/20 hover:bg-ember-bright",
-                  ((step === 1 && !formData.name) || (step === 3 && isSubmitting)) && "opacity-50 cursor-not-allowed"
+                  ((step === 1 && (!formData.name || !formData.email.trim())) || (step === 3 && isSubmitting)) && "opacity-50 cursor-not-allowed"
                 )}
               >
                 {isSubmitting ? (

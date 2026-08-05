@@ -13,6 +13,7 @@ export function paymentConfirmationCookieName(orderId: string): string {
 
 export interface CreateOrderFingerprintInput {
   customerName: string;
+  customerEmail?: string;
   customerDiscord?: string;
   customerIGN?: string;
   customerNotes?: string;
@@ -36,6 +37,7 @@ function normalizeString(value: string | undefined): string {
 export function fingerprintCreateOrderInput(input: CreateOrderFingerprintInput): string {
   const canonical = {
     customerName: normalizeString(input.customerName),
+    customerEmail: normalizeString(input.customerEmail),
     customerDiscord: normalizeString(input.customerDiscord),
     customerIGN: normalizeString(input.customerIGN),
     customerNotes: normalizeString(input.customerNotes),

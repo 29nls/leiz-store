@@ -39,6 +39,7 @@ const CAMEL_TO_SNAKE: Record<string, string> = {
   paymentProof: "payment_proof",
   paymentRef: "payment_ref",
   customerName: "customer_name",
+  customerEmail: "customer_email",
   customerDiscord: "customer_discord",
   customerIGN: "customer_ign",
   customerNotes: "customer_notes",

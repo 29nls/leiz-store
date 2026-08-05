@@ -9,8 +9,20 @@ import { MANUAL_PAYMENT_METHODS } from "@/lib/payment/constants";
 
 // ─── Order Creation ─────────────────────────────────────────
 
+/** Shared strict email pattern; reused server-side when delivering invoice emails. */
+export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export const createOrderSchema = z.object({
   customerName: z.string().min(1, "Name is required").max(100),
+  // Optional in the API so existing clients keep working; the checkout UI
+  // requires it. Stored to order.customer_email and used as the invoice email
+  // recipient. When absent, the invoice email is SKIPPED (never faked).
+  customerEmail: z
+    .string()
+    .max(254, "Email terlalu panjang")
+    .optional()
+    .or(z.literal(""))
+    .refine((value) => !value || EMAIL_PATTERN.test(value), { message: "Email tidak valid" }),
   customerDiscord: z.string().min(1, "Discord ID is required").max(100).refine(isValidDiscordId, {
     message: "Discord ID tidak valid. Masukkan User ID numerik (17-19 digit) atau username Discord.",
   }),

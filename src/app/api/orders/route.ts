@@ -56,10 +56,11 @@ export const POST = withErrorHandling(async (
     );
   }
 
-  const { customerName, customerDiscord, customerIGN, customerNotes, items, paymentMethod, currency } = parsed.data;
+  const { customerName, customerEmail, customerDiscord, customerIGN, customerNotes, items, paymentMethod, currency } = parsed.data;
 
   const result = await orderService.create({
     customerName,
+    customerEmail: customerEmail || undefined,
     customerDiscord: customerDiscord || undefined,
     customerIGN: customerIGN || undefined,
     customerNotes: customerNotes || undefined,
