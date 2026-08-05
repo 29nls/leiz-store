@@ -17,6 +17,7 @@ import {
   forecastRepository,
 } from "@/lib/repositories";
 import { convertCurrency, type Currency } from "@/lib/currency";
+import { formatDateTime } from "@/lib/datetime";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@/lib/prisma-types";
 import { PAYMENT_EXPIRY_MS } from "@/lib/payment/constants";
@@ -703,11 +704,10 @@ export const notificationService = {
       `💰 Total: Rp${order.total.toLocaleString("id-ID")}`,
       `💳 Payment: ${order.paymentMethod}`,
       order.customerDiscord ? `🎮 Discord: ${order.customerDiscord}` : null,
-      ``,
-      `⏰ ${new Date().toLocaleString("id-ID")}`,
-    ]
-      .filter(Boolean)
-      .join("\n");
+      ``,    `⏰ ${formatDateTime(new Date(), { month: "numeric", second: "2-digit" })}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
 
     // Send to all configured channels
     await Promise.allSettled([
