@@ -6,6 +6,7 @@
 import { NextResponse } from "next/server";
 import { isAdminRequest } from "@/lib/admin-auth";
 import { supabaseAdmin } from "@/lib/supabase";
+import { createCategorySchema, zodErrorMessages } from "@/lib/validators/admin";
 
 async function checkAuth() {
   return isAdminRequest();
@@ -50,11 +51,12 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { name, slug, description, icon, image, sortOrder, isActive, parentId } = body;
-
-    if (!name) {
-      return NextResponse.json({ error: "Category name is required" }, { status: 400 });
+    const parsed = createCategorySchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: zodErrorMessages(parsed.error) }, { status: 400 });
     }
+
+    const { name, slug, description, icon, image, sortOrder, isActive, parentId } = parsed.data;
 
     // Auto-generate slug if not provided
     const generatedSlug = slug || name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");

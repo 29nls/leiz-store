@@ -6,6 +6,7 @@
 import { NextResponse } from "next/server";
 import { isAdminRequest } from "@/lib/admin-auth";
 import { supabaseAdmin } from "@/lib/supabase";
+import { updateProductSchema, zodErrorMessages } from "@/lib/validators/admin";
 
 async function checkAuth() {
   return isAdminRequest();
@@ -24,11 +25,16 @@ export async function PUT(
 
   try {
     const body = await request.json();
+    const parsed = updateProductSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: zodErrorMessages(parsed.error) }, { status: 400 });
+    }
+
     const {
       name, slug, description, price, comparePrice, unit,
       stock, minStock, badge, isActive, isFeatured,
       categoryId, images,
-    } = body;
+    } = parsed.data;
 
     // Check if product exists
     const { data: existing } = await supabaseAdmin

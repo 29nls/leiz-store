@@ -1,5 +1,17 @@
 -- ============================================================
 -- LEIZ STORE - Supabase Database Schema (TEXT IDs for JSON compat)
+--
+-- Consolidated baseline matching the FINAL state produced by applying
+-- migrations 003_invoice.sql through 009_database_optimizations.sql:
+--   * invoice, whatsapp_queue, job_queue        (migration 003 + 007 columns)
+--   * payment_confirmation, order_log           (migration 005)
+--   * order.customer_phone                      (migration 004)
+--   * order.expiry_at partial index             (migration 005)
+--   * index optimization set                    (migration 009)
+--
+-- Stored functions (create_order_atomic, claim_next_job,
+-- recover_stale_jobs) and storage buckets intentionally remain owned by the
+-- migrations; after applying this file, still run every migration in order.
 -- ============================================================
 
 -- ─── Stores ──────────────────────────────────────────────────
@@ -17,6 +29,11 @@ DROP TABLE IF EXISTS public.product_recommendation CASCADE;
 DROP TABLE IF EXISTS public.customer_segment CASCADE;
 DROP TABLE IF EXISTS public.sales_forecast CASCADE;
 DROP TABLE IF EXISTS public.analytics_event CASCADE;
+DROP TABLE IF EXISTS public.job_queue CASCADE;
+DROP TABLE IF EXISTS public.whatsapp_queue CASCADE;
+DROP TABLE IF EXISTS public.invoice CASCADE;
+DROP TABLE IF EXISTS public.order_log CASCADE;
+DROP TABLE IF EXISTS public.payment_confirmation CASCADE;
 DROP TABLE IF EXISTS public.payment CASCADE;
 DROP TABLE IF EXISTS public.order_idempotency CASCADE;
 DROP TABLE IF EXISTS public.order_item CASCADE;
@@ -124,6 +141,7 @@ CREATE TABLE public.order (
   customer_discord TEXT,
   customer_ign TEXT,
   customer_notes TEXT,
+  customer_phone TEXT,
   subtotal DOUBLE PRECISION NOT NULL DEFAULT 0,
   subtotal_usd DOUBLE PRECISION,
   tax DOUBLE PRECISION NOT NULL DEFAULT 0,
@@ -147,7 +165,13 @@ CREATE TABLE public.order (
   store_id TEXT REFERENCES public.store(id) ON DELETE SET NULL,
   notes TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  -- Vocabulary matches migration 009 (STATUS_TRANSITIONS in constants.ts).
+  CONSTRAINT order_status_check CHECK (status IN (
+    'PENDING', 'PENDING_PAYMENT', 'WAITING_PAYMENT', 'WAITING_CONFIRMATION',
+    'PAID', 'PROCESSING', 'NEEDS_REVIEW', 'REJECTED', 'COMPLETED',
+    'CANCELLED', 'FORCE_CANCELLED', 'REFUNDED', 'EXPIRED'
+  ))
 );
 
 CREATE TABLE public.order_item (
@@ -195,6 +219,79 @@ CREATE TABLE public.payment (
   notes TEXT,
   verified_at TIMESTAMPTZ,
   paid_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- One row per buyer-submitted transfer confirmation (migration 005).
+CREATE TABLE public.payment_confirmation (
+  id TEXT PRIMARY KEY,
+  order_id TEXT NOT NULL UNIQUE REFERENCES public.order(id) ON DELETE CASCADE,
+  buyer_name TEXT NOT NULL,
+  buyer_discord_id TEXT,
+  note TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Immutable audit trail of order status transitions (migration 005).
+CREATE TABLE public.order_log (
+  id TEXT PRIMARY KEY,
+  order_id TEXT NOT NULL REFERENCES public.order(id) ON DELETE CASCADE,
+  actor_type TEXT NOT NULL,
+  actor_id TEXT,
+  action TEXT NOT NULL,
+  previous_status TEXT,
+  new_status TEXT,
+  metadata JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Invoice per order, 1:1 (migration 003; pdf_path from 007).
+CREATE TABLE public.invoice (
+  id TEXT PRIMARY KEY,
+  order_id TEXT NOT NULL UNIQUE REFERENCES public.order(id) ON DELETE CASCADE,
+  invoice_no TEXT NOT NULL UNIQUE,
+  status TEXT NOT NULL DEFAULT 'PENDING',
+  pdf_url TEXT,
+  pdf_path TEXT,
+  sent_via_email BOOLEAN NOT NULL DEFAULT FALSE,
+  sent_via_wa BOOLEAN NOT NULL DEFAULT FALSE,
+  email_status TEXT DEFAULT 'PENDING',
+  wa_status TEXT DEFAULT 'PENDING',
+  error_log JSONB,
+  store_id TEXT REFERENCES public.store(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  sent_at TIMESTAMPTZ
+);
+
+-- Outbound WhatsApp message queue for invoice delivery (migration 003).
+CREATE TABLE public.whatsapp_queue (
+  id TEXT PRIMARY KEY,
+  order_id TEXT REFERENCES public.order(id) ON DELETE SET NULL,
+  to_number TEXT NOT NULL,
+  message TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'PENDING',
+  error_log TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  sent_at TIMESTAMPTZ
+);
+
+-- Durable background job queue (migration 003; dedupe/lease from 007).
+CREATE TABLE public.job_queue (
+  id TEXT PRIMARY KEY,
+  type TEXT NOT NULL,
+  payload JSONB NOT NULL DEFAULT '{}',
+  status TEXT NOT NULL DEFAULT 'PENDING',
+  priority INTEGER NOT NULL DEFAULT 0,
+  retry_count INTEGER NOT NULL DEFAULT 0,
+  max_retries INTEGER NOT NULL DEFAULT 3,
+  last_error TEXT,
+  scheduled_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  started_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ,
+  dedupe_key TEXT,
+  lease_expires_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -358,28 +455,36 @@ CREATE TABLE public.currency_rate (
 );
 
 -- ─── Indexes ─────────────────────────────────────────────────
-CREATE INDEX idx_user_email ON public.user(email);
+-- Single source of truth, matching the final state after migration 009.
+-- UNIQUE constraints already create their backing indexes, so the redundant
+-- hand-written ones (idx_user_email, idx_category_slug, idx_product_slug,
+-- idx_order_number, idx_wishlist_user, idx_customer_segment_user,
+-- idx_analytics_event_name, idx_order_status) are intentionally omitted.
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
 CREATE INDEX idx_user_store ON public.user(store_id);
-CREATE INDEX idx_category_slug ON public.category(slug);
 CREATE INDEX idx_category_parent ON public.category(parent_id);
 CREATE INDEX idx_category_store ON public.category(store_id);
-CREATE INDEX idx_product_slug ON public.product(slug);
 CREATE INDEX idx_product_category ON public.product(category_id);
 CREATE INDEX idx_product_store ON public.product(store_id);
 CREATE INDEX idx_product_active ON public.product(is_active);
 CREATE INDEX idx_product_featured ON public.product(is_featured);
 CREATE INDEX idx_product_image_product ON public.product_image(product_id);
-CREATE INDEX idx_order_number ON public.order(order_number);
-CREATE INDEX idx_order_status ON public.order(status);
+CREATE INDEX idx_order_status_created ON public.order(status, created_at DESC);
+CREATE INDEX idx_order_store_created ON public.order(store_id, created_at DESC);
 CREATE INDEX idx_order_user ON public.order(user_id);
 CREATE INDEX idx_order_store ON public.order(store_id);
 CREATE INDEX idx_order_created ON public.order(created_at);
+CREATE INDEX idx_order_expiry ON public.order(expiry_at)
+  WHERE status IN ('PENDING_PAYMENT', 'WAITING_CONFIRMATION');
 CREATE INDEX idx_order_item_order ON public.order_item(order_id);
 CREATE INDEX idx_order_item_product ON public.order_item(product_id);
 CREATE INDEX idx_order_idempotency_expires ON public.order_idempotency(expires_at);
 CREATE INDEX idx_order_idempotency_order ON public.order_idempotency(order_id);
+CREATE INDEX idx_order_log_order ON public.order_log(order_id, created_at DESC);
 CREATE INDEX idx_payment_order ON public.payment(order_id);
-CREATE INDEX idx_analytics_event_name ON public.analytics_event(event);
+CREATE INDEX idx_payment_status ON public.payment(status);
+CREATE INDEX idx_analytics_event_event_created ON public.analytics_event(event, created_at DESC);
 CREATE INDEX idx_analytics_event_created ON public.analytics_event(created_at);
 CREATE INDEX idx_stock_alert_product ON public.stock_alert(product_id);
 CREATE INDEX idx_stock_alert_unread ON public.stock_alert(is_read);
@@ -388,15 +493,33 @@ CREATE INDEX idx_notification_status ON public.notification(status);
 CREATE INDEX idx_activity_log_user ON public.activity_log(user_id);
 CREATE INDEX idx_activity_log_action ON public.activity_log(action);
 CREATE INDEX idx_activity_log_created ON public.activity_log(created_at);
+CREATE INDEX idx_activity_log_store_created ON public.activity_log(store_id, created_at DESC);
 CREATE INDEX idx_inventory_log_product ON public.inventory_log(product_id);
 CREATE INDEX idx_inventory_log_created ON public.inventory_log(created_at);
-CREATE INDEX idx_wishlist_user ON public.wishlist(user_id);
+CREATE INDEX idx_inventory_log_product_created ON public.inventory_log(product_id, created_at DESC);
 CREATE INDEX idx_wishlist_product ON public.wishlist(product_id);
-CREATE INDEX idx_customer_segment_user ON public.customer_segment(user_id);
 CREATE INDEX idx_customer_segment_name ON public.customer_segment(segment);
 CREATE INDEX idx_forecast_store ON public.sales_forecast(store_id);
+CREATE INDEX idx_forecast_product_period ON public.sales_forecast(product_id, period);
 CREATE INDEX idx_recommendation_source ON public.product_recommendation(source_product_id);
 CREATE INDEX idx_recommendation_target ON public.product_recommendation(recommended_product_id);
+CREATE INDEX idx_invoice_order ON public.invoice(order_id);
+CREATE INDEX idx_invoice_status ON public.invoice(status);
+CREATE INDEX idx_whatsapp_queue_order ON public.whatsapp_queue(order_id);
+CREATE INDEX idx_whatsapp_queue_status ON public.whatsapp_queue(status);
+CREATE INDEX idx_whatsapp_queue_status_created ON public.whatsapp_queue(status, created_at);
+CREATE INDEX idx_job_queue_status ON public.job_queue(status);
+CREATE INDEX idx_job_queue_type ON public.job_queue(type);
+CREATE INDEX idx_job_queue_scheduled ON public.job_queue(scheduled_at)
+  WHERE status = 'PENDING';
+CREATE UNIQUE INDEX idx_job_queue_dedupe_active
+  ON public.job_queue(type, dedupe_key)
+  WHERE dedupe_key IS NOT NULL AND status IN ('PENDING', 'PROCESSING');
+CREATE INDEX idx_job_queue_type_claim
+  ON public.job_queue(type, priority DESC, created_at)
+  WHERE status = 'PENDING';
+CREATE INDEX idx_product_search_trgm
+  ON public.product USING GIN (name gin_trgm_ops, description gin_trgm_ops);
 
 -- ─── Enable RLS ──────────────────────────────────────────────
 ALTER TABLE public.store ENABLE ROW LEVEL SECURITY;
@@ -409,6 +532,11 @@ ALTER TABLE public.order ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.order_item ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.order_idempotency ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payment ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.payment_confirmation ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.order_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.invoice ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.whatsapp_queue ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.job_queue ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.analytics_event ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sales_forecast ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.customer_segment ENABLE ROW LEVEL SECURITY;
@@ -478,14 +606,21 @@ CREATE POLICY "Admin manage product_images" ON public.product_image FOR ALL USIN
 -- Categories
 CREATE POLICY "Admin manage categories" ON public.category FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
 
--- Orders & Items & Payments
+-- Orders, Items, Payments, Confirmations & Logs
 CREATE POLICY "Admin manage orders" ON public.order FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
 CREATE POLICY "Admin manage order_items" ON public.order_item FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
 CREATE POLICY "Admin manage order idempotency" ON public.order_idempotency FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
 CREATE POLICY "Admin manage payments" ON public.payment FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admin manage payment confirmations" ON public.payment_confirmation FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admin manage order logs" ON public.order_log FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
 
 REVOKE ALL ON TABLE public.order_idempotency FROM PUBLIC, anon, authenticated;
 GRANT ALL ON TABLE public.order_idempotency TO service_role;
+
+-- Invoices, WhatsApp queue & job queue (server/admin-only data)
+CREATE POLICY "Admin manage invoices" ON public.invoice FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admin manage whatsapp_queue" ON public.whatsapp_queue FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admin manage job_queue" ON public.job_queue FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
 
 -- Settings & Content
 CREATE POLICY "Admin manage settings" ON public.setting FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
@@ -522,3 +657,4 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.order_item;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.product_image;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.setting;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.payment;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.invoice;

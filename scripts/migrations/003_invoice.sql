@@ -37,13 +37,30 @@ CREATE INDEX IF NOT EXISTS idx_whatsapp_queue_status ON public.whatsapp_queue(st
 ALTER TABLE public.invoice ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.whatsapp_queue ENABLE ROW LEVEL SECURITY;
 
+-- DROP POLICY IF EXISTS keeps this migration idempotent against the
+-- consolidated baseline (scripts/supabase-schema.sql), which already declares
+-- these admin policies for a fresh install.
+DROP POLICY IF EXISTS "Admin manage invoices" ON public.invoice;
 CREATE POLICY "Admin manage invoices" ON public.invoice
   FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
 
+DROP POLICY IF EXISTS "Admin manage whatsapp_queue" ON public.whatsapp_queue;
 CREATE POLICY "Admin manage whatsapp_queue" ON public.whatsapp_queue
   FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
 
-ALTER PUBLICATION supabase_realtime ADD TABLE public.invoice;
+-- Guarded ADD so a fresh install (base schema + migrations) does not fail with
+-- 'relation is already member of publication'.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+     WHERE pubname = 'supabase_realtime'
+       AND schemaname = 'public'
+       AND tablename = 'invoice'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.invoice;
+  END IF;
+END $$;
 
 -- ============================================================
 -- Job Queue for background processing with retry
@@ -70,5 +87,6 @@ CREATE INDEX IF NOT EXISTS idx_job_queue_scheduled ON public.job_queue(scheduled
   WHERE status = 'PENDING';
 
 ALTER TABLE public.job_queue ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Admin manage job_queue" ON public.job_queue;
 CREATE POLICY "Admin manage job_queue" ON public.job_queue
   FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
