@@ -437,9 +437,18 @@ CREATE POLICY "Public read" ON public.faq FOR SELECT USING (true);
 CREATE POLICY "Public read" ON public.setting FOR SELECT USING (true);
 CREATE POLICY "Public read" ON public.banner FOR SELECT USING (true);
 
-CREATE POLICY "Insert order" ON public.order FOR INSERT WITH CHECK (true);
-CREATE POLICY "Insert order_item" ON public.order_item FOR INSERT WITH CHECK (true);
-CREATE POLICY "Insert payment" ON public.payment FOR INSERT WITH CHECK (true);
+-- Order writes are intentionally NOT granted to anon/authenticated clients.
+-- All order/order_item/payment writes flow through the server (service_role):
+--   - Checkout: create_order_atomic RPC (EXECUTE granted to service_role only)
+--   - Payment flow: /api/orders/* -> payment-service.ts (supabaseAdmin)
+--   - Admin actions: /api/admin/* (supabaseAdmin)
+-- The previous anon INSERT policies (WITH CHECK (true)) let anyone with the
+-- public anon key forge order/item/payment rows via the REST API, bypassing
+-- server-side pricing, stock, and idempotency logic. They were removed on
+-- 2026-08-05 (security audit HIGH-2). Existing deployments must drop them:
+--   DROP POLICY IF EXISTS "Insert order" ON public.order;
+--   DROP POLICY IF EXISTS "Insert order_item" ON public.order_item;
+--   DROP POLICY IF EXISTS "Insert payment" ON public.payment;
 
 -- ─── Admin Full Access Policies (email-based, no UUID mismatch) ───
 -- Note: public.user.id uses TEXT/cuid format, NOT postgres UUID.
