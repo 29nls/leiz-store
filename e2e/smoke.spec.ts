@@ -10,8 +10,8 @@ test.describe("Smoke Tests", () => {
   test("products page shows product grid", async ({ page }) => {
     await page.goto("/products");
     await expect(page).toHaveURL(/\/products/);
-    // Wait for product cards to render
-    await page.waitForLoadState("networkidle");
+    // Playwright assertions wait for the rendered page without requiring a
+    // completely idle network (Next.js and analytics may keep requests open).
     const productCards = page.locator(
       '[class*="product"], [class*="card"], article, [data-testid="product-card"]'
     );
@@ -31,7 +31,6 @@ test.describe("Smoke Tests", () => {
 
   test("track page has order search form", async ({ page }) => {
     await page.goto("/track");
-    await page.waitForLoadState("networkidle");
     await expect(page.locator("input[type='text'], input[type='search']").first()).toBeVisible();
   });
 
@@ -45,8 +44,7 @@ test.describe("Smoke Tests", () => {
 test.describe("Wishlist", () => {
   test("wishlist page loads when not authenticated", async ({ page }) => {
     await page.goto("/wishlist");
-    await page.waitForLoadState("networkidle");
-    // Should either show login redirect or an empty wishlist
-    expect(page.url()).toContain("/wishlist");
+    // Should either show login redirect or an empty wishlist.
+    await expect(page).toHaveURL(/\/wishlist/);
   });
 });
