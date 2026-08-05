@@ -48,14 +48,6 @@ export function slugify(text: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-export function generateOrderNumber(): string {
-  const date = new Date();
-  const prefix = "LZ";
-  const datePart = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`;
-  const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
-  return `${prefix}-${datePart}-${randomPart}`;
-}
-
 export function truncate(str: string, length: number): string {
   if (str.length <= length) return str;
   return str.substring(0, length) + "...";

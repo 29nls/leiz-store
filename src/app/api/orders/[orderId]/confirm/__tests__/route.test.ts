@@ -94,12 +94,9 @@ describe("POST /api/orders/[orderId]/confirm", () => {
       "a".repeat(43),
       undefined
     );
-    expect(mockCookieSet).toHaveBeenCalledWith(expect.objectContaining({
-      name: "payment_confirmation_order-1",
-      value: "",
-      maxAge: 0,
-      path: "/api/orders/order-1/confirm",
-    }));
+    // The confirmation cookie is intentionally kept after confirming so the
+    // payment page's track reads keep working on refresh/poll.
+    expect(mockCookieSet).not.toHaveBeenCalled();
   });
 
   it("keeps body-token compatibility when the cookie is absent", async () => {

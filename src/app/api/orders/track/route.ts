@@ -1,8 +1,20 @@
 import { NextRequest } from "next/server";
+import { cookies } from "next/headers";
 import { orderRepository } from "@/lib/repositories";
 import { successResponse, errorResponse } from "@/lib/errors";
 import { checkRateLimit, getClientIp } from "@/lib/middleware";
-import { getOrderForPayment } from "@/lib/payment/payment-service";
+import { getOrderForPayment, validateTransferToken } from "@/lib/payment/payment-service";
+import { paymentConfirmationCookieName } from "@/lib/order-idempotency";
+
+/** Mask a full name to "First L." for anonymous lookups (no PII). */
+function maskCustomerName(name: string | null | undefined): string {
+  const trimmed = String(name ?? "").trim();
+  if (!trimmed) return "";
+  const parts = trimmed.split(/\s+/);
+  const first = parts[0];
+  const initial = parts.length > 1 ? parts[1][0] : "";
+  return initial ? `${first} ${initial.toUpperCase()}.` : first;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -30,8 +42,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // If orderId is provided, use the payment service for richer data
+    // If orderId is provided, use the payment service for richer data.
+    // The orderId branch returns buyer PII (customer name + Discord ID), so it
+    // is gated on the order-scoped confirmation cookie that checkout issued
+    // (broadened to path /api/orders so this endpoint receives it). A missing
+    // or invalid cookie fails closed with the same generic 404 as a missing
+    // order — no PII, and no way to probe whether an order exists.
     if (orderId) {
+      const cookieToken = (await cookies()).get(paymentConfirmationCookieName(orderId))?.value;
+      if (!cookieToken || !(await validateTransferToken(orderId, cookieToken))) {
+        return Response.json(
+          errorResponse(new Error("Order not found") as any),
+          { status: 404 }
+        );
+      }
+
       const orderData = await getOrderForPayment(orderId);
       if (!orderData) {
         return Response.json(
@@ -64,7 +89,10 @@ export async function GET(request: NextRequest) {
       return Response.json(successResponse(safeOrderData));
     }
 
-    // Otherwise use orderNumber lookup
+    // Otherwise use orderNumber lookup. The order number is itself the bearer
+    // credential here — it is a random, unguessable per-order identifier the
+    // buyer holds (from the Discord DM / checkout), never emailed. The response
+    // intentionally masks contact identifiers (customerDiscord/buyerDiscordId).
     const order = await orderRepository.findByOrderNumber(orderNumber!);
     if (!order) {
       return Response.json(
@@ -78,7 +106,10 @@ export async function GET(request: NextRequest) {
       id: (order as any).id,
       orderNumber: order.orderNumber,
       status: order.status,
-      customerName: order.customerName,
+      // The order number is the bearer credential on this anonymous path, but
+      // the buyer's full name is still PII — mask it to first name + initial
+      // (the track page never renders it, so legit users are unaffected).
+      customerName: maskCustomerName(order.customerName),
       // Do not expose contact identifiers through a public tracking lookup.
       customerDiscord: undefined,
       buyerDiscordId: undefined,

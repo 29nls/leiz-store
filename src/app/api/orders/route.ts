@@ -91,7 +91,11 @@ export const POST = withErrorHandling(async (
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
-    path: `/api/orders/${String((result.order as any).id)}/confirm`,
+    // MED-1: broadened from /api/orders/{id}/confirm so the same token also
+    // authorizes GET /api/orders/track?orderId=… reads (the payment page's
+    // track fetch is same-origin and carries this cookie). Still httpOnly +
+    // SameSite=Lax, and scoped per-order via the cookie name.
+    path: "/api/orders",
     maxAge: Math.floor(PAYMENT_EXPIRY_MS / 1000),
   });
 

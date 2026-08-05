@@ -3,7 +3,6 @@ import {
   formatDate,
   formatRelativeTime,
   slugify,
-  generateOrderNumber,
   truncate,
   getInitials,
   debounce,
@@ -73,19 +72,6 @@ describe("Utility Functions", () => {
 
     it("should handle multiple spaces", () => {
       expect(slugify("  Many   Spaces  ")).toBe("many-spaces");
-    });
-  });
-
-  describe("generateOrderNumber", () => {
-    it("should generate order number with LZ prefix", () => {
-      const orderNumber = generateOrderNumber();
-      expect(orderNumber).toMatch(/^LZ-\d{8}-[A-Z0-9]{6}$/);
-    });
-
-    it("should generate unique order numbers", () => {
-      const nums = new Set(Array.from({ length: 100 }, () => generateOrderNumber()));
-      // Should have at least some unique ones (collision unlikely but possible)
-      expect(nums.size).toBeGreaterThan(90);
     });
   });
 

@@ -92,7 +92,7 @@ describe("POST /api/orders", () => {
       value: "raw-token-value",
       httpOnly: true,
       sameSite: "lax",
-      path: "/api/orders/order-1/confirm",
+      path: "/api/orders",
     }));
     expect(payload.data.paymentConfirmationToken).toBeUndefined();
     expect(payload.data.paymentConfirmationTokenHash).toBeUndefined();
