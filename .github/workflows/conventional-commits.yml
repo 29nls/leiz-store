@@ -1,0 +1,35 @@
+name: Conventional Commits
+
+# Validasi pesan commit pada PR terhadap aturan commitlint
+# (melengkapi hook .husky/commit-msg di sisi developer).
+# Workflow ini AKTIF saat di-push ke GitHub; tambahkan ke branch
+# protection sebagai required status check untuk main & develop.
+
+on:
+  pull_request:
+    branches: [main, master, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  commitlint:
+    name: Validate commit messages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Butuh full history agar --from <base.sha> tersedia
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: "npm"
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint commit messages (PR commits)
+        run: |
+          npx commitlint \
+            --from "${{ github.event.pull_request.base.sha }}" \
+            --to "${{ github.event.pull_request.head.sha }}" \
+            --verbose
