@@ -33,7 +33,7 @@ jest.mock("@/lib/repositories", () => ({
 }));
 
 jest.mock("@/lib/middleware", () => ({
-  checkRateLimit: () => ({ allowed: true, remaining: 9, resetAt: Date.now() + 60_000 }),
+  safeCheckRateLimit: () => ({ allowed: true, remaining: 9, resetAt: Date.now() + 60_000 }),
   getClientIp: () => "203.0.113.5",
 }));
 

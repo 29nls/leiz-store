@@ -113,7 +113,7 @@ terpisah (lihat §5.3).
 | Fitur | Detail |
 |---|---|
 | **CORS** | `CORS_ORIGINS` (default `http://localhost:3000`); preflight `OPTIONS` → 204. |
-| **Rate limit** | In-memory (`Map`); header `X-RateLimit-Limit/-Remaining/-Reset`. Contoh: confirm transfer 5/10 mnt/IP, tracking 10/mnt/IP. |
+| **Rate limit** | Redis/KV-backed (`src/lib/rate-limit.ts`, fallback in-memory untuk dev); header `X-RateLimit-Limit/-Remaining/-Reset`. Lihat tabel lengkap di `docs/openapi.yaml` §Rate limit. |
 | **Pagination** | `page` (min 1), `limit` (1–100, default 20); helper `parsePagination`. |
 | **Sort** | `parseSort` dengan allowlist kolom. |
 | **Store context** | Header `X-Store-Id` / `X-Store-Slug`, query `store_slug` (multi-toko). |
@@ -129,7 +129,7 @@ terpisah (lihat §5.3).
   + **validasi transisi state machine** → cegah double-process / race.
 - Idempotensi checkout: header `Idempotency-Key` + RPC `create_order_atomic`
   (transaksi Postgres; stok dipesan atomik; replay mengembalikan order sama).
-- Rate limit di endpoint publik (confirm, track).
+- Rate limit di endpoint publik (products, orders, track, confirm) & semua route admin. Endpoint system/cron/discord tidak di-rate-limit.
 - Password admin: PBKDF2-SHA512 (100k iterasi) atau Supabase Auth.
 - Public tracking memakai **allowlist field eksplisit** (tidak pernah
   meneruskan email/notes/token hash/proof path).
@@ -306,6 +306,8 @@ Side effect: log status + notifikasi pembeli via Discord DM.
 `sort` (`price_asc|price_desc|newest|name`), `badge`, `featured=true`,
 `minPrice`, `maxPrice`, `currency` (`IDR`|`USD`).
 
+**Rate limit:** 60 request/menit/IP (sama untuk detail produk `GET /api/products/:slug`).
+
 **Respons 200:** `{ success, data: [product+priceFormatted], meta: {page, limit, total, totalPages} }`
 — produk menyertakan `priceFormatted` sesuai currency (`Rp…` / `$…`).
 
@@ -431,7 +433,7 @@ Setelah implementasi/migrasi, jalankan verifikasi berikut (unit + integration):
 
 - [x] **Konsolidasi envelope respons** semua endpoint (publik + admin) → `{ success, data, error, meta }` seragam (2026-08-05).
 - [x] **Zod di semua route admin** (products, categories, users, settings, upload — create & update) + unit test `src/lib/validators/__tests__/admin.test.ts`.
-- [ ] **Rate limit di lebih banyak endpoint** publik/admin (saat ini hanya confirm & track).
-- [ ] **Migrasi storage rate-limit** dari in-memory ke Redis/KV untuk multi-instance.
+- [x] **Rate limit di lebih banyak endpoint** publik/admin — products list/detail (60/mnt/IP), orders create (20/mnt/IP), track (10/mnt/IP), confirm (5/10mnt/IP/order), admin login, semua route admin (120/mnt/IP/route) (2026-08-05).
+- [x] **Migrasi storage rate-limit** dari in-memory ke Redis/KV untuk multi-instance — `src/lib/rate-limit.ts` (Vercel KV / Upstash REST, fallback in-memory) (2026-08-05).
 - [ ] **Idempotensi-Key** di ekspose ke dokumentasi frontend + test double-submit.
 - [ ] **Dokumentasi OpenAPI** dari spesifikasi ini (opsional, generate dari sini).

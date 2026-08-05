@@ -14,6 +14,24 @@ info:
       (`VALIDATION_ERROR`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`,
       `RATE_LIMITED`, `INTERNAL_ERROR`).
 
+    ## Rate limit
+    Endpoint publik & admin yang tercantum pada tabel di bawah dilindungi
+    rate limiter (Redis/KV `src/lib/rate-limit.ts`, fallback in-memory untuk
+    dev). Bucket kunci per IP (dan per order untuk confirm). Endpoint di
+    luar tabel (`/api/health`, system/cron, discord) tidak di-rate-limit.
+    Saat batas terlampaui dikembalikan `429` dengan envelope standar +
+    header `X-RateLimit-Limit` / `X-RateLimit-Remaining` / `X-RateLimit-Reset`.
+
+    | Endpoint | Batas | Jendela |
+    |----------|-------|---------|
+    | `GET /api/products` | 60 req | 1 menit/IP |
+    | `GET /api/products/{slug}` | 60 req | 1 menit/IP |
+    | `POST /api/orders` | 20 order | 1 menit/IP |
+    | `GET /api/orders/track` | 10 req | 1 menit/IP |
+    | `POST /api/orders/{orderId}/confirm` | 5 percobaan | 10 menit/IP/order |
+    | `POST /api/admin/login` | 20 gagal/IP, 10 gagal/akun | 15 menit |
+    | `/api/admin/*` | 120 req | 1 menit/IP/route |
+
     ## Autentikasi
     - **Admin:** Supabase Auth (cookie `sb-*` atau `Authorization: Bearer <access_token>`)
       ATAU legacy JWT (cookie `admin_token` atau Bearer HS256, role `ADMIN`, 24 jam).
@@ -84,6 +102,7 @@ paths:
       description: |
         Daftar produk aktif dengan paginasi, filter, dan dual currency.
         Sorting: `price_asc`, `price_desc`, `newest`, `name`.
+        Rate limit: 60 request/menit/IP.
       operationId: listProducts
       parameters:
         - $ref: "#/components/parameters/PageParam"
@@ -143,11 +162,14 @@ paths:
                     category: { id: "cat1", name: "Game Currency", slug: "game-currency" }
                     images: [{ url: "https://example.com/img.jpg", alt: "500 UC" }]
                 meta: { page: 1, limit: 20, total: 1, totalPages: 1 }
+        "429":
+          $ref: "#/components/responses/RateLimitedResponse"
 
   /api/products/{slug}:
     get:
       tags: [Public]
       summary: Detail produk
+      description: "Rate limit: 60 request/menit/IP."
       operationId: getProductBySlug
       parameters:
         - name: slug
@@ -170,6 +192,8 @@ paths:
                       data: { $ref: "#/components/schemas/Product" }
         "404":
           $ref: "#/components/responses/NotFoundError"
+        "429":
+          $ref: "#/components/responses/RateLimitedResponse"
 
   /api/orders:
     post:
@@ -247,6 +271,8 @@ paths:
           $ref: "#/components/responses/ValidationErrorResponse"
         "409":
           $ref: "#/components/responses/ConflictResponse"
+        "429":
+          $ref: "#/components/responses/RateLimitedResponse"
 
   /api/orders/track:
     get:

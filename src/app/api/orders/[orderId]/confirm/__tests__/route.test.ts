@@ -35,7 +35,7 @@ jest.mock("@/lib/payment/payment-service", () => ({
 
 jest.mock("@/lib/middleware", () => ({
   addRateLimitHeaders: (response: Response) => response,
-  checkRateLimit: () => ({ allowed: true, remaining: 4, resetAt: Date.now() + 1000 }),
+  safeCheckRateLimit: () => ({ allowed: true, remaining: 4, resetAt: Date.now() + 1000 }),
   corsHeaders: () => ({ "Access-Control-Allow-Origin": "*" }),
   getClientIp: () => "127.0.0.1",
   handleCors: () => null,

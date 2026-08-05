@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withErrorHandling } from "@/lib/api-helpers";
 import { successResponse, errorResponse, ValidationError } from "@/lib/errors";
-import { addRateLimitHeaders, checkRateLimit, corsHeaders, getClientIp, handleCors } from "@/lib/middleware";
+import { addRateLimitHeaders, corsHeaders, getClientIp, handleCors, safeCheckRateLimit } from "@/lib/middleware";
 import { confirmTransferSchema } from "@/lib/validators/order";
 import { confirmTransfer, getOrderForPayment, validateTransferToken } from "@/lib/payment/payment-service";
 import { orderRepository } from "@/lib/repositories";
@@ -37,7 +37,7 @@ export const POST = withErrorHandling(async (
     );
   }
 
-  const rateLimit = await checkRateLimit(`confirm:${getClientIp(req)}:${orderId}`, 5, 10 * 60 * 1000);
+  const rateLimit = await safeCheckRateLimit(`confirm:${getClientIp(req)}:${orderId}`, 5, 10 * 60 * 1000);
   if (!rateLimit.allowed) {
     const response = NextResponse.json(
       errorResponse(new ValidationError("Too many confirmation attempts. Please try again later.")),

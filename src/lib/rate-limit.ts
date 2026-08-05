@@ -225,6 +225,15 @@ export const ORDER_CREATE_RATE_LIMIT = {
   windowMs: 60 * 1000,
 } as const;
 
+/** Per-IP throttle for public catalog reads (products list/detail). */
+export const PUBLIC_READ_RATE_LIMIT = {
+  /** Requests allowed per client IP per route per window. Generous: catalog
+   *  pages legitimately issue several requests (pagination, filters, image
+   *  prefetch), so keep headroom over a normal browsing session. */
+  max: 60,
+  windowMs: 60 * 1000,
+} as const;
+
 /** Generic per-IP throttle for every /api/admin/* route (per route, per window). */
 export const ADMIN_RATE_LIMIT = {
   /** Requests allowed per client IP per route per window. */

@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import { orderRepository } from "@/lib/repositories";
 import { successResponse, errorResponse } from "@/lib/errors";
-import { checkRateLimit, getClientIp } from "@/lib/middleware";
+import { getClientIp, safeCheckRateLimit } from "@/lib/middleware";
 import { getOrderForPayment, validateTransferToken } from "@/lib/payment/payment-service";
 import { paymentConfirmationCookieName } from "@/lib/order-idempotency";
 
@@ -18,9 +18,10 @@ function maskCustomerName(name: string | null | undefined): string {
 
 export async function GET(request: NextRequest) {
   try {
-    // Rate limit public tracking endpoint
+    // Rate limit public tracking endpoint (fail-open: a limiter outage must
+    // never take the tracking page down)
     const clientIp = getClientIp(request);
-    const rateLimit = await checkRateLimit(`track:${clientIp}`, 10, 60000);
+    const rateLimit = await safeCheckRateLimit(`track:${clientIp}`, 10, 60000);
     if (!rateLimit.allowed) {
       return Response.json({ error: "Rate limit exceeded" }, { status: 429 });
     }

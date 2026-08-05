@@ -101,6 +101,7 @@ export {
   addRateLimitHeaders,
   LOGIN_RATE_LIMIT,
   ORDER_CREATE_RATE_LIMIT,
+  PUBLIC_READ_RATE_LIMIT,
   ADMIN_RATE_LIMIT,
   enforceAdminRateLimit,
   redisRateLimitConfigured,
