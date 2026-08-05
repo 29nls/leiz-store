@@ -144,7 +144,7 @@ export const MAX_UPLOAD_SIZE = 5 * 1024 * 1024; // 5MB
 
 export const uploadFileSchema = z.object({
   file: z
-    .instanceof(File, "File wajib diunggah")
+    .instanceof(File, { message: "File wajib diunggah" })
     .refine((f) => f.size > 0, "File kosong")
     .refine(
       (f) => ALLOWED_IMAGE_TYPES.includes(f.type as (typeof ALLOWED_IMAGE_TYPES)[number]),

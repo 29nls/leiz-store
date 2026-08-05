@@ -156,15 +156,11 @@ export const POST = withErrorHandling(async (
       successResponse({ message: "Transfer confirmed", orderId }),
       { status: 200, headers: corsHeaders(req.headers.get("origin") || undefined) }
     );
-    response.cookies.set({
-      name: paymentConfirmationCookieName(orderId),
-      value: "",
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: `/api/orders/${orderId}/confirm`,
-      maxAge: 0,
-    });
+    // The confirmation cookie is intentionally NOT cleared here: the payment
+    // page keeps polling GET /api/orders/track?orderId=… after confirming, so
+    // a refresh must still be authorized. The token is order-scoped and expires
+    // with the order (PAYMENT_EXPIRY_MS); confirm is idempotent and guarded by
+    // status + duplicate checks, so keeping it grants read access only.
     return addRateLimitHeaders(response, rateLimit, 5);
   } catch (error) {
     if (proofPath) await deletePaymentProof(proofPath);

@@ -13,12 +13,12 @@
 
 LEIZ STORE's **payment/checkout integrity core is well engineered** — server-side pricing authority, atomic stock handling, idempotency with encrypted replay tokens, order-scoped confirmation tokens, and magic-byte-validated payment-proof uploads are all handled correctly. The real exposure is at the **edges**: Discord-button authorization, anon INSERT grants in Row-Level Security, PII leakage through the unauthenticated tracking endpoint, and missing rate limits on sensitive endpoints.
 
-**Verdict: 2 High (both remediated ✅), 4 Medium (3 remediated ✅, 1 investigated 🔍), 4 Low findings.** The two High findings and three of the Medium findings were fixed on 2026-08-05 (see remediation notes below); MED-1 received a read-only investigation; the Low items remain open.
+**Verdict: 2 High (both remediated ✅), 4 Medium (all remediated ✅), 4 Low findings.** The two High findings and all four Medium findings were fixed on 2026-08-05 (see remediation notes below); the Low items remain open.
 
 | Severity | Count | Status |
 |---|---|---|
 | 🔴 High | 2 | ✅ Remediated 2026-08-05 |
-| 🟠 Medium | 4 | 3 ✅ Remediated · 1 🔍 Investigated |
+| 🟠 Medium | 4 | ✅ All Remediated 2026-08-05 |
 | 🟡 Low | 4 | ⏳ Open |
 
 > **Remediation log**
@@ -26,7 +26,7 @@ LEIZ STORE's **payment/checkout integrity core is well engineered** — server-s
 > - **2026-08-05 — HIGH-2 remediated:** anon INSERT policies (`"Insert order"`, `"Insert order_item"`, `"Insert payment"`) removed from `scripts/supabase-schema.sql`, with `scripts/migrations/010_revoke_anon_inserts.sql` shipping the same DROPs (plus a self-check) for existing deployments. Verified beforehand that every `order`/`order_item`/`payment` write flows through `service_role` (`create_order_atomic` RPC + `supabaseAdmin` API routes); the browser/anon client only reads those tables.
 > - **2026-08-05 — MED-3 remediated:** `createOrderSchema` now caps `items` at 20 line items (`.max(20)`) and constrains `paymentMethod` to `z.enum([...MANUAL_PAYMENT_METHODS])` = `bank_transfer | gopay | dana`. Regression tests added in `src/app/api/orders/__tests__/route.test.ts`.
 > - **2026-08-05 — MED-4 remediated:** all PostgREST `.or()` search interpolations now percent-encode the user term via the shared `buildIlikeOrFilter()` helper (`src/lib/supabase-search.ts`) — applied to `/api/admin/orders`, `/api/admin/products`, `/api/admin/users`, and the client-side admin orders table. Unit tests in `src/lib/__tests__/supabase-search.test.ts`.
-> - **2026-08-05 — MED-1 investigated (read-only, no code change):** see the investigation notes in the MED-1 section below. Fix decision still pending.
+> - **2026-08-05 — MED-1 remediated:** `track?orderId=` reads now require the order-scoped confirmation cookie (path broadened to `/api/orders` so the same httpOnly token authorizes reads and confirms). Order-number reads keep working anonymously — the order number is the bearer credential there — and its generator was switched from `Math.random()` to a CSPRNG (`crypto.randomInt`) after review found the old suffix was non-cryptographic (see MED-1 section for the corrected severity). Tests in `src/app/api/orders/track/__tests__/route.test.ts` and `src/lib/__tests__/order-number.test.ts`.
 > - **2026-08-05 — MED-2 remediated:** brute-force protection added to `/api/admin/login` (dual buckets: 20 attempts/IP + 10 attempts/account per 15 min; only failures count, success resets; fail-open via `safe*` wrappers; windows auto-expire — no permanent lockout) and `POST /api/orders` (20 orders/IP per 60 s, fail-open). See MED-2 section for the full design incl. IP trust model. Tests in `middleware.test.ts` and a new login-route test file.
 
 ---
@@ -127,7 +127,19 @@ The 25-char random order ID is the *only* barrier, and it lives in the URL — l
 2. In the anonymous `orderNumber` branch, don't return `customerDiscord`/`buyerDiscordId` (currently `undefined` — good); keep `customerName` masked (e.g. first name + initial) if it must stay.
 3. Set the payment cookie with a broader `path: "/"` (or also `"/api/orders/track"`) so legitimate reads work, while keeping it httpOnly + SameSite=Lax.
 
-**🔍 Investigation notes (2026-08-05, read-only):**
+**✅ REMEDIATED (2026-08-05):**
+
+*Mechanism (least-invasive combination).* The confirmation cookie that checkout already issues is now the read credential too:
+
+1. **Broadened the cookie path** from `/api/orders/{id}/confirm` to `/api/orders` in `src/app/api/orders/route.ts` (and stopped clearing it after confirm in `confirm/route.ts` — the payment page keeps polling `track` after confirming, so a refresh must still be authorized). The cookie remains httpOnly + SameSite=Lax + per-order-named, so it is invisible to JS and only ever grants access to its own order.
+2. **Gated the `orderId` branch** in `src/app/api/orders/track/route.ts`: `track?orderId=` now requires `payment_confirmation_{orderId}` and validates it against the stored SHA-256 token hash via the existing `validateTransferToken()`. Missing or invalid → uniform **404** (not 401) with the same generic body as a missing order — **no PII and no order-existence oracle**. The `orderNumber` branch is unchanged and still masks `customerDiscord`/`buyerDiscordId`.
+3. **Order numbers = the bearer credential on the manual path.** The anonymous `orderNumber` lookup intentionally requires nothing beyond the number itself: the buyer holds it from checkout/Discord (never emailed). The response excludes contact identifiers (`customerDiscord`/`buyerDiscordId`) and now also masks the customer name to "First L." (`maskCustomerName` in the route) — the `/track` page never renders the name, so legitimate buyers are unaffected. This keeps the public `/track` page working on any device.
+
+*Order-number severity finding (corrected).* `LZ-{date}-{6 base36}` suffixes were generated with **`Math.random()`** — a non-cryptographic PRNG — in `services/index.ts`, and could even produce suffixes shorter than 6 characters (failing the route's own format check). The date prefix is sequential by day, but the suffix is random, so order numbers are **not enumerable in practice** (36⁶ ≈ 2.2B values, plus the 10 req/min/IP track rate limit). Still, a predictable PRNG weakens the bearer-credential assumption, so the generator was moved to a dedicated server-only module (`src/lib/order-number.ts`) using **`crypto.randomInt`** and is now used by `orderService.create`; the dead `Math.random()` copy in `utils.ts` was removed. This is defense-in-depth (severity remains Medium, not elevated to High: no practical enumeration path).
+
+*Regression check.* Post-checkout `/payment/[orderId]` (same browser, cookie present) works; manual `/track` by order number works with no cookie; post-confirm refreshes/polling still authorized because the cookie persists until order expiry (24 h).
+
+**🔍 Investigation notes (2026-08-05, read-only — superseded by the remediation above):**
 
 *How a buyer reaches tracking:* there are exactly two entry points, and **no confirmation email or Discord DM contains a tracking link**. (1) The public `/track` page (Navbar link + homepage CTA) — the buyer types their **order number** (`LZ-…`) manually → `GET /api/orders/track?orderNumber=…`. (2) Immediately after checkout the app redirects to `/payment/[orderId]`, which fetches `GET /api/orders/track?orderId=…` for payment instructions. The buyer-facing Discord DM (`buildBuyerEmbed`) carries only the order number + message; the email channel is a `console.log` placeholder — so tracking is entirely self-service by order number, or the payment URL right after checkout.
 
@@ -281,7 +293,7 @@ Settings are readable by anonymous users and `PUT /api/admin/settings` accepts a
 | ✅ | HIGH-2: Drop anon INSERT policies on `order`/`order_item`/`payment` | Applied 2026-08-05 (base schema + `migrations/010_revoke_anon_inserts.sql`) |
 | ✅ | MED-3: Cap `items` array (`.max(20)`), enum `paymentMethod` | Applied 2026-08-05 (body-size guard still open as defense-in-depth) |
 | ✅ | MED-4: Parameterize `.or()` search values | Applied 2026-08-05 (`buildIlikeOrFilter` at 4 sites) |
-| 🔍 | MED-1: Gate `track?orderId=` behind the confirmation token/cookie; mask PII | Investigated 2026-08-05 — fix needs a token/cookie mechanism that doesn't break the post-checkout payment page |
+| ✅ | MED-1: Gate `track?orderId=` behind the confirmation cookie (path broadened to `/api/orders`); CSPRNG order numbers | Applied 2026-08-05 |
 | ✅ | MED-2: Rate-limit admin login + order creation | Applied 2026-08-05 (in-memory, fail-open; Redis-backed recommended for multi-instance serverless) |
 | P2 | LOW-1…4: constant-time comparisons, legacy-JWT profile check, CORS default, upload magic bytes, settings key allowlist | ~half day |
 | P3 | Add regression tests: unauth Discord interaction → denied; anon REST INSERT → denied; track without cookie → 401 | ~half day |

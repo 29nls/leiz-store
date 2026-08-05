@@ -22,12 +22,11 @@ import { prisma } from "@/lib/db";
 import { Prisma } from "@/lib/prisma-types";
 import { PAYMENT_EXPIRY_MS } from "@/lib/payment/constants";
 import { calculateOrderTotals, ORDER_TAX_RATE } from "@/lib/order-pricing";
-import { generatePaymentToken, hashPaymentToken } from "@/lib/payment/confirmation-token";
-import {
-  encryptPaymentToken,
+import { generatePaymentToken, hashPaymentToken } from "@/lib/payment/confirmation-token";import { encryptPaymentToken,
   decryptPaymentToken,
   fingerprintCreateOrderInput,
 } from "@/lib/order-idempotency";
+import { generateOrderNumber } from "@/lib/order-number";
 import { logOrderStatusChange } from "@/lib/payment/order-logger";
 import {
   Role,
@@ -213,10 +212,7 @@ export const orderService = {
         })
       : undefined;
 
-    const date = new Date();
-    const datePart = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`;
-    const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const orderNumber = `LZ-${datePart}-${randomPart}`;
+    const orderNumber = generateOrderNumber();
 
     const encryptedPaymentToken = idempotencyKey
       ? encryptPaymentToken(paymentConfirmationToken)

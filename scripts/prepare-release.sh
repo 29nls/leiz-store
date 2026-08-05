@@ -191,6 +191,10 @@ if [ "$RUN_E2E" = "1" ]; then
   run_step "E2E (playwright)"  npm run e2e
 fi
 
+# test:ci menulis ulang junit.xml (file terlacak di repo) — pulihkan agar
+# working tree tetap bersih setelah verifikasi dan skrip bisa dijalankan ulang.
+git checkout -- junit.xml 2>/dev/null || true
+
 # ── 5. Ringkasan ────────────────────────────────────────────
 echo ""
 if [ "$FAIL_COUNT" -gt 0 ]; then
