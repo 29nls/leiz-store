@@ -13,13 +13,13 @@
 
 LEIZ STORE's **payment/checkout integrity core is well engineered** — server-side pricing authority, atomic stock handling, idempotency with encrypted replay tokens, order-scoped confirmation tokens, and magic-byte-validated payment-proof uploads are all handled correctly. The real exposure is at the **edges**: Discord-button authorization, anon INSERT grants in Row-Level Security, PII leakage through the unauthenticated tracking endpoint, and missing rate limits on sensitive endpoints.
 
-**Verdict: 2 High (both remediated ✅), 4 Medium (all remediated ✅), 4 Low findings.** The two High findings and all four Medium findings were fixed on 2026-08-05 (see remediation notes below); the Low items remain open.
+**Verdict: 2 High (both remediated ✅), 4 Medium (all remediated ✅), 4 Low findings.** The two High findings and all four Medium findings were fixed on 2026-08-05. LOW-1 was remediated in PR #31 and LOW-3 + LOW-4 in PR #33 (both on 2026-08-05); LOW-2 (CORS) was re-evaluated and its residual risk **accepted** — browsers reject `*` + credentials by spec, so the real risk is near zero. See the individual sections and the remediation log below.
 
 | Severity | Count | Status |
 |---|---|---|
 | 🔴 High | 2 | ✅ Remediated 2026-08-05 |
 | 🟠 Medium | 4 | ✅ All Remediated 2026-08-05 |
-| 🟡 Low | 4 | ⏳ Open |
+| 🟡 Low | 4 | ✅ LOW-1 (PR #31) + LOW-3/LOW-4 (PR #33) remediated 2026-08-05 · LOW-2 risk accepted |
 
 > **Remediation log**
 > - **2026-08-05 — HIGH-1 remediated:** `api/discord/interactions/route.ts` now requires the clicking member to hold `DISCORD_ADMIN_ROLE_ID` and fails closed when the env var is unset. `.env.example` documents the new var; tests updated/added in `interactions.test.ts`. Signature verification unchanged.
@@ -28,6 +28,10 @@ LEIZ STORE's **payment/checkout integrity core is well engineered** — server-s
 > - **2026-08-05 — MED-4 remediated:** all PostgREST `.or()` search interpolations now percent-encode the user term via the shared `buildIlikeOrFilter()` helper (`src/lib/supabase-search.ts`) — applied to `/api/admin/orders`, `/api/admin/products`, `/api/admin/users`, and the client-side admin orders table. Unit tests in `src/lib/__tests__/supabase-search.test.ts`.
 > - **2026-08-05 — MED-1 remediated:** `track?orderId=` reads now require the order-scoped confirmation cookie (path broadened to `/api/orders` so the same httpOnly token authorizes reads and confirms). Order-number reads keep working anonymously — the order number is the bearer credential there — and its generator was switched from `Math.random()` to a CSPRNG (`crypto.randomInt`) after review found the old suffix was non-cryptographic (see MED-1 section for the corrected severity). Tests in `src/app/api/orders/track/__tests__/route.test.ts` and `src/lib/__tests__/order-number.test.ts`.
 > - **2026-08-05 — MED-2 remediated:** brute-force protection added to `/api/admin/login` (dual buckets: 20 attempts/IP + 10 attempts/account per 15 min; only failures count, success resets; fail-open via `safe*` wrappers; windows auto-expire — no permanent lockout) and `POST /api/orders` (20 orders/IP per 60 s, fail-open). See MED-2 section for the full design incl. IP trust model. Tests in `middleware.test.ts` and a new login-route test file.
+> - **2026-08-05 — LOW-1 remediated (PR #31):** `verifyJWT()` now compares HMAC signatures with `crypto.timingSafeEqual` (length-guarded), and the legacy JWT admin path re-validates the DB profile — the admin row must exist with `role === "ADMIN"` and `is_active === true` — so deactivating an admin revokes outstanding legacy tokens. Error text and API surface unchanged.
+> - **2026-08-05 — LOW-3 remediated (PR #33):** `POST /api/admin/upload` (product images) now fail-closes with a magic-byte check (`hasValidImageSignature`, shared with payment-proof validation) before any storage write. *Location correction:* the audit's payment-proof path already had magic-byte validation; the missing check was the **product-image** upload.
+> - **2026-08-05 — LOW-4 remediated (PR #33):** `upsertSettingSchema` now enforces `ALLOWED_SETTING_KEYS` (the 9 keys used by the admin settings UI); free-form keys are rejected with 400.
+> - **2026-08-05 — LOW-2 re-evaluated:** CORS `*` + `Access-Control-Allow-Credentials: true` is rejected by browsers by spec, so the residual risk is **accepted**; hardening (default ACAO to `""`, validate `CORS_ORIGINS` at startup) remains optional.
 
 ---
 
@@ -228,6 +232,8 @@ or use the PostgREST `and()`/`or()` with properly quoted values (`"value"`).
 
 **Fix:** `crypto.timingSafeEqual` for both comparisons (decode buffers first, guard length); in the legacy JWT path, also look up the profile by email and reject deactivated users. Remove the "credentials not configured" differentiation in error text.
 
+**✅ REMEDIATED (2026-08-05, PR #31):** `verifyJWT()` in `src/lib/auth.ts` now compares HMAC signatures with `crypto.timingSafeEqual` (length-guarded). The legacy JWT path in `src/lib/admin-auth.ts` re-validates the profile against the DB — the admin row must exist, have `role === "ADMIN"` and `is_active === true` — so deactivating an admin revokes outstanding legacy tokens. Error messages and the API surface are unchanged; tests updated/added (`auth.test.ts`, `admin-auth.test.ts`).
+
 ---
 
 ### 🟡 LOW-2 — CORS responses may emit `*` with credentials on error paths
@@ -240,6 +246,8 @@ or use the PostgREST `and()`/`or()` with properly quoted values (`"value"`).
 `corsHeaders()` returns `Access-Control-Allow-Origin: *` when `origin` is falsy, while `Access-Control-Allow-Credentials: true` is always set. Browsers reject `*` + credentials, but several error responses call `corsHeaders()` without an origin, and the allowlist logic is loose. If `CORS_ORIGINS` is misconfigured (e.g. left as the default `http://localhost:3000`), the API reflects no cross-origin access at all in production.
 
 **Fix:** default `Access-Control-Allow-Origin` to `""` unless a whitelisted origin is present; validate `CORS_ORIGINS` at startup; never combine `*` with credentials.
+
+**ℹ️ RE-EVALUATED (2026-08-05) — risk accepted.** Per the CORS spec, browsers treat `Access-Control-Allow-Origin: *` together with `Access-Control-Allow-Credentials: true` as an invalid combination and refuse to send credentials on cross-origin requests, so the wildcard cannot enable credentialed cross-origin calls. The `*` only appears when no `Origin` header is present (non-browser clients such as curl), where credentials do not apply — real-world risk is near zero. No code change shipped; the hardening below (default ACAO to `""`, validate `CORS_ORIGINS` at startup) remains an optional defense-in-depth item.
 
 ---
 
@@ -254,6 +262,8 @@ The admin upload validates `file.type` against an allowlist but — unlike `paym
 
 **Fix:** reuse `hasValidPaymentProofSignature()`-style magic-byte validation; serve with a fixed `content-type` and `Content-Disposition` derived from the validated extension.
 
+**✅ REMEDIATED (2026-08-05, PR #33):** `POST /api/admin/upload` now runs a fail-closed magic-byte check after reading the buffer and **before any storage operation** — content that does not match the declared image type returns **400 `VALIDATION_ERROR`**. The checker reuses the payment-proof signature validator, aliased as `hasValidImageSignature` (`src/lib/payment/payment-proof-storage.ts`), and covers exactly the MIME allowlist (jpeg/png/webp/avif). *Location correction:* the payment-proof upload path already had magic-byte validation (see §4 "Payment-proof uploads") — the missing check was the **product-image** upload into the public `product-images` bucket. Tests: `src/app/api/admin/upload/__tests__/route.test.ts`.
+
 ---
 
 ### 🟡 LOW-4 — `public.setting` is world-readable and admin-writable with free-form keys
@@ -266,6 +276,8 @@ The admin upload validates `file.type` against an allowlist but — unlike `paym
 Settings are readable by anonymous users and `PUT /api/admin/settings` accepts arbitrary `key`/`value`/`group`. Fine today (store config only), but there is no guard against an admin (or a future bug) storing a secret there — it would immediately be public.
 
 **Fix:** add a comment/policy audit listing disallowed keys; consider an allowlist of setting keys in the API route, and/or move sensitive values to env vars (already the convention).
+
+**✅ REMEDIATED (2026-08-05, PR #33):** `upsertSettingSchema` now enforces `ALLOWED_SETTING_KEYS` (`src/lib/validators/admin.ts`) — the 9 keys actually used by the admin settings UI; keys outside the list are rejected with 400. Verified complete: no seed rows exist, no storefront code reads the `setting` table, and `settingRepository` has no callers, so the allowlist equals the full known key set. *Residual (see deploy notes below):* the admin settings page writes directly to Supabase through RLS (`is_admin()`), bypassing the API-route allowlist; it cannot invent new keys (it only updates existing rows), and a DB `CHECK` constraint on allowed keys remains an optional hardening. Tests: `src/lib/validators/__tests__/admin.test.ts`.
 
 ---
 
@@ -295,8 +307,14 @@ Settings are readable by anonymous users and `PUT /api/admin/settings` accepts a
 | ✅ | MED-4: Parameterize `.or()` search values | Applied 2026-08-05 (`buildIlikeOrFilter` at 4 sites) |
 | ✅ | MED-1: Gate `track?orderId=` behind the confirmation cookie (path broadened to `/api/orders`); CSPRNG order numbers | Applied 2026-08-05 |
 | ✅ | MED-2: Rate-limit admin login + order creation | Applied 2026-08-05 (in-memory, fail-open; Redis-backed recommended for multi-instance serverless) |
-| P2 | LOW-1…4: constant-time comparisons, legacy-JWT profile check, CORS default, upload magic bytes, settings key allowlist | ~half day |
+| ✅ | LOW-1: constant-time comparisons + legacy-JWT DB profile check | Applied 2026-08-05 (PR #31) |
+| ✅ | LOW-3 + LOW-4: upload magic bytes + settings key allowlist | Applied 2026-08-05 (PR #33) |
+| ⏸️ | LOW-2: CORS default / allowlist validation | Risk accepted 2026-08-05 (browsers reject `*` + credentials); optional hardening remains |
 | P3 | Add regression tests: unauth Discord interaction → denied; anon REST INSERT → denied; track without cookie → 401 | ~half day |
+
+**Deploy / residual notes (2026-08-05):**
+- **Invoice-email (PR #32):** apply `scripts/migrations/011_invoice_email.sql` before or together with the code deploy (self-healing `ADD COLUMN IF NOT EXISTS customer_email`, idempotent) and set `BREVO_SMTP_HOST/PORT/USER/PASS` + `BREVO_FROM_EMAIL/NAME`. Until SMTP is configured, invoice emails are transparently `SKIPPED` (never a fake success) and can be re-sent per-invoice from the admin panel.
+- **Settings key allowlist (LOW-4, PR #33):** the admin settings UI writes directly to Supabase via RLS `is_admin()`, so the API-route allowlist does not gate that path; the UI cannot invent new keys (it only updates existing rows). A DB `CHECK` constraint on `ALLOWED_SETTING_KEYS` (new migration) would close every write path and remains the recommended follow-up.
 
 ---
 
