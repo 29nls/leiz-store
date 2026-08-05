@@ -32,8 +32,9 @@ export default {
     ],
     // Subject boleh memakai huruf apa pun (hindari konflik dengan kata teknis)
     "subject-case": [0],
-    // Maksimal 72 karakter pada baris subject
-    "header-max-length": [2, "always", 72],
+    // Maksimal 100 karakter pada baris subject (default Conventional Commits;
+    // 72 terlalu ketat untuk scope + deskripsi yang bermakna)
+    "header-max-length": [2, "always", 100],
     // Body bebas (boleh lebih panjang)
     "body-max-line-length": [0],
     // Wajib ada type diawal pesan
